@@ -392,3 +392,98 @@ timestamp: 2026-04-24T15:40:00Z
 **Consequences.** All documentation, CLI command, package name, and template naming follow. Marketing copy uses the studio metaphor consistently.
 
 ---
+
+---
+id: ADR-021
+trace_id: BRD:Epic-4
+category: architecture
+session: analyst-case-walkthrough-2026-04-24
+composer: alex-vela
+timestamp: 2026-04-24T22:00:00Z
+---
+
+# claim overloaded for create+claim to close the contribution-creation gap
+
+**Summary.** The `claim` tool accepts two call shapes: (1) `claim(contribution_id)` — claim an existing open contribution; (2) `claim({trace_id, territory_id, kind, description})` — create a contribution in `open` state and immediately claim it atomically. Both shapes return the same response: contribution row + session ownership. Tool count stays at 12 (ADR-013 preserved).
+
+**Rationale.** The analyst-case walkthrough revealed no path for a web agent to create a contribution via the 12-tool endpoint. The 12 tools include `claim`, `update`, and `release` for contributions but no `create`. Without creation, the scenario requires a PM to pre-create every open contribution via the web app before an analyst's agent can claim it — a coordination bottleneck not described in any BRD story. Overloading `claim` is the minimal fix: one tool, two call shapes, same state machine entry point, no 13th tool.
+
+**Consequences.** `claim` implementation branches on input shape. If `{trace_id, territory_id, kind, description}` is provided, a contribution row is inserted at `open` and immediately transitioned to `claimed` in one transaction. Idempotent: calling create+claim twice with the same `trace_id + territory_id + kind` returns the existing claimed contribution if it belongs to the calling session. API docs describe both shapes. ADR-013 (`12 tools`) is unchanged.
+
+---
+
+---
+id: ADR-022
+trace_id: BRD:Epic-2
+category: architecture
+session: analyst-case-walkthrough-2026-04-24
+composer: alex-vela
+timestamp: 2026-04-24T22:05:00Z
+---
+
+# update carries optional content payload; endpoint commits via git API for web-locus sessions
+
+**Summary.** The `update` tool accepts two additional optional parameters: `content` (string — artifact content) and `slug` (string — filename component). When `content` is present and the calling session has `locus=web`, the endpoint commits the content to `research/<trace_id>-<slug>.md` (for `research_artifact` contributions) or the appropriate target path (for `doc_region` contributions) via the git provider API, then sets `content_ref` in the contribution row to the committed path. IDE-locus sessions write files directly and pass only the `content_ref` path via `update`.
+
+**Rationale.** The analyst-case walkthrough revealed that web agents have no path to commit research artifact content to the repo. The `update` tool was described as state-transition only. But `log_decision` already commits to `decisions.md` via git provider API — the same mechanism works for research artifact content. Extending `update` with an optional content payload reuses the established pattern without adding a new tool. ARCH-05 (open) addressed only agent transcript storage; this decision covers research artifact content itself.
+
+**Consequences.** `update` implementation branches: if `content` is present, commit via git API before updating `content_ref`. Commit message format: `docs(research): add <slug> for <trace_id> [session:<session_id>]`. IDE agents continue to write files directly and call `update` with only `state` and optionally `content_ref`. `content` parameter is ignored (or rejected with a warning) if locus is `ide` or `terminal`. Transcript sidecar files (`research/<trace_id>-<slug>.transcript.md`) follow the same mechanism when a session ends with an unwritten transcript.
+
+---
+
+---
+id: ADR-023
+trace_id: BRD:Epic-4
+category: architecture
+session: analyst-case-walkthrough-2026-04-24
+composer: alex-vela
+timestamp: 2026-04-24T22:10:00Z
+---
+
+# contributions.trace_id becomes trace_ids text[] with first element as primary
+
+**Summary.** The `trace_id text` column in the `contributions` table is replaced with `trace_ids text[]`. The first element is the primary trace ID (used for routing, display, and fit_check scoping). Additional elements represent secondary trace IDs (cross-references to affected stories). Existing queries that filter on trace_id use `trace_ids[1]` or `trace_ids @> ARRAY[value]` depending on intent.
+
+**Rationale.** The analyst-case walkthrough surfaced: "what happens when research on US-1.3 reveals implications for US-1.5?" The single `trace_id` column forces either two contributions (coordination overhead, fragmented artifact) or silent omission of the cross-reference. An array preserves one contribution per unit of work while making cross-trace attribution explicit and queryable. fit_check already scopes queries by trace_id subtree — array membership supports that equally.
+
+**Consequences.** Schema migration: `ALTER TABLE contributions ADD COLUMN trace_ids text[] GENERATED ALWAYS AS (ARRAY[trace_id]) STORED` is not valid; instead, a proper migration drops `trace_id` and adds `trace_ids text[] NOT NULL DEFAULT '{}'` with a check that `array_length(trace_ids, 1) >= 1`. API: `claim` and `update` accept `trace_ids` (array); `trace_id` (singular) is accepted as shorthand and coerced. Indexes: `GIN(trace_ids)` replaces the existing `btree(trace_id)` index. `traceability.json` links from story IDs to contribution IDs via array membership.
+
+---
+
+---
+id: ADR-024
+trace_id: BRD:Epic-2
+category: architecture
+session: analyst-case-walkthrough-2026-04-24
+composer: alex-vela
+timestamp: 2026-04-24T22:15:00Z
+---
+
+# release tool semantic: forward to review, not abandon; abandon is explicit update
+
+**Summary.** `release` transitions a contribution from `in_progress` to `review`, notifying other composers via pub/sub that the work is ready for examination. It does not release ownership back to open. To abandon a contribution (return to `open`, clear `author_session_id`), a composer calls `update(contribution_id, state="open")` explicitly. The two operations are semantically distinct and must not be conflated.
+
+**Rationale.** The analyst-case walkthrough exposed an ambiguity: `release` was described as "release a claimed contribution" in the tool list, which reads as abandonment, while `NORTH-STAR.md §5` describes `release` as transitioning the contribution to `review`. These are opposite semantics. Clarifying: `release` = "release for review" (forward, ownership retained until merged/rejected); explicit `update` to `open` = "abandon" (backward, ownership cleared). This matches user mental model ("I'm releasing my work for review") and avoids accidental abandonment.
+
+**Consequences.** Tool documentation updated to: "`release(contribution_id)` — mark contribution as ready for review; transitions state from `in_progress` to `review`; ownership retained; pub/sub broadcasts to project." State machine diagram added to `ARCHITECTURE.md §6.2` showing all valid transitions and which tool drives each. `update` docs note that setting `state=open` on a contribution you own abandons it and clears `author_session_id`.
+
+---
+
+---
+id: ADR-025
+trace_id: BRD:Epic-2
+category: architecture
+session: analyst-case-walkthrough-2026-04-24
+composer: alex-vela
+timestamp: 2026-04-24T22:20:00Z
+---
+
+# get_context accepts optional trace_id scope parameter
+
+**Summary.** `get_context` accepts an optional `trace_id` parameter (string). When provided, the response scopes recent decisions and territory contribution state to entries matching that trace ID (exact match and subtree — e.g., `BRD:Epic-1` matches `US-1.*`). When omitted, behavior is unchanged: returns full constitution + last N decisions + full territory state + traceability registry.
+
+**Rationale.** The analyst-case walkthrough showed that `get_context` with no scoping returns the full project state — potentially thousands of decisions and contributions for a long-running project. An analyst starting work on US-1.3 needs context scoped to that story, not the full project dump. Scoped `get_context` makes the first call useful without requiring client-side filtering. The constitution (CLAUDE.md, AGENTS.md, .atelier/*.yaml) is always returned unscoped since it governs all sessions. Traceability registry is always returned unscoped since it is small.
+
+**Consequences.** `get_context` response shape unchanged when `trace_id` is omitted. When `trace_id` is provided: `recent_decisions` filtered to `trace_ids @> ARRAY[trace_id]`; `territory_state.contributions` filtered to `trace_ids @> ARRAY[trace_id]`; all other fields (constitution, traceability) unscoped. `fit_check` already has an `optional trace_id` parameter (parallel design); this brings `get_context` into alignment. API docs updated.
+
+---

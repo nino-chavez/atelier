@@ -7,7 +7,7 @@
   "counts": {
     "brd-epics": 16,
     "brd-stories": 95,
-    "decisions": 20,
+    "decisions": 25,
     "open-questions": 15,
     "sections": 0,
     "prototype-slices": 0
@@ -340,6 +340,46 @@
       "kind": "decision",
       "docPath": "PRD-COMPANION.md",
       "docUrl": "#d25--naming-atelier",
+      "prototypePages": []
+    },
+    {
+      "id": "ADR-021",
+      "label": "claim overloaded for create+claim",
+      "kind": "decision",
+      "docPath": "DECISIONS.md",
+      "docUrl": "#adr-021",
+      "prototypePages": []
+    },
+    {
+      "id": "ADR-022",
+      "label": "update carries optional content payload for web-agent artifact writes",
+      "kind": "decision",
+      "docPath": "DECISIONS.md",
+      "docUrl": "#adr-022",
+      "prototypePages": []
+    },
+    {
+      "id": "ADR-023",
+      "label": "contributions.trace_ids is text[] not text",
+      "kind": "decision",
+      "docPath": "DECISIONS.md",
+      "docUrl": "#adr-023",
+      "prototypePages": []
+    },
+    {
+      "id": "ADR-024",
+      "label": "release tool semantic: forward to review, not abandon",
+      "kind": "decision",
+      "docPath": "DECISIONS.md",
+      "docUrl": "#adr-024",
+      "prototypePages": []
+    },
+    {
+      "id": "ADR-025",
+      "label": "get_context accepts optional trace_id scope parameter",
+      "kind": "decision",
+      "docPath": "DECISIONS.md",
+      "docUrl": "#adr-025",
       "prototypePages": []
     }
   ]

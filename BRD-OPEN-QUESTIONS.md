@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-24 (pre-build)
+**Last updated:** 2026-04-24 (analyst-case walkthrough session)
 
 ---
 
@@ -17,15 +17,28 @@
 5. Log decisions about findings
 6. Release the contribution for PM review
 
-**Open questions:**
-- Does the territory schema with `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly support this flow? Or does the schema need a structural rework for knowledge-work artifact types?
-- What happens when the analyst's research touches multiple trace IDs (e.g., research on US-1.3 reveals implications for US-1.5)? Does it become two contributions, or one with multi-trace-ID?
-- How are agent-session transcripts stored alongside the distilled research artifact? Sidecar file? External blob store?
-- When the analyst releases the contribution to `review`, who (which role + which lens) sees it for triage/approval?
+**Walkthrough findings (2026-04-24).**
 
-**Recommendation.** Walk the scenario end-to-end through the schema + endpoint + prototype views **before any code is written**. If a step requires a concept not yet in the design, add it to the design — don't code around it.
+The scenario was traced end-to-end through `ARCHITECTURE.md §5` (data model), `NORTH-STAR.md §5` (12-tool endpoint surface), and `territories.yaml`. Five gaps surfaced, all resolved via new decisions. What held up cleanly: `strategy-research` territory schema (`scope_kind: research_artifact`, `scope_pattern: research/**/*`), `fit_check` flow, `log_decision` four-step atomic operation, session lifecycle, lock + fencing, PM notification via pub/sub.
 
-**Status.** This is the top-priority pre-build question.
+| Step | Tool | Result |
+|---|---|---|
+| 1. Read context for US-1.3 | `get_context` | Clean — minor gap: no `trace_id` scope parameter. Resolved: ADR-025. |
+| 2. Claim a research artifact contribution | `claim` | Gap: no contribution-creation path in 12-tool surface. Resolved: ADR-021 (`claim` overloaded for create+claim). |
+| 3. Run fit_check | `fit_check` | Clean. No gaps. |
+| 4. Author research content via web agent | `update` | Significant gap: no artifact write path for web agents. Resolved: ADR-022 (`update` + optional `content` payload; endpoint commits via git API). |
+| 5. Log decisions about findings | `log_decision` | Clean. Existing four-step flow covers web agents via git API. |
+| 6. Release for PM review | `release` | Minor gap: `release` semantic was ambiguous (abandon vs. forward to review). Resolved: ADR-024. |
+
+**Resolved open questions:**
+- Territory schema with `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly supports the flow. No structural rework needed.
+- Multi-trace-ID research: `trace_id text` → `trace_ids text[]` (first element = primary). Resolved: ADR-023.
+- Agent-session transcript storage: sidecar file `research/<trace_id>-<slug>.transcript.md` committed via same git API mechanism as artifact content (ADR-022). Covered by ARCH-05.
+- When analyst releases to `review`: PM lens (`/atelier` with PM filter active) shows contributions in `review` state in `strategy-research` territory. Pub/sub broadcast notifies all active PM sessions. No design change needed — existing lens + pub/sub covers this.
+
+**Decisions produced:** ADR-021, ADR-022, ADR-023, ADR-024, ADR-025.
+
+**Status.** RESOLVED. No design gaps remain for the analyst case. Implementation can proceed.
 
 ---
 

@@ -44,6 +44,7 @@ Read in this order on a first pass.
 | [`PRD-COMPANION.md`](./PRD-COMPANION.md) | Decisions log with rationale. What we chose, why, alternatives rejected. |
 | [`BRD-OPEN-QUESTIONS.md`](./BRD-OPEN-QUESTIONS.md) | Open items surfaced during analysis that need resolution before build. |
 | [`DECISIONS.md`](./DECISIONS.md) | Append-only decision log. Canonical for anything Atelier-scoped. |
+| [`BUILD-SEQUENCE.md`](./BUILD-SEQUENCE.md) | Order of construction for the reference implementation. Plan, not canon — design docs win on conflicts. |
 
 ---
 

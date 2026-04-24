@@ -143,7 +143,8 @@ Prompt: "Walk `BRD-OPEN-QUESTIONS.md §1` end-to-end. Use actual US-1.3 as the t
 Prompt: "Resolve `PRD-COMPANION.md` OPEN decisions: D22 (Switchman), D23 (identity service default), D24 (embedding model). For each, produce a concrete recommendation with evidence, then update the decision's status and append a new ADR to `DECISIONS.md`."
 
 **Option C — Implementation planning (build sequencing).**
-Prompt: "Design scope is locked. Now produce a build sequence that respects ADR-011 (destination-first). Implementation can be sequenced even though design cannot be phased. Propose a sequence that gets to a working reference implementation with the full v1 scope in the fewest milestones. Each milestone must be independently demonstrable, not a 'Phase 1 shippable product.'"
+Initial sketch exists in `BUILD-SEQUENCE.md` (8 milestones M0–M7, with the recursion check as the organizing principle). Open items listed in `BUILD-SEQUENCE.md §7`.
+Prompt: "Review `BUILD-SEQUENCE.md`. Resolve the four open questions in §7 (fit_check timing, M3/M4 ordering, M2 subsetting, D22 timing). Validate each milestone's exit criteria are specific enough to know when it's done. Revise the sequence if any revision is warranted, and log a new ADR in `DECISIONS.md` for any consequential reorder."
 
 **Option D — Reference-implementation technology selection.**
 Prompt: "ADR-012 says architecture is capability-level. But we need to pick a specific stack for the reference implementation. Recommend concrete choices for each capability in `NORTH-STAR.md §13` (versioned file store, relational datastore, pub/sub, identity, vector index, serverless, static hosting, protocol, cron, observability), with rationale. Document as 'one valid implementation' not 'the architecture.'"

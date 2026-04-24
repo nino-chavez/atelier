@@ -1,0 +1,193 @@
+# HANDOFF — Pick this up in a new session
+
+**Written:** 2026-04-24
+**Session:** Initial strategic synthesis (design only, no code)
+**Owner:** Nino Chavez
+
+Read this first. It gets you oriented in under 5 minutes without re-reading every doc.
+
+---
+
+## What Atelier is (one paragraph)
+
+**A self-hostable OSS project template + agent interop protocol + reference prototype** where mixed teams of humans and AI agents concurrently author one canonical artifact (the prototype) across different loci (IDE, browser, terminal). Not a SaaS. Not an agent framework. Not a replacement for Jira/Linear/Confluence/Figma. Atelier is the **spine** that connects existing best-in-class tools around one project so mixed teams can work concurrently without drift.
+
+Origin: synthesizes `bc-subscriptions` (reference impl of big-blueprint methodology), `hackathon-hive` (working coordination substrate), `ai-hive` (architecture spec), and `big-blueprint` (methodology template) into one design with corrections applied from red-team analysis.
+
+---
+
+## Current state
+
+- **Phase:** Pre-implementation. Complete v1 design scope captured. Zero code.
+- **Scaffold:** 19 files, ~4000 lines of docs + config in this directory.
+- **Git:** initialized, staged, no initial commit yet.
+- **Immediate next step:** Walk one analyst-case scenario end-to-end through the schema + endpoint + prototype views before writing any code (see `BRD-OPEN-QUESTIONS.md §1`).
+
+---
+
+## Read-order for a fresh session
+
+**Fast path (under 15 min):**
+1. This file (`HANDOFF.md`)
+2. `README.md` — vocabulary + doc map
+3. `NORTH-STAR.md` — the complete destination spec
+
+**Full context (under 1 hour):**
+4. `STRATEGY.md` — why this shape (market, competitive, red-team, verdict)
+5. `PRD-COMPANION.md` — the 25 design decisions and their rationale
+6. `METHODOLOGY.md` — how this repo applies Atelier to itself
+7. `BRD-OPEN-QUESTIONS.md` — the 15 open items (focus on top 3)
+
+**Reference (as needed):**
+- `PRD.md`, `BRD.md`, `ARCHITECTURE.md`, `DECISIONS.md`
+
+---
+
+## The irreducible bet (don't forget this)
+
+**Fit_check precision at ≥75% at ≥60% recall on a labeled eval set.** This is the disconfirming test for any commercial surface. It ships at v1 with the eval harness and CI gate regardless of precision outcome. If precision holds → commercial wedge exists (managed fit_check). If it misses → Atelier remains OSS template + protocol spec + reference implementation. **Either way, every feature in `NORTH-STAR.md` ships.** Fit_check performance determines the commercial story, not the feature scope.
+
+---
+
+## Load-bearing decisions (don't re-litigate without a new red team)
+
+The 20 ADRs in `DECISIONS.md` represent choices made across multiple session iterations, often after explicit user corrections. Before challenging any of them, read the ADR's rationale + the corresponding entry in `PRD-COMPANION.md`. If you still think a change is warranted, propose a new decision that references and reverses the prior ADR — don't silently modify the earlier choice.
+
+Shortlist of the 20, grouped by "this will bite you if you forget":
+
+**Scope guardrails** (most likely to be accidentally violated):
+- **ADR-007** — No SaaS. Self-hosted OSS only.
+- **ADR-010** — Explicit exclusions: not a workflow engine, task tracker UI, chat app, code editor, design tool, doc editor, wiki, or messaging platform.
+- **ADR-011** — Destination-first design. No feature deferral in design docs. No "Phase 2" or "coming soon."
+- **ADR-012** — Capability-level architecture. No vendor names in arch docs.
+
+**Structural model** (changes cascade if you violate):
+- **ADR-001** — Prototype is canonical artifact AND coordination dashboard. One web app, five routes including `/atelier`.
+- **ADR-002** — Contribution is the atomic unit. One schema subsumes tasks, decisions, proposals, PRs.
+- **ADR-003** — `scope_kind` generalized from day one (files, doc_region, research_artifact, design_component, slice_config).
+- **ADR-016** — Two orthogonal substrates (SDLC sync + coordination). Don't conflate them.
+- **ADR-021** — Figma is feedback surface only. Design lives in the prototype (repo-canonical).
+
+**Safety / durability** (silent violations cause data loss):
+- **ADR-004** — Fencing tokens on every lock from v1. Never ship locks without fencing.
+- **ADR-005** — Decisions write to `decisions.md` first, datastore second. Repo is authoritative.
+- **ADR-020** — Triage never auto-merges. External content requires human approval.
+
+**Protocol / architecture**:
+- **ADR-013** — 12 tools, exactly. Protocol-agnostic spec (MCP is the v1 reference).
+- **ADR-014** — Territory + contract model extended to non-code artifacts.
+- **ADR-015** — One hive, many projects (plural schema from v1).
+
+**Personas / actors**:
+- **ADR-009** — Remote-principal actor class. Web agents are first-class composers, not second-class reviewers.
+- **ADR-018** — Five role-aware lenses at `/atelier`: analyst, dev, PM, designer, stakeholder.
+
+**Process**:
+- **ADR-008** — All 5 sync substrate scripts ship together.
+
+**Naming**:
+- **ADR-025** — Atelier. Rejected: Hivemind OS (platform-coded), Hive (too narrow), Commons (too generic).
+
+---
+
+## Corrections that happened mid-session (context for why certain choices are locked)
+
+These are the three structural corrections the user made during the initial session that shaped the final design. A fresh session that re-introduces any of these will be wrong:
+
+1. **Hive is NOT narrow.** Early framing treated multi-composer concurrency as a specialized primitive ("only when two devs code the same files"). User correction: "we absolutely need concurrent brainstorming and development. it's why we build hackathon-hive and hive-dashboard from the ai-hive architecture document." Hive is central, not narrow.
+2. **Figma does NOT own the design.** Early framing treated Figma as a design source-of-truth. User correction: "figma should not own the design, it is just the surface for feedback." Design lives in the prototype components (repo-canonical). Figma is a projection/feedback surface like Confluence is for BRDs.
+3. **Big-blueprint IS the prototype.** Early framing separated "the methodology" from "the prototype." User correction: "the point of big-blueprint is to be the prototype so we would enhance it for collaboration capabilities." The prototype is the canonical artifact; the methodology is how the prototype is structured.
+
+The fourth major correction was **no feature deferral**: "nothing should be deferred or future state. north star from the start so we understand the full scope of what needs to be designed. this is the point of blueprint as we learned from a 'feature at a time' approach builds drift that needs to be avoided." This is why `NORTH-STAR.md` specifies every capability at v1 with no phasing language.
+
+---
+
+## Scope boundaries — what NOT to build
+
+A new session will be tempted to build adjacent features. Resist.
+
+Atelier is NOT:
+- A SaaS (self-hosted only)
+- An agent framework (Claude Code, Cursor, claude.ai stay in their lanes)
+- A workflow engine (Conductor, LangGraph, CrewAI stay in their lanes)
+- A task tracker UI (Jira, Linear remain canonical for delivery tracking)
+- A chat app (claude.ai, ChatGPT remain canonical for agent conversations)
+- A code editor (VS Code, Cursor remain canonical)
+- A design tool (Figma remains canonical for visual design)
+- A doc editor (Confluence, Notion remain canonical for published long-form docs)
+- A wiki (repo markdown is the knowledge base)
+- A messaging platform (Slack, Teams remain canonical)
+
+If a feature request maps to one of these categories, push back or create a `BRD-OPEN-QUESTIONS.md` entry — don't implement.
+
+---
+
+## Top 3 open items (from `BRD-OPEN-QUESTIONS.md`)
+
+These should be resolved before implementation begins or very early in implementation:
+
+1. **Territory model validation on the analyst case.** Walk one analyst-week-1-research scenario (analyst claims a `research_artifact` contribution, runs fit_check, authors via web agent, logs decision, releases for PM review) end-to-end through the schema + endpoint + prototype views. If any step requires a concept not yet in the design, the design changes before code is written.
+2. **Switchman as dependency vs. own-implementation for file locks.** Evaluate Switchman's public API, fencing-token support, license compatibility, and maintainer health. If stable with fencing, integrate. If not, own-implementation with fencing from v1.
+3. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability.
+
+---
+
+## Suggested next-session openings (pick one)
+
+Each is ~1–2 hours of focused work.
+
+**Option A — Walk the analyst case (highest priority).**
+Prompt: "Walk `BRD-OPEN-QUESTIONS.md §1` end-to-end. Use actual US-1.3 as the trace ID. Trace each step through the schema in `ARCHITECTURE.md §5`, the endpoint tools in `NORTH-STAR.md §5`, and the prototype routes in `NORTH-STAR.md §4`. If any step reveals a gap, name the gap and propose the design change before coding."
+
+**Option B — Resolve open ADRs (Switchman, identity, embedding).**
+Prompt: "Resolve `PRD-COMPANION.md` OPEN decisions: D22 (Switchman), D23 (identity service default), D24 (embedding model). For each, produce a concrete recommendation with evidence, then update the decision's status and append a new ADR to `DECISIONS.md`."
+
+**Option C — Implementation planning (build sequencing).**
+Prompt: "Design scope is locked. Now produce a build sequence that respects ADR-011 (destination-first). Implementation can be sequenced even though design cannot be phased. Propose a sequence that gets to a working reference implementation with the full v1 scope in the fewest milestones. Each milestone must be independently demonstrable, not a 'Phase 1 shippable product.'"
+
+**Option D — Reference-implementation technology selection.**
+Prompt: "ADR-012 says architecture is capability-level. But we need to pick a specific stack for the reference implementation. Recommend concrete choices for each capability in `NORTH-STAR.md §13` (versioned file store, relational datastore, pub/sub, identity, vector index, serverless, static hosting, protocol, cron, observability), with rationale. Document as 'one valid implementation' not 'the architecture.'"
+
+**Option E — User-facing materials (if planning to publish).**
+Prompt: "Atelier's commercial story is OSS-first with methodology as credibility artifact. Draft: (1) a positioning one-pager for the methodology, (2) an announcement blog post framing the problem and Atelier's shape, (3) a 'getting started' guide from `atelier init` through first multi-composer session. Match the 'no emoji, no overclaims' voice from other Nino materials."
+
+---
+
+## Predecessors worth knowing about
+
+- `/Users/nino/Workspace/dev/wip/bc-subscriptions/` — reference implementation of big-blueprint methodology. Read `METHODOLOGY.md`, `BRD.md` story format, `traceability.json` structure. Atelier's repo structure mirrors this.
+- `/Users/nino/Workspace/dev/wip/big-blueprint/` — the methodology template itself. Currently houses the methodology; Atelier is its successor framing.
+- `/Users/nino/Workspace/dev/wip/ai-hive/docs/architecture.md` — the coordination substrate architecture spec. Atelier's blackboard model, 12-tool endpoint surface, territory/contract model inherit from here.
+- `/Users/nino/Workspace/dev/wip/ai-hive/docs/document-resonance.md` — resonance analysis showing which ideas converged across research sources. Confirms fit_check as load-bearing primitive.
+- `/Users/nino/Workspace/dev/tools/hackathon-hive/` — working coordination implementation (Supabase + Vercel + MCP). Has the fencing-token gap, missing fit_check, and missing decisions.md writer that Atelier fixes at v1.
+
+---
+
+## User's conversational patterns worth preserving
+
+Drawn from the initial session. These affect how to engage:
+
+- **Rejects incrementalism.** "Nothing should be deferred or future state." Phased rollouts in design docs will be rejected. Present complete scope; sequence implementation separately.
+- **Pushes back on competitive analyses.** Expect to have competitor lists challenged. Be specific and recent; hedge on things you can't verify.
+- **Expects product-architect thinking.** "Who are the users and their personas. what are they doing. where would they do it. then what capabilities are we building ourselves vs integrating with in another system." Lead with users and jobs-to-be-done, not with primitives or data models.
+- **Corrects rather than repeats.** If you miss the framing (e.g., treating Figma as design source), the correction is specific and sharp. Don't argue; absorb and update.
+- **Wants methodological consistency.** Atelier applying its own methodology to itself is not a gimmick — it's load-bearing. Violations of the methodology in Atelier's own docs will be called out.
+- **No emoji.** Ever, unless explicitly requested.
+
+---
+
+## Memory pointer
+
+`~/.claude/projects/-Users-nino-Workspace-dev-wip-bc-subscriptions/memory/project_methodology.md` holds the cross-session project memory that tracks the methodology's evolution (currently scoped to bc-subscriptions but Atelier's emergence is noted). A fresh session may want to update or create an Atelier-specific memory entry once implementation begins.
+
+---
+
+## If something feels wrong
+
+Atelier's design was iterated across a long session with multiple corrections. If a fresh session reads a doc and something feels off (a decision contradicts another, a capability seems to duplicate an external tool, a boundary appears violated), it's probably a real issue — flag it via a new `BRD-OPEN-QUESTIONS.md` entry rather than silently "fixing" it. Design docs are canonical; undocumented changes from a fresh session are drift.
+
+---
+
+## Final note
+
+The product is named **Atelier** for a reason (ADR-025). A studio where multiple contributors work together on one canonical artifact. Everything about the design serves that metaphor. When in doubt, ask: "Does this make the shared studio work better, or does it pull us into a category we explicitly excluded?"

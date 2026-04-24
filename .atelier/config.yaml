@@ -1,0 +1,88 @@
+# Atelier project config
+#
+# This file is the canonical project-scoped config. Committed to repo.
+# Read by the CLI, the agent endpoint, the prototype, and sync scripts.
+
+project:
+  id: atelier-self  # stable UUID in real projects; self-referential name here because this IS Atelier
+  name: Atelier
+  description: >
+    Reference implementation and canonical source for Atelier — the methodology,
+    protocol, and template for multi-composer human+agent software authorship.
+  created_at: 2026-04-24
+  template_version: "1.0"
+
+# Repo configuration. Atelier is versioned-file-store-agnostic — provider is an
+# implementation detail. In practice at v1, git providers (GitHub/GitLab/Bitbucket)
+# are the supported options.
+repo:
+  default_branch: main
+  trace_id_pattern: "US-[0-9]+\\.[0-9]+|BRD:Epic-[0-9]+|D[0-9]+|ADR-[0-9]+|NF-[0-9]+"
+
+# Coordination datastore binding. Capability-level — specific vendor configured
+# per-deploy in environment variables, not committed to repo.
+datastore:
+  # The binding points to a logical datastore URL resolved at runtime from env
+  # var ATELIER_DATASTORE_URL. Capability requirements in ARCHITECTURE.md §3.
+  binding: "${ATELIER_DATASTORE_URL}"
+  schema_version: "1.0"
+
+# Agent interop protocol. Default MCP; swappable if ecosystem consolidates elsewhere.
+agent_protocol:
+  name: mcp
+  transport: streamable-http
+  endpoint: "${ATELIER_ENDPOINT_URL}"
+
+# Prototype deployment target. Capability-level — specific vendor per-deploy.
+prototype:
+  deploy_binding: "${ATELIER_PROTOTYPE_DEPLOY_URL}"
+  local_dev_port: 3030
+
+# External system integrations. Each entry is optional; absence disables the
+# corresponding sync script.
+integrations:
+  delivery_tracker:
+    # Examples: jira, linear, github-issues
+    kind: null
+    project_key: null
+  published_docs:
+    # Examples: confluence, notion, github-pages
+    kind: null
+    space_key: null
+  design_tool:
+    # Examples: figma
+    kind: null
+    file_key: null
+  messaging:
+    # Examples: slack, teams, discord
+    kind: null
+    channel: null
+  git_provider:
+    # Examples: github, gitlab, bitbucket
+    kind: github
+    owner: null
+    repo: null
+
+# fit_check configuration. Embedding model is swappable per ADR-024 (open).
+fit_check:
+  embedding_model: "${ATELIER_EMBEDDING_MODEL}"
+  default_threshold: 0.80
+  weak_suggestion_threshold: 0.65
+  eval_set_path: "atelier/eval/fit_check"
+  ci_precision_gate: 0.75
+  ci_recall_gate: 0.60
+
+# Session + lock policy defaults. Overridable per-territory.
+policy:
+  session_heartbeat_interval_seconds: 30
+  session_ttl_seconds: 90
+  lock_default_ttl_seconds: 7200     # 2 hours
+  lock_max_ttl_seconds: 28800        # 8 hours
+  reap_interval_seconds: 60
+
+# Observability sink binding. Capability-level.
+observability:
+  sink_binding: "${ATELIER_OBSERVABILITY_SINK_URL}"
+
+# Protocol version. Bumped when endpoint tool surface changes.
+protocol_version: "1.0"

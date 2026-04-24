@@ -1,0 +1,216 @@
+# Atelier project territories
+#
+# Each territory declares a named domain within the project: who owns it,
+# what kind of artifacts it contains, what scope pattern bounds it, and which
+# contracts it publishes/consumes.
+#
+# Referenced by: contributions (via territory_id), locks (via artifact_scope),
+# contracts (via territory_id), role-aware lenses (via owner_role).
+
+territories:
+
+  - name: methodology
+    owner_role: architect
+    scope_kind: doc_region
+    scope_pattern:
+      - "NORTH-STAR.md#*"
+      - "METHODOLOGY.md#*"
+      - "STRATEGY.md#*"
+    contracts_published:
+      - canonical_vocabulary
+      - scope_boundaries
+      - capability_map
+    contracts_consumed: []
+    description: >
+      The methodology layer. Owns north-star design, strategy, and vocabulary.
+      Changes here trigger broadcasts to all other territories since they
+      define the project's foundational contracts.
+
+  - name: product
+    owner_role: pm
+    scope_kind: doc_region
+    scope_pattern:
+      - "PRD.md#*"
+      - "PRD-COMPANION.md#*"
+    contracts_published:
+      - feature_scope
+      - personas
+      - success_metrics
+    contracts_consumed:
+      - canonical_vocabulary
+      - scope_boundaries
+    description: >
+      Product requirements and decisions. Consumes methodology contracts to
+      stay aligned with north-star scope boundaries.
+
+  - name: requirements
+    owner_role: analyst
+    scope_kind: doc_region
+    scope_pattern:
+      - "BRD.md#*"
+      - "BRD-OPEN-QUESTIONS.md#*"
+    contracts_published:
+      - epic_catalog
+      - user_stories
+      - non_functional_requirements
+    contracts_consumed:
+      - personas
+      - feature_scope
+      - canonical_vocabulary
+    description: >
+      Business requirements — epics and user stories with trace IDs.
+      Bridges product (PM) and implementation (dev) territories.
+
+  - name: architecture
+    owner_role: architect
+    scope_kind: doc_region
+    scope_pattern:
+      - "ARCHITECTURE.md#*"
+    contracts_published:
+      - capability_interfaces
+      - data_model
+      - security_model
+    contracts_consumed:
+      - feature_scope
+      - user_stories
+      - canonical_vocabulary
+      - scope_boundaries
+    description: >
+      Capability-level architecture. Vendor-neutral by design.
+
+  - name: strategy-research
+    owner_role: analyst
+    scope_kind: research_artifact
+    scope_pattern:
+      - "research/**/*"
+    contracts_published:
+      - research_findings
+      - competitive_analysis
+      - red_team_findings
+    contracts_consumed:
+      - personas
+      - canonical_vocabulary
+    description: >
+      Research artifacts authored by analyst composers, typically via
+      web-based agent clients. Scope is research/ directory.
+
+  - name: protocol
+    owner_role: dev
+    scope_kind: files
+    scope_pattern:
+      - "prototype/src/lib/protocol/**"
+      - "scripts/sync/**"
+    contracts_published:
+      - agent_endpoint_tools
+      - sync_substrate_contracts
+    contracts_consumed:
+      - capability_interfaces
+      - data_model
+      - user_stories
+    description: >
+      Agent interop endpoint implementation + sync substrate scripts.
+      Protocol version + tool surface are canonical contracts here.
+
+  - name: prototype-app
+    owner_role: dev
+    scope_kind: files
+    scope_pattern:
+      - "prototype/src/app/**"
+      - "prototype/src/components/**"
+    contracts_published:
+      - route_table
+      - component_library
+      - lens_configurations
+    contracts_consumed:
+      - agent_endpoint_tools
+      - data_model
+      - user_stories
+    description: >
+      The prototype web app — canonical artifact and coordination dashboard.
+      Five routes + role-aware lenses.
+
+  - name: prototype-design
+    owner_role: designer
+    scope_kind: design_component
+    scope_pattern:
+      - "prototype/src/components/**"
+      - "prototype/design-tokens/**"
+    contracts_published:
+      - design_tokens
+      - component_variants
+    contracts_consumed:
+      - canonical_vocabulary
+    description: >
+      Visual design for prototype components. Components live in the
+      repo (ADR-019). Figma is a feedback surface, not the source.
+
+  - name: decisions
+    owner_role: architect
+    scope_kind: doc_region
+    scope_pattern:
+      - "decisions.md#*"
+      - "DECISIONS.md#*"
+    contracts_published:
+      - architectural_decisions
+      - reversals
+    contracts_consumed: []
+    description: >
+      Append-only decision log. Writes are repo-first per ADR-005;
+      datastore mirrors for query. No UPDATE or DELETE allowed.
+
+  - name: traceability
+    owner_role: architect
+    scope_kind: files
+    scope_pattern:
+      - "traceability.json"
+      - "scripts/traceability/**"
+    contracts_published:
+      - trace_id_registry
+      - bidirectional_links
+    contracts_consumed:
+      - epic_catalog
+      - user_stories
+      - architectural_decisions
+    description: >
+      The registry. Canonical trace-ID index with bidirectional links
+      across all docs + prototype + external systems.
+
+  - name: evaluation
+    owner_role: dev
+    scope_kind: files
+    scope_pattern:
+      - "prototype/eval/fit_check/**"
+    contracts_published:
+      - fit_check_eval_set
+      - precision_recall_thresholds
+    contracts_consumed:
+      - agent_endpoint_tools
+    description: >
+      Labeled eval set + runner for fit_check. Drives CI gate.
+      Eval set improvements from composer accept/reject feedback.
+
+# Territory roles map to composer default_role.
+# Each composer has one default role but may hold secondary roles with
+# explicit territory grants.
+roles:
+  architect:
+    description: Owns methodology, architecture, decisions, traceability territories
+    can_invite: true
+  pm:
+    description: Owns product territory; owns priority/phase fields
+    can_invite: true
+  analyst:
+    description: Owns requirements, strategy-research territories
+    can_invite: false
+  dev:
+    description: Owns protocol, prototype-app, evaluation territories
+    can_invite: false
+  designer:
+    description: Owns prototype-design territory
+    can_invite: false
+  admin:
+    description: Platform role — token rotation, composer suspension, observability
+    can_invite: true
+  stakeholder:
+    description: Read-only participant; comments flow through triage
+    can_invite: false

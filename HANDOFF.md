@@ -18,7 +18,7 @@ Origin: synthesizes `bc-subscriptions` (reference impl of big-blueprint methodol
 
 ## Current state
 
-- **Phase:** Pre-implementation. Design scope captured + analyst-case walk completed + reference-stack picked. 28 ADRs landed. Zero code.
+- **Phase:** Pre-implementation. Design scope captured + analyst-case walk completed + reference-stack picked + GCP-portability constraint locked. 29 ADRs landed. Zero code.
 - **Scaffold:** ~22 files, ~5500 lines of docs + config in this directory.
 - **Git:** public remote at `Signal-x-Studio-LLC/atelier`, multiple commits on `main`.
 - **Immediate next step:** Begin M1 of `BUILD-SEQUENCE.md` — the five SDLC sync substrate scripts (per ADR-008 they ship together). Stack is locked: GitHub + Supabase + Vercel + MCP.

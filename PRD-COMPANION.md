@@ -52,8 +52,9 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D29 | Transcripts as repo-sidecar files, opt-in by config | Architecture | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D30 | Review routing keyed by `territory.review_role` | Coordination | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D31 | Reference implementation stack: GitHub + Supabase + Vercel + MCP | Architecture | High | Adopt as reference (not architecture) | **DECIDED** (2026-04-25) |
+| D32 | Reference impl preserves GCP-portability; thin abstraction around Realtime; no proprietary Vercel/Supabase imports outside named adapters | Architecture | High | Adopt | **DECIDED** (2026-04-25) |
 
-D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `DECISIONS.md`. D22, D23, D31 landed as ADR-026, ADR-028, ADR-027 on 2026-04-25.
+D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `DECISIONS.md`. D22, D23, D31, D32 landed as ADR-026, ADR-028, ADR-027, ADR-029 on 2026-04-25.
 
 ---
 
@@ -650,8 +651,35 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Impact on downstream docs:**
 - `BUILD-SEQUENCE.md` M2 onward — implementation targets this stack
 - `.atelier/config.yaml` — env-var bindings get reference comments (vendor-neutral; reference-named)
-- `DECISIONS.md` — ADR-027 (parent), ADR-028 (identity sub-decision)
+- `DECISIONS.md` — ADR-027 (parent), ADR-028 (identity sub-decision), ADR-029 (portability constraint)
 - `NORTH-STAR.md` §13 unchanged — capabilities remain vendor-neutral
+
+---
+
+### D32 — Reference impl preserves GCP-portability
+
+**Status:** DECIDED (2026-04-25). See ADR-029.
+
+**Context.** D31/ADR-027 picks Vercel + Supabase as the reference stack. Forward-looking constraint from the stack-pick conversation: GCP migration must remain a viable future option. Without portability discipline, the reference impl accumulates Supabase/Vercel-specific code that compounds migration tax.
+
+**Alternatives considered:**
+1. Constrain at v1: avoid proprietary features, wrap the unavoidable in adapters, document the migration mapping (adopted).
+2. Use the platforms freely; accept rework if migration happens (rejected — migration cost compounds and is hard to estimate later).
+3. Build a full vendor-neutral platform abstraction layer (rejected — over-engineering; ADR-012 already keeps the *architecture* vendor-neutral, this is about the reference-impl discipline).
+
+**Decision.** v1 reference impl uses only features with documented GCP equivalents. The two amber capabilities (Pub/sub Realtime, Auth claims) get thin abstractions; everything else stays standard. A `BroadcastService` interface decouples the endpoint from Supabase Realtime. Auth verification is OIDC-standard. No imports from `@vercel/edge`, `@vercel/kv`, Edge Config, or Supabase RPC helpers outside named adapters.
+
+**Per-capability mapping** — see ADR-029 table for the full Supabase/Vercel ↔ GCP equivalents.
+
+**Rationale.** Constraining now keeps migration cost bounded. The cost of constraint (one interface, a lint rule, a runbook) is small relative to the compounding cost of removing Realtime usages or rewriting Vercel-Edge functions later.
+
+**Re-evaluation triggers.** GCP deprecates Cloud SQL Postgres or Identity Platform; zero migration interest after 12 months; or a Vercel/Supabase-only feature becomes load-bearing for the v1 value prop.
+
+**Impact on downstream docs:**
+- `BUILD-SEQUENCE.md` M2 — `BroadcastService` interface added to "Produces"
+- `DECISIONS.md` — ADR-029
+- `docs/migration-to-gcp.md` — runbook ships when M2 lands
+- M7 hardening — lint rule banning proprietary imports outside adapters
 
 ---
 

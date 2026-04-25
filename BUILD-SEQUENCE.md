@@ -29,9 +29,11 @@ This doc is **not** in the canonical-state precedence list in `CLAUDE.md`. If it
 
 ---
 
-## 2.5. Reference implementation stack (ADR-027)
+## 2.5. Reference implementation stack (ADR-027, ADR-028, ADR-029)
 
 The reference impl runs on **GitHub + Supabase (Postgres + Realtime + Auth + pgvector) + Vercel (Functions + Hosting + Cron) + MCP**. This is one valid implementation, not the architecture (per ADR-012). Each capability in `NORTH-STAR.md` §13 stays vendor-neutral; M2 onward simply targets these defaults. Identity default is Supabase Auth per ADR-028; BYO via `.atelier/config.yaml: identity.provider`.
+
+**Portability constraint (ADR-029):** the reference impl is constrained to features with documented GCP equivalents. M2 introduces a `BroadcastService` interface (default impl: Supabase Realtime; documented migration impl: Postgres NOTIFY/LISTEN). No `@vercel/edge`, `@vercel/kv`, Edge Config, or Supabase RPC helpers outside named adapters. Auth verification is OIDC-standard, not Supabase claim helpers. A `docs/migration-to-gcp.md` runbook ships when M2 lands.
 
 ---
 
@@ -106,7 +108,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Produces.** Relational schema with `contributions`, `decisions`, `scopes`, `locks`, `composers`, `sessions`, `contracts` tables. The 12-tool agent endpoint per ADR-013, with fit_check returning `unknown` (real fit_check arrives in M5). Locks with fencing tokens from day one.
 
-**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-locus committer), ADR-024 (transcript schema field).
+**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-locus committer), ADR-024 (transcript schema field), ADR-026 (own-impl lock+fencing), ADR-027 (Supabase + Vercel reference stack), ADR-028 (Supabase Auth default), ADR-029 (GCP-portability constraint; `BroadcastService` interface lands here).
 
 **Advances.** BRD Epic 2 (endpoint), Epic 4 (territory + contribution), Epic 5 (decision durability — write path), Epic 7 (locks + fencing), Epic 8 (territory contracts).
 

@@ -1,17 +1,17 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-04-25T09:45:00Z",
+  "generated_at": "2026-04-25T10:30:00Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
   "counts": {
     "brd-epics": 16,
     "brd-stories": 95,
-    "decisions": 30,
+    "decisions": 31,
     "open-questions": 15,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 26
+    "adrs": 28
   },
   "entries": [
     {
@@ -392,6 +392,16 @@
       "prototypePages": [],
       "adr": "ADR-025",
       "source": "walks/analyst-week-1.md"
+    },
+    {
+      "id": "D31",
+      "label": "Reference implementation stack: GitHub + Supabase + Vercel + MCP",
+      "kind": "decision",
+      "docPath": "PRD-COMPANION.md",
+      "docUrl": "#d31--reference-implementation-stack-github--supabase--vercel--mcp",
+      "prototypePages": [],
+      "adr": "ADR-027",
+      "source": "stack-pick-2026-04-25"
     }
   ]
 }

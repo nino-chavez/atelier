@@ -18,10 +18,10 @@ Origin: synthesizes `bc-subscriptions` (reference impl of big-blueprint methodol
 
 ## Current state
 
-- **Phase:** Pre-implementation. Design scope captured + analyst-case walk completed (5 design ADRs landed). Zero code.
-- **Scaffold:** ~22 files, ~5000 lines of docs + config in this directory.
-- **Git:** initialized, public remote at `Signal-x-Studio-LLC/atelier`, two commits on `main`.
-- **Immediate next step:** Pick the reference-implementation stack (Option D below) or begin M1 of `BUILD-SEQUENCE.md` (SDLC sync substrate). The schema design is now stable — analyst-week-1 walk closed the open territory questions.
+- **Phase:** Pre-implementation. Design scope captured + analyst-case walk completed + reference-stack picked. 28 ADRs landed. Zero code.
+- **Scaffold:** ~22 files, ~5500 lines of docs + config in this directory.
+- **Git:** public remote at `Signal-x-Studio-LLC/atelier`, multiple commits on `main`.
+- **Immediate next step:** Begin M1 of `BUILD-SEQUENCE.md` — the five SDLC sync substrate scripts (per ADR-008 they ship together). Stack is locked: GitHub + Supabase + Vercel + MCP.
 
 ---
 
@@ -135,9 +135,11 @@ These should be resolved before implementation begins or very early in implement
 
 1. ~~**Territory model validation on the analyst case.**~~ **RESOLVED 2026-04-24.** See `walks/analyst-week-1.md`. Five gaps surfaced and landed as ADR-021 through ADR-025. Schema is now stable.
 2. ~~**Switchman as dependency vs. own-implementation for file locks.**~~ **RESOLVED 2026-04-25.** Own-implementation. Switchman lacks fencing-token API; disqualified per ADR-004. See ADR-026 and PRD-COMPANION D22.
-3. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability. (D24 in PRD-COMPANION.) Lower urgency — needed at M5 entry, not before.
+3. ~~**Identity service default.**~~ **RESOLVED 2026-04-25.** Supabase Auth as default; BYO via OIDC through `.atelier/config.yaml: identity.provider`. See ADR-028 and PRD-COMPANION D23.
+4. ~~**Reference implementation stack pick.**~~ **RESOLVED 2026-04-25.** GitHub + Supabase + Vercel + MCP. See ADR-027 and PRD-COMPANION D31.
+5. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability. (D24 in PRD-COMPANION.) Lower urgency — needed at M5 entry, not before.
 
-**Now blocking M1/M2:** identity service default (D23) and reference-stack pick (HANDOFF Option D). Stack pick is partially implied by the "evolve hackathon-hive in place" approach (Supabase + Vercel + MCP) but should be formally landed as an ADR.
+**Nothing remaining blocks M1/M2.** The next concrete step is M1 of `BUILD-SEQUENCE.md` (SDLC sync substrate, 5 scripts).
 
 ---
 

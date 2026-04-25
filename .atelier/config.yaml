@@ -21,11 +21,19 @@ repo:
 
 # Coordination datastore binding. Capability-level — specific vendor configured
 # per-deploy in environment variables, not committed to repo.
+# Reference implementation default: Supabase Postgres (per ADR-027).
 datastore:
   # The binding points to a logical datastore URL resolved at runtime from env
   # var ATELIER_DATASTORE_URL. Capability requirements in ARCHITECTURE.md §3.
   binding: "${ATELIER_DATASTORE_URL}"
   schema_version: "1.0"
+
+# Identity service. Default Supabase Auth (per ADR-028); override via
+# any OIDC-compliant provider.
+identity:
+  provider: supabase-auth
+  oidc_issuer: "${ATELIER_OIDC_ISSUER}"
+  jwt_audience: "${ATELIER_JWT_AUDIENCE}"
 
 # Agent interop protocol. Default MCP; swappable if ecosystem consolidates elsewhere.
 agent_protocol:
@@ -34,6 +42,7 @@ agent_protocol:
   endpoint: "${ATELIER_ENDPOINT_URL}"
 
 # Prototype deployment target. Capability-level — specific vendor per-deploy.
+# Reference implementation default: Vercel (Functions + Hosting + Cron, per ADR-027).
 prototype:
   deploy_binding: "${ATELIER_PROTOTYPE_DEPLOY_URL}"
   local_dev_port: 3030

@@ -29,6 +29,12 @@ This doc is **not** in the canonical-state precedence list in `CLAUDE.md`. If it
 
 ---
 
+## 2.5. Reference implementation stack (ADR-027)
+
+The reference impl runs on **GitHub + Supabase (Postgres + Realtime + Auth + pgvector) + Vercel (Functions + Hosting + Cron) + MCP**. This is one valid implementation, not the architecture (per ADR-012). Each capability in `NORTH-STAR.md` §13 stays vendor-neutral; M2 onward simply targets these defaults. Identity default is Supabase Auth per ADR-028; BYO via `.atelier/config.yaml: identity.provider`.
+
+---
+
 ## 3. The recursion check
 
 Atelier dogfoods itself. From **M2** onward, every contribution toward building Atelier is tracked *in* Atelier. From **M5** onward, every contribution is fit-checked against the corpus. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.

@@ -51,8 +51,9 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D28 | Remote-locus commits via per-project endpoint git committer | Architecture | High | Adopt | **DECIDED** (2026-04-24) |
 | D29 | Transcripts as repo-sidecar files, opt-in by config | Architecture | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D30 | Review routing keyed by `territory.review_role` | Coordination | Medium | Adopt | **DECIDED** (2026-04-24) |
+| D31 | Reference implementation stack: GitHub + Supabase + Vercel + MCP | Architecture | High | Adopt as reference (not architecture) | **DECIDED** (2026-04-25) |
 
-D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `DECISIONS.md`.
+D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `DECISIONS.md`. D22, D23, D31 landed as ADR-026, ADR-028, ADR-027 on 2026-04-25.
 
 ---
 
@@ -454,11 +455,26 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 ### D23 — Identity service default
 
-**Status:** OPEN
+**Status:** DECIDED (2026-04-25). Default: **Supabase Auth**, override via `.atelier/config.yaml: identity.provider`. See ADR-028.
 
-**Decision pending.** Options: self-hosted OIDC (complex; team self-hosts identity), external provider default (Auth0/Clerk-class; clean but vendor dependency), bring-your-own with a sensible default.
+**Context.** Atelier requires per-composer signed tokens (ARCH §7.1). Three options on the table per BRD-OPEN-QUESTIONS §5: self-hosted OIDC (heavy ops), external provider default (clean but adds a vendor), BYO with a default. Resolution is a sub-decision of D31/ADR-027 (reference stack pick).
 
-**Recommendation.** BYO with a documented default recipe.
+**Alternatives considered:**
+1. Self-hosted Keycloak / Hydra (rejected — too heavy for a v1 reference default).
+2. Auth0 or Clerk as default (rejected — adds a second managed dependency on every deploy alongside the datastore).
+3. Supabase Auth as default; BYO via OIDC federation for SSO-having teams (adopted).
+
+**Decision.** Supabase Auth is the default identity provider. Teams override with any OIDC-compliant provider via `.atelier/config.yaml: identity.provider`.
+
+**Rationale.** Once Supabase is the datastore (D31), Supabase Auth ships with it — signed JWTs match ARCH §7.1, RLS integration is native (ARCH §5.3), OIDC federation supports SSO. A separate identity provider would add operational surface for no v1 benefit. BYO framing preserves the template-and-protocol-first posture: don't force teams to swap a working identity layer.
+
+**Re-evaluation triggers.** Supabase Auth deprecation, JWT-claim breaking change, or >50% of `atelier init` users overriding the default.
+
+**Impact on downstream docs:**
+- `ARCHITECTURE.md` §7.1 — references the default explicitly; capability stays vendor-neutral
+- `.atelier/config.yaml` — `identity:` section with `provider: supabase-auth` default
+- `DECISIONS.md` — ADR-028
+- CLI gains `atelier identity provision`
 
 ---
 
@@ -598,6 +614,44 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 - `NORTH-STAR.md` §4 — lens routing note
 - `.atelier/territories.yaml` — schema change with defaults
 - `DECISIONS.md` — ADR-025
+
+---
+
+### D31 — Reference implementation stack: GitHub + Supabase + Vercel + MCP
+
+**Status:** DECIDED (2026-04-25). See ADR-027.
+
+**Context.** ADR-012 keeps Atelier's architecture capability-level (no vendor lock-in), but the reference implementation needs a concrete stack. The "evolve hackathon-hive in place" direction (strategic conversation, 2026-04-24) implied Supabase + Vercel + MCP since hackathon-hive runs on it today; this decision formalizes that as the v1 reference and resolves the per-capability vendor mapping for all 10 capabilities in `NORTH-STAR.md` §13.
+
+**Alternatives considered:**
+1. **Adopt hackathon-hive's stack** (Supabase + Vercel + MCP) and fill the v1 gaps in place (adopted).
+2. **Greenfield stack pick** (e.g., Cloudflare D1/Workers + Pinecone + Auth0) — rejected; doubles the work (stack rewrite + methodology fix-up) and discards 60%+ of working hackathon-hive code.
+3. **Multi-provider matrix** (separate vendors for each capability, no consolidation) — rejected; adds operational surface and contradicts the "self-hosted, low operational burden" posture.
+
+**Decision.** Reference stack:
+
+| Capability | Choice |
+|---|---|
+| Versioned file store | GitHub |
+| Relational datastore | Supabase Postgres |
+| Pub/sub broadcast | Supabase Realtime |
+| Identity service | Supabase Auth (D23 / ADR-028) |
+| Vector index | pgvector on Supabase |
+| Serverless runtime | Vercel Functions |
+| Static hosting | Vercel |
+| Protocol | MCP (streamable-http) |
+| Cron / scheduled | Vercel Cron Jobs |
+| Observability sink | OpenTelemetry → local `telemetry` table (default), pluggable external |
+
+**Rationale.** Supabase consolidates four §13 capabilities (datastore + pub/sub + identity + vector) into one managed Postgres surface — RLS-native, GIN-supporting, pgvector-ready. Vercel covers serverless + static + cron with one provider and a tight GitHub integration. The reference impl avoids both vendor sprawl (Cloudflare + Pinecone + Auth0 + Vercel + …) and the "ship your own Postgres" trap. ADR-012 stays intact: each capability remains a vendor-neutral interface in the architecture; this ADR governs only the reference-impl choice.
+
+**Re-evaluation triggers.** Supabase / Vercel pricing-or-policy changes; pgvector p95 degrading past the documented scale envelope (BRD-OPEN-QUESTIONS §7); Atelier ecosystem moving off MCP onto a different agent protocol.
+
+**Impact on downstream docs:**
+- `BUILD-SEQUENCE.md` M2 onward — implementation targets this stack
+- `.atelier/config.yaml` — env-var bindings get reference comments (vendor-neutral; reference-named)
+- `DECISIONS.md` — ADR-027 (parent), ADR-028 (identity sub-decision)
+- `NORTH-STAR.md` §13 unchanged — capabilities remain vendor-neutral
 
 ---
 

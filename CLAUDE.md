@@ -96,6 +96,8 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-024:** Agent-session transcripts as repo-sidecar files, opt-in via `.atelier/config.yaml`.
 - **ADR-025:** Review routing keyed by `territory.review_role`.
 - **ADR-026:** Atelier owns the lock + fencing implementation; Switchman not adopted (no fencing-token API).
+- **ADR-027:** Reference implementation stack: GitHub + Supabase (Postgres + Realtime + Auth + pgvector) + Vercel (Functions + Hosting + Cron) + MCP. One valid implementation; ADR-012 still governs the architecture.
+- **ADR-028:** Identity service default = Supabase Auth (sub-decision of ADR-027). BYO via OIDC through `.atelier/config.yaml: identity.provider`.
 
 Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR).
 

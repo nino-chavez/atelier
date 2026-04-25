@@ -103,7 +103,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** BYO with a documented default recipe (most likely a specific external provider for the default to reduce ceremony). Support SSO federation via OIDC claims mapping.
 
-**Status.** OPEN.
+**Status.** **RESOLVED** (2026-04-25). Default: **Supabase Auth** (sub-decision of ADR-027 reference stack). BYO via OIDC federation through `.atelier/config.yaml: identity.provider`. See ADR-028 and PRD-COMPANION D23.
 
 ---
 

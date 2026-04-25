@@ -4,13 +4,13 @@
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Scope:** Complete v1 feature set — all 16 epics ship together per `NORTH-STAR.md` §17.
+**Scope:** Complete v1 feature set — all 16 epics ship together per `../strategic/NORTH-STAR.md` §17.
 
 ---
 
 ## 1. Purpose & scope
 
-This document specifies the complete v1 capability set for Atelier as described in `PRD.md`. Expanded into 16 epics comprising ~95 user stories, each tagged with a trace ID. All stories are v1-scope; Atelier explicitly rejects phased rollout per `DECISIONS.md` ADR-013.
+This document specifies the complete v1 capability set for Atelier as described in `PRD.md`. Expanded into 16 epics comprising ~95 user stories, each tagged with a trace ID. All stories are v1-scope; Atelier explicitly rejects phased rollout per `../architecture/decisions` ADR-013.
 
 ---
 
@@ -88,7 +88,7 @@ Goal: `atelier init` produces a fully formed project in one command.
 As a dev principal, I want `atelier init <name>` to create a complete repo so that I have canonical structure and prototype from the first commit.
 
 Acceptance:
-- Given a clean directory, when I run `atelier init foo`, then the directory contains `NORTH-STAR.md`, `PRD.md`, `BRD.md`, `ARCHITECTURE.md`, `DECISIONS.md`, `METHODOLOGY.md`, `README.md`, `.atelier/config.yaml`, `.atelier/territories.yaml`, `prototype/`, `scripts/`, `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `traceability.json`.
+- Given a clean directory, when I run `atelier init foo`, then the directory contains `../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, `../architecture/decisions`, `../methodology/METHODOLOGY.md`, `README.md`, `.atelier/config.yaml`, `.atelier/territories.yaml`, `prototype/`, `scripts/`, `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `traceability.json`.
 - Given the scaffolded project, when I run the prototype locally, then all five routes render with seed content.
 
 **US-1.2 — Provision coordination datastore**

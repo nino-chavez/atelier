@@ -1,10 +1,10 @@
 # Build Sequence: Atelier reference implementation
 
-**Companion to:** `NORTH-STAR.md`, `PRD.md`, `BRD.md`
+**Companion to:** `NORTH-STAR.md`, `../functional/PRD.md`, `../functional/BRD.md`
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `DECISIONS.md`, `PRD-COMPANION.md`, `BRD-OPEN-QUESTIONS.md`
+**Related:** `../architecture/decisions`, `../functional/PRD-COMPANION.md`, `../functional/BRD-OPEN-QUESTIONS.md`
 
 ---
 
@@ -20,9 +20,9 @@ It is explicitly **not** a roadmap, a phased rollout, or a feature-deferral plan
 
 | Doc | Concern | Mutability |
 |---|---|---|
-| `NORTH-STAR.md`, `PRD.md`, `BRD.md`, `ARCHITECTURE.md` | What is built (destination scope) | Append/edit; locked v1 scope |
-| `PRD-COMPANION.md` | Why design decisions were made | Editable; rationale record |
-| `DECISIONS.md` | Append-only canonical decision log | Append-only |
+| `NORTH-STAR.md`, `../functional/PRD.md`, `../functional/BRD.md`, `../architecture/ARCHITECTURE.md` | What is built (destination scope) | Append/edit; locked v1 scope |
+| `../functional/PRD-COMPANION.md` | Why design decisions were made | Editable; rationale record |
+| `../architecture/decisions` | Append-only canonical decision log | Append-only |
 | **`BUILD-SEQUENCE.md` (this doc)** | **Order of construction** | **Editable; major reorders log an ADR** |
 
 This doc is **not** in the canonical-state precedence list in `CLAUDE.md`. If it conflicts with any design doc, the design doc wins.
@@ -70,9 +70,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Done (2026-04-24)
 
-**Produces.** Repo conventions, 20 ADRs, `traceability.json` registry, `.atelier/territories.yaml`, `.atelier/config.yaml`, `CLAUDE.md` agent constitution, complete v1 design corpus.
+**Produces.** Repo conventions, 32 ADRs, `traceability.json` registry, `.atelier/territories.yaml`, `.atelier/config.yaml`, `CLAUDE.md` + `AGENTS.md` agent constitution, complete v1 design corpus organized into seven-layer doc tree (per ADR-032), hand-bootstrapped reference repo (Epic 1 CLI surface intentionally deferred to M7 — see §9).
 
-**Operationalizes.** ADR-005, ADR-011, ADR-012, ADR-014, ADR-015, ADR-020 (naming).
+**Operationalizes.** ADR-005, ADR-011, ADR-012, ADR-014, ADR-015, ADR-020 (naming), ADR-030 (per-ADR split), ADR-031 (three-tier consumer model), ADR-032 (extended doc structure).
 
 **Advances.** Pre-BRD; this is methodology setup, not a BRD epic.
 
@@ -80,7 +80,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Demoable.** This repo, https://github.com/Signal-x-Studio-LLC/atelier.
 
-**Exit criteria.** Met: design scope locked, all 20 ADRs landed, scaffolding complete, `HANDOFF.md` written.
+**Exit criteria.** Met: design scope locked, 32 ADRs landed (the doc-organization cleanup added ADR-030/031/032), scaffolding complete, session checkpoint at `.atelier/checkpoints/SESSION.md`, docs structurally organized into the seven-layer tree (per ADR-032).
 
 ---
 
@@ -96,7 +96,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Bootstrap function.** Once consistent, every doc edit from M2 onward propagates without manual reconciliation. This is the layer that makes "repo is canonical, datastore mirrors" actually true.
 
-**Demoable.** Edit `DECISIONS.md` and watch the datastore mirror update; edit `traceability.json` and watch BRD links resolve in CI; rename a territory in `.atelier/territories.yaml` and watch downstream references reconcile.
+**Demoable.** Edit `../architecture/decisions` and watch the datastore mirror update; edit `traceability.json` and watch BRD links resolve in CI; rename a territory in `.atelier/territories.yaml` and watch downstream references reconcile.
 
 **Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Round-trip integrity test passes (markdown → datastore → projector → markdown is byte-identical).
 
@@ -106,15 +106,15 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** Relational schema with `contributions`, `decisions`, `scopes`, `locks`, `composers`, `sessions`, `contracts` tables. The 12-tool agent endpoint per ADR-013, with fit_check returning `unknown` (real fit_check arrives in M5). Locks with fencing tokens from day one.
+**Produces.** Relational schema with `projects`, `composers`, `sessions`, `contributions`, `decisions`, `locks`, `contracts`, `telemetry` tables (per ARCHITECTURE §5.1). The 12-tool agent endpoint per ADR-013, with fit_check returning `unknown` (real fit_check arrives in M5). Locks with fencing tokens from day one. `atelier datastore init` ships in raw form here (Epic 1 partial; polished at M7).
 
 **Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-locus committer), ADR-024 (transcript schema field), ADR-026 (own-impl lock+fencing), ADR-027 (Supabase + Vercel reference stack), ADR-028 (Supabase Auth default), ADR-029 (GCP-portability constraint; `BroadcastService` interface lands here).
 
 **Advances.** BRD Epic 2 (endpoint), Epic 4 (territory + contribution), Epic 5 (decision durability — write path), Epic 7 (locks + fencing), Epic 8 (territory contracts).
 
-**Bootstrap function.** **The dogfooding ignition point.** Every contribution toward M3+ is itself a tracked contribution. Every decision goes into `DECISIONS.md` first (per ADR-005), then mirrors via M1's scripts.
+**Bootstrap function.** **The dogfooding ignition point.** Every contribution toward M3+ is itself a tracked contribution. Every decision goes into `../architecture/decisions` first (per ADR-005), then mirrors via M1's scripts.
 
-**Demoable.** Two `claim_scope` calls on the same scope; second rejected with stale-fencing-token error. `log_decision` appends to `DECISIONS.md` and the datastore mirror reflects within one M1 sync cycle.
+**Demoable.** Two `claim_scope` calls on the same scope; second rejected with stale-fencing-token error. `log_decision` appends to `../architecture/decisions` and the datastore mirror reflects within one M1 sync cycle.
 
 **Exit criteria.** All 12 tools respond with real (non-stub) values except `fit_check`. Fencing tokens enforced in CI integration tests. The build of M3 onward registers contributions in this datastore.
 
@@ -124,7 +124,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** Prototype web app with five routes (`/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`). The `/atelier` route renders the five role-aware lenses (analyst, dev, PM, designer, stakeholder) per ADR-017, backed by M2's endpoint.
+**Produces.** Prototype web app with six routes (`/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`). The `/atelier` route renders the five role-aware lenses (analyst, dev, PM, designer, stakeholder) per ADR-017, backed by M2's endpoint. `atelier deploy` ships in raw form here (Epic 1 partial; polished at M7).
 
 **Operationalizes.** ADR-001 (prototype is canonical artifact + dashboard), ADR-017 (5 lenses), ADR-019 (Figma is feedback only), ADR-025 (review routing via territory.review_role).
 
@@ -160,9 +160,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** Fit_check scoring service backed by an embedding model (default selected per D24 resolution in M7 prep), eval harness with a labeled seed set drawn from this repo's own decisions corpus, CI gate enforcing ≥75% precision at ≥60% recall per ADR-006.
+**Produces.** Fit_check scoring service backed by an embedding model (default selected per D24 resolution, which must land before M5 begins — see §7 Q3), eval harness with a labeled seed set drawn from this repo's own decisions corpus, CI gate enforcing ≥75% precision at ≥60% recall per ADR-006, keyword-search fallback with explicit UI degraded banner per US-6.5.
 
-**Operationalizes.** ADR-006.
+**Operationalizes.** ADR-006 (fit_check + eval harness + keyword fallback).
 
 **Advances.** BRD Epic 6 (fit_check + eval harness).
 
@@ -180,9 +180,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Produces.** External web-agent composers (Claude Code, Cursor, custom MCP clients) as first-class actors per ADR-009. Triage queue requiring human approval for all external-sourced content per ADR-018. Auth/authz scoped to remote-principal class.
 
-**Operationalizes.** ADR-009, ADR-018 (triage never auto-merges).
+**Operationalizes.** ADR-009, ADR-018 (triage never auto-merges), ADR-024 (transcript ingestion runtime — schema field landed at M2, capture path lights up here with the analyst case).
 
-**Advances.** BRD Epic 16 (remote composer support), Epic 10 (external integrations), Epic 13 (security — auth/authz path for remote composers).
+**Advances.** BRD Epic 16 (remote composer support), Epic 10 (external integrations), Epic 13 (security — auth/authz path for remote composers). Ships `atelier invite` in raw form (Epic 1 partial; polished at M7).
 
 **Bootstrap function.** The end-to-end analyst case from `BRD-OPEN-QUESTIONS §1` is now executable. M7 itself can be built largely by external agents under triage supervision, which is the strongest stress test of the whole substrate.
 
@@ -196,9 +196,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** Resolutions to D22 (Switchman as dependency vs. own-impl), D23 (identity service default), D24 (embedding model default) — each landed as a new ADR. Observability stack. `atelier init` and `atelier deploy` polished. Reference-implementation technology choices documented (per Option D in `HANDOFF.md`).
+**Produces.** Resolution to D24 (embedding model default) landed as a new ADR — D22 already resolved as ADR-026 and D23 as ADR-028. Observability stack (telemetry table populated, `/atelier/observability` route, alerting). Full Epic 1 CLI polish: `atelier init`, `atelier datastore init`, `atelier deploy`, `atelier invite`, `atelier territory add`, `atelier doctor`, `atelier upgrade`. Reference-implementation technology choices documented (per ADR-027). `docs/migration-to-gcp.md` runbook finalized per ADR-029. Lint rule banning proprietary imports outside named adapters (per ADR-029).
 
-**Operationalizes.** New ADRs for D22, D23, D24. ADR-012 (capability-level architecture) reaffirmed by labeling all reference choices as "one valid implementation."
+**Operationalizes.** New ADR for D24. ADR-012 (capability-level architecture) reaffirmed by labeling all reference choices as "one valid implementation." ADR-029 hardened with lint discipline.
 
 **Advances.** BRD Epic 1 (scaffolding & lifecycle), Epic 11 (CLI tooling), Epic 12 (observability), Epic 13 (security model).
 
@@ -206,30 +206,50 @@ This is also the strongest disconfirming test available before public release. A
 
 **Demoable.** `atelier init demo-project && cd demo-project && atelier deploy` produces a live prototype + endpoint with the five lenses working out of the box.
 
-**Exit criteria.** All 25 design decisions in `PRD-COMPANION.md` are DECIDED (no OPEN). `atelier init` round-trips clean. Public reference implementation is announced.
+**Exit criteria.** All 35 design decisions in `../functional/PRD-COMPANION.md` are DECIDED (no OPEN). `atelier init` round-trips clean. Public reference implementation is announced.
 
 ---
 
 ## 6. How this document evolves
 
 - **Editable in place.** Re-ordering within a milestone, refining exit criteria, or adjusting demoable artifacts happens via PR to this file.
-- **Major reorders log an ADR.** Moving a milestone (e.g., bringing fit_check forward to M3) is consequential and warrants an entry in `DECISIONS.md` referencing the prior sequence. The ADR explains *why* the order changed; this doc reflects the *current* order.
+- **Major reorders log an ADR.** Moving a milestone (e.g., bringing fit_check forward to M3) is consequential and warrants an entry in `../architecture/decisions` referencing the prior sequence. The ADR explains *why* the order changed; this doc reflects the *current* order.
 - **Status transitions** (`Planned` → `In progress` → `Done`) are PR-tracked. Mark a milestone Done only when its exit criteria are met.
-- **No phase tags in design docs.** This file holds all sequencing language. `NORTH-STAR.md` / `PRD.md` / `BRD.md` / `ARCHITECTURE.md` remain phase-free per ADR-011.
+- **No phase tags in design docs.** This file holds all sequencing language. `NORTH-STAR.md` / `../functional/PRD.md` / `../functional/BRD.md` / `../architecture/ARCHITECTURE.md` remain phase-free per ADR-011.
 
 ---
 
 ## 7. Open questions about the sequence itself
 
-These are sequence-specific open items distinct from `BRD-OPEN-QUESTIONS.md`.
+These are sequence-specific open items distinct from `../functional/BRD-OPEN-QUESTIONS.md`.
 
 1. **Should fit_check arrive earlier than M5?** Pulling it forward to M3 means the eval signal arrives before UI ships and could shape lens design. Cost: M3 grows substantially and may slip M4. Trade-off worth surfacing once M2 lands and M3 estimates harden.
 2. **Should M4 (concurrency) precede M3 (UI)?** Demoing concurrency without a UI is harder, but demoing UI without real concurrency makes M3 partly fake. The current order assumes thin UI on top of stubbed concurrency is acceptable for one milestone; revisit if M3 dogfooding feels hollow.
-3. **What is the smallest M2 that still unblocks M3?** If the 12-tool endpoint can be split into a "coordination subset" (claim/release/log_decision) shipped first, M3 could begin in parallel. Investigate at M1 exit.
-4. **Does M7's Switchman decision (D22) need to land before M2 ships locks?** If Switchman is adopted, the locks subsystem in M2 changes shape. Recommend resolving D22 *during* M1 to derisk M2.
+3. **D24 (embedding model default) must resolve before M5 starts.** M5 ships fit_check; fit_check needs a chosen model. Recommend resolving D24 during M3/M4 (benchmark ≥3 candidates against the seed eval set) so M5 can begin without blocking. Currently the only OPEN ADR-relevant decision (D22, D23 already resolved as ADR-026 and ADR-028).
+4. **What is the smallest M2 that still unblocks M3?** If the 12-tool endpoint can be split into a "coordination subset" (claim/release/log_decision) shipped first, M3 could begin in parallel. Investigate at M1 exit.
 
 ---
 
 ## 8. Provenance
 
-The 8-milestone shape was derived from `HANDOFF.md` Option C ("destination-first build sequencing"), validated against the 20 ADRs, and structured to make the recursion check (§3) the central organizing principle.
+The 8-milestone shape was derived from a "destination-first build sequencing" exercise, validated against the 32 ADRs, and structured to make the recursion check (§3) the central organizing principle.
+
+---
+
+## 9. Epic 1 (CLI lifecycle) sequencing convention
+
+This repo is **hand-bootstrapped** — it is the artifact that `atelier init` will eventually produce. That means Epic 1's CLI surface ships across milestones in two phases:
+
+| Command | Raw form (functional, hand-invokable) | Polished form (exit-code-tested, `--help`, end-to-end tested) |
+|---|---|---|
+| `atelier init` | M0 (this repo's structure) | M7 |
+| `atelier datastore init` | M2 (raw SQL migration scripts) | M7 |
+| `atelier deploy` | M3 (raw deploy script for prototype + endpoint) | M7 |
+| `atelier invite` | M6 (token issuance for remote-principal composers) | M7 |
+| `atelier territory add` | M2 (manual `.atelier/territories.yaml` edit pattern) | M7 |
+| `atelier doctor` | — | M7 |
+| `atelier upgrade` | — | M7 |
+
+**Why split:** the destination-first rule (ADR-011) governs feature scope, not packaging. Ergonomics polish (CLI commands, `--help` text, exit-code contracts, end-to-end tests) is correctly batched into M7 once all the underlying capabilities exist. The earlier milestones use the underlying scripts directly; M7 wraps them.
+
+**Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation. Acceptance for "polished form": US-1.1 through US-1.7 all pass.

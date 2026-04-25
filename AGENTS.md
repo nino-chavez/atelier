@@ -26,7 +26,7 @@ See `.atelier/territories.yaml` for the canonical declaration. Key rules:
 
 - **Cross-territory work routes through proposals.** If you need to modify an artifact outside your role's primary territories, create a `kind=proposal` contribution; do not directly edit.
 - **Contracts are load-bearing.** A territory's `contracts_published` defines the interface downstream consumers depend on. Breaking changes route through cross-territory proposal flow (ADR-014).
-- **Locks are per-scope, not per-file.** A `doc_region` lock on `BRD.md#section-3` allows concurrent edits to `BRD.md#section-4` by another composer.
+- **Locks are per-scope, not per-file.** A `doc_region` lock on `docs/functional/BRD.md#section-3` allows concurrent edits to `docs/functional/BRD.md#section-4` by another composer.
 
 ---
 
@@ -36,9 +36,9 @@ See `.atelier/territories.yaml` for the canonical declaration. Key rules:
 2. **Run `fit_check` before creating contributions.** The cost of checking is much lower than the cost of duplication.
 3. **Claim before editing.** Any edit to a shared artifact requires a claimed contribution and an acquired lock.
 4. **Use fencing tokens on every write.** Writes without current fencing token will be rejected server-side (ADR-004).
-5. **Log decisions when making architectural/strategic/convention choices.** Keyword: "because". If the choice carries a 'because', it's a decision and belongs in `DECISIONS.md`.
+5. **Log decisions when making architectural/strategic/convention choices.** Keyword: "because". If the choice carries a 'because', it's a decision and belongs as a new file under `docs/architecture/decisions/ADR-NNN-<slug>.md` (per ADR-030).
 6. **Append-only for decisions.** Never edit prior decisions. Reversals are new entries with `reverses:` frontmatter.
-7. **Respect scope boundaries.** If you're asked to build something that falls in an excluded category (per `PRD.md` §5), push back rather than implement.
+7. **Respect scope boundaries.** If you're asked to build something that falls in an excluded category (per `docs/functional/PRD.md` §5), push back rather than implement.
 8. **No emoji in commits, docs, or code** unless the user explicitly requests.
 
 ---
@@ -57,7 +57,7 @@ Always deregister cleanly when possible. Reaped sessions are visible in `/atelie
 
 ## Agent clients supported
 
-The protocol is client-agnostic (ADR-019). Any client that can:
+The protocol is client-agnostic (ADR-013). Any client that can:
 - Speak the agent interop protocol (MCP at v1)
 - Maintain a session heartbeat loop
 - Hold and present a composer token
@@ -68,6 +68,6 @@ The protocol is client-agnostic (ADR-019). Any client that can:
 
 ## Sandbox rules
 
-- **External-sourced content (via triage) never auto-merges.** Triage produces `kind=proposal` contributions that require explicit human approval (ADR-020).
+- **External-sourced content (via triage) never auto-merges.** Triage produces `kind=proposal` contributions that require explicit human approval (ADR-018).
 - **Service-role datastore credentials live server-side only.** Clients (including this agent) only hold per-composer tokens (ADR-007 security consequence).
 - **No direct datastore writes from clients.** All writes go through the agent endpoint, which enforces authorization and fencing.

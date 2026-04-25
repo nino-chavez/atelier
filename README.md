@@ -1,58 +1,66 @@
 # Atelier
 
-A self-hostable OSS project template where mixed teams of humans + agents concurrently author a single canonical artifact (the prototype) from any locus, without drift.
+A self-hostable OSS project template + agent interop protocol + reference prototype where mixed teams of humans and AI agents concurrently author one canonical artifact across IDE, browser, and terminal loci — without drift.
 
 ---
 
 ## What this repo is
 
-This repository is the reference implementation and canonical source for **Atelier** — the methodology, protocol, and template for multi-composer human+agent software authorship.
+Atelier ships as **three things in one repo**:
 
-It serves three roles simultaneously:
+1. **A methodology** (transferable to any project, any stack).
+2. **An open protocol** (12-tool agent-facing surface; MCP is the v1 reference transport).
+3. **A reference implementation** (the codebase you're looking at — Vercel + Supabase + MCP, per ADR-027).
 
-1. **The spec** — every design decision, capability, and protocol detail lives in these docs.
-2. **The template** — the `prototype/`, `scripts/`, and `.atelier/` directories are what a new project scaffolded via `atelier init` inherits.
-3. **A reference implementation of its own methodology** — this repo itself follows Atelier conventions (territories, trace IDs, decisions.md, fit_check on BRD stories).
+These are documented as three tiers below. Pick the tier that matches what you want to do.
 
 ---
 
-## What Atelier is
+## Pick your path
 
-A **self-hosted OSS project template + agent interop protocol + reference prototype** that lets teams of humans and AI agents concurrently author one canonical artifact across different loci (IDE, browser, terminal).
+| Tier | Action | What you do | Start here |
+|---|---|---|---|
+| **1. Reference Deployment** | **Deploy** | Run Atelier as-is for your team via `atelier init && atelier deploy`. You don't want to think about the implementation. | [`docs/user/`](./docs/user/) (populates at v1) and [`docs/ops/`](./docs/ops/) (populates at M7) |
+| **2. Reference Implementation** | **Extend** | Fork this repo. Modify schema, add lenses, swap fit_check model, write new sync adapters. | [`docs/developer/fork-and-customize.md`](./docs/developer/fork-and-customize.md) |
+| **3. Specification** | **Implement** | Implement the 12-tool protocol on a different stack, OR apply Atelier's methodology to a project that does not use this codebase. | [`docs/methodology/adoption-guide.md`](./docs/methodology/adoption-guide.md) (methodology) or [`docs/architecture/protocol/`](./docs/architecture/protocol/) (protocol) |
 
-- **Not a SaaS.** Teams self-host the coordination datastore and prototype.
-- **Not an agent framework.** Existing agent clients (IDE + web) connect via an open interop protocol.
-- **Not a replacement for Jira/Linear/Confluence/Figma.** Each remains canonical for its thing.
-- **Not a workflow engine.** External workflow tools stay in their lanes.
+All three tiers are open source. All three tiers are first-class at v1 per ADR-031.
 
-Atelier is the **spine that connects those tools around one project** so mixed teams can work concurrently without drift.
+---
+
+## What Atelier is not
+
+- **Not a SaaS** — teams self-host (per ADR-007).
+- **Not an agent framework** — existing agent clients connect via the open protocol.
+- **Not a replacement for Jira / Linear / Confluence / Figma / Slack** — each remains canonical for its own domain (per ADR-010).
+- **Not a workflow engine** — Conductor / LangGraph / CrewAI stay in their lanes.
+
+Atelier is the **spine that connects existing best-in-class tools around one project** so mixed teams can work concurrently without drift.
 
 ---
 
 ## Document map
 
-Read in this order on a first pass.
+| Layer | Audience question | Path |
+|---|---|---|
+| **Methodology** | How is the way-of-working organized, and how do I adopt it? | [`docs/methodology/`](./docs/methodology/) |
+| **Strategic** | Where is Atelier going, and why this shape? | [`docs/strategic/`](./docs/strategic/) — NORTH-STAR, STRATEGY, BUILD-SEQUENCE |
+| **Functional** | What does the product do? | [`docs/functional/`](./docs/functional/) — PRD, BRD, companion, open questions |
+| **Architecture** | How is it designed? | [`docs/architecture/`](./docs/architecture/) — ARCHITECTURE, decisions, protocol, schema, walks, diagrams |
+| **Developer** | How do I contribute or fork? | [`docs/developer/`](./docs/developer/) |
+| **Ops** | How do I self-host and operate it? (M7) | [`docs/ops/`](./docs/ops/) |
+| **Testing** | How is quality assured? (M5) | [`docs/testing/`](./docs/testing/) |
+| **User** | How do I use it as an end-user? (v1) | [`docs/user/`](./docs/user/) |
 
-| Doc | Purpose |
-|---|---|
-| [`NORTH-STAR.md`](./NORTH-STAR.md) | Complete design scope, capability-level, no vendor prescriptions. Read this first. |
-| [`STRATEGY.md`](./STRATEGY.md) | Market context, competitive landscape, red-team analysis, product-scope verdict. Why Atelier and why not a SaaS. |
-| [`METHODOLOGY.md`](./METHODOLOGY.md) | How Atelier itself is organized — applies its own methodology to this repo. |
-| [`PRD.md`](./PRD.md) | Product requirements. What the product must do. |
-| [`BRD.md`](./BRD.md) | Business requirements. Epics and user stories with trace IDs. |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Capability-level architecture. Components, data model, flows. No vendor lock-in. |
-| [`PRD-COMPANION.md`](./PRD-COMPANION.md) | Decisions log with rationale. What we chose, why, alternatives rejected. |
-| [`BRD-OPEN-QUESTIONS.md`](./BRD-OPEN-QUESTIONS.md) | Open items surfaced during analysis that need resolution before build. |
-| [`DECISIONS.md`](./DECISIONS.md) | Append-only decision log. Canonical for anything Atelier-scoped. |
-| [`BUILD-SEQUENCE.md`](./BUILD-SEQUENCE.md) | Order of construction for the reference implementation. Plan, not canon — design docs win on conflicts. |
+Doc structure follows [claude-docs-toolkit](https://github.com/) seven-layer model with Atelier-specific extensions for `methodology/`, `architecture/protocol/`, `architecture/schema/` (per ADR-032). Empty layer READMEs cite the BUILD-SEQUENCE milestone where they fill in.
 
 ---
 
 ## The irreducible bet
 
-**Fit_check precision.** Semantic search that answers "is this already done or in flight?" at ≥75% precision with ≥60% recall. Ships at v1 with an evaluation harness and CI gate.
+**Fit_check precision.** Semantic search that answers "is this already done or in flight?" at ≥75% precision with ≥60% recall. Ships at v1 with an evaluation harness and CI gate (per ADR-006).
 
-If the bar holds, Atelier has a defensible commercial wedge (optional managed fit_check service). If it misses, Atelier still ships as a credible OSS template + protocol spec + reference implementation. Either way, every feature described in `NORTH-STAR.md` ships together.
+If the bar holds, Atelier has a defensible commercial wedge (optional managed fit_check service). If it misses, Atelier still ships as a credible OSS template + protocol spec + reference implementation. Either way, every feature described in `docs/strategic/NORTH-STAR.md` ships together.
 
 ---
 
@@ -68,7 +76,7 @@ If the bar holds, Atelier has a defensible commercial wedge (optional managed fi
 | **Contribution** | Atomic unit of work; one schema covers tasks/decisions/proposals/PRs. |
 | **Contract** | Typed interface published by one territory for consumption by others. |
 | **Blackboard** | Coordination state (sessions, contributions, decisions, locks, contracts). |
-| **Constitution** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `.atelier/*`. |
+| **Constitution** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `docs/architecture/decisions/`, `.atelier/*`. |
 | **Prototype** | The web app that is both the canonical artifact and the dashboard. |
 | **Trace ID** | `US-X.Y`, `BRD:Epic-N`, etc. — join key across all surfaces. |
 | **Fit_check** | Semantic search that answers "is this already done or in flight?" |
@@ -78,6 +86,5 @@ If the bar holds, Atelier has a defensible commercial wedge (optional managed fi
 
 ## Status
 
-- **Phase:** Pre-implementation. Design scope captured; no code yet.
-- **Current session:** 2026-04-24. Strategic synthesis from cross-session analysis (bc-subscriptions reference impl, hackathon-hive working substrate, ai-hive architecture, big-blueprint methodology).
-- **Next step:** Stress-test the territory model on the analyst case before committing to build. See `BRD-OPEN-QUESTIONS.md §1`.
+- **Phase:** Pre-implementation. M0 of [`docs/strategic/BUILD-SEQUENCE.md`](./docs/strategic/BUILD-SEQUENCE.md) complete (methodology + 32 ADRs + scaffolding). M1 (SDLC sync substrate) is the next concrete step.
+- **Current session state:** see [`.atelier/checkpoints/SESSION.md`](./.atelier/checkpoints/SESSION.md) — ephemeral, sunset at M2 when `get_context` (US-2.4) replaces it.

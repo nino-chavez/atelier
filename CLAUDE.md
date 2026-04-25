@@ -10,15 +10,15 @@ This repo is both the spec for Atelier and a reference implementation of its own
 
 The following documents are authoritative. When they disagree with each other, the precedence order is:
 
-1. `NORTH-STAR.md` — complete design scope
-2. `STRATEGY.md` — why and what's out of scope
-3. `PRD.md` — product requirements
-4. `BRD.md` — stories with trace IDs
-5. `ARCHITECTURE.md` — capability-level architecture
-6. `METHODOLOGY.md` — repo conventions
-7. `PRD-COMPANION.md` — design-time decisions with rationale
-8. `DECISIONS.md` — append-only canonical runtime decision log
-9. `BRD-OPEN-QUESTIONS.md` — known open items
+1. `docs/strategic/NORTH-STAR.md` — complete design scope
+2. `docs/strategic/STRATEGY.md` — why and what's out of scope
+3. `docs/functional/PRD.md` — product requirements
+4. `docs/functional/BRD.md` — stories with trace IDs
+5. `docs/architecture/ARCHITECTURE.md` — capability-level architecture
+6. `docs/methodology/METHODOLOGY.md` — repo conventions
+7. `docs/functional/PRD-COMPANION.md` — design-time decisions with rationale
+8. `docs/architecture/decisions/` — append-only canonical runtime decision log (one file per ADR per ADR-030)
+9. `docs/functional/BRD-OPEN-QUESTIONS.md` — known open items
 10. `traceability.json` — trace-ID registry
 
 If you would change the canonical state, explain which doc and why before modifying.
@@ -29,11 +29,11 @@ If you would change the canonical state, explain which doc and why before modify
 
 When you start a session in this repo:
 
-1. Read `README.md` if you haven't already.
-2. Read `NORTH-STAR.md` — this is the destination.
-3. Scan `DECISIONS.md` — these are load-bearing choices; don't re-litigate without cause.
-4. Check `BRD-OPEN-QUESTIONS.md` — you may be working on one of these.
-5. If an agent-facing endpoint is live for this project, call `get_context` to pull session + territory + recent decisions.
+1. Read `README.md` if you haven't already — it has tier-routing (Deploy / Extend / Implement) and the document map.
+2. Read `docs/strategic/NORTH-STAR.md` — this is the destination.
+3. Scan `docs/architecture/decisions/README.md` (the ADR index) — these are load-bearing choices; don't re-litigate without cause.
+4. Check `docs/functional/BRD-OPEN-QUESTIONS.md` — you may be working on one of these.
+5. If an agent-facing endpoint is live for this project, call `get_context` to pull session + territory + recent decisions. **Pre-M2** (now), the equivalent is `.atelier/checkpoints/SESSION.md` — a thin session-state file that is retired the moment the M2 endpoint ships. See `docs/methodology/METHODOLOGY.md §6.1` for the canonical-vs-ephemeral split and the no-parallel-summary rule.
 
 ---
 
@@ -43,15 +43,25 @@ This repo follows the methodology it specifies. That means:
 
 - **Repo is canonical for discovery fields.** Decisions, requirements, architecture live in markdown files, not in the datastore. The datastore mirrors for query.
 - **Every story has a trace ID.** If you add a user story, add a trace ID (`US-<epic>.<story>`) and update `traceability.json`.
-- **Every architectural/strategic choice is a decision.** Append to `DECISIONS.md` with YAML frontmatter. Never edit a prior decision; reversals are new entries referencing old.
-- **No feature deferral in design docs.** Atelier specifies destination-first; don't add "Phase 2" or "coming soon" to `NORTH-STAR.md`, `PRD.md`, `BRD.md`, or `ARCHITECTURE.md`. Build sequencing is separate.
-- **Vendor-neutral in architecture docs.** Architecture describes capabilities (versioned file store, relational datastore, pub/sub broadcast, etc.), not specific vendors.
+- **Every architectural/strategic choice is a decision.** Add a new file under `docs/architecture/decisions/ADR-NNN-<slug>.md` with YAML frontmatter (per ADR-030). Never edit a prior ADR file; reversals are new files referencing old via `reverses: ADR-<N>` frontmatter.
+- **No feature deferral in design docs.** Atelier specifies destination-first; don't add "Phase 2" or "coming soon" to the canonical docs. Build sequencing is separate (see `docs/strategic/BUILD-SEQUENCE.md`).
+- **Vendor-neutral in architecture docs.** Architecture describes capabilities (versioned file store, relational datastore, pub/sub broadcast, etc.), not specific vendors. The reference implementation is a separate concept (per ADR-012, ADR-027).
+
+---
+
+## Three-tier consumer model (per ADR-031)
+
+Atelier serves three distinct reader intents. When responding to questions, identify the tier:
+
+- **Tier 1 — Reference Deployment** (action: **Deploy**): "Run Atelier as-is for my team via `atelier init && atelier deploy`." Primary docs: `docs/user/`, `docs/ops/`.
+- **Tier 2 — Reference Implementation** (action: **Extend**): "Fork this repo and customize." Primary docs: `docs/developer/`, `docs/architecture/`. Entry point: `docs/developer/fork-and-customize.md`.
+- **Tier 3 — Specification** (action: **Implement**): "Implement the protocol on a different stack" or "apply the methodology without using this repo." Primary docs: `docs/methodology/`, `docs/architecture/protocol/`. Entry points: `docs/methodology/adoption-guide.md` (methodology) or `docs/architecture/protocol/implementing-on-other-stacks.md` (protocol).
 
 ---
 
 ## Scope boundaries (what Atelier is NOT)
 
-Per `NORTH-STAR.md` §14 and `PRD.md` §5:
+Per `docs/strategic/NORTH-STAR.md` §14 and `docs/functional/PRD.md` §5:
 
 - Not a SaaS
 - Not an agent framework (agent clients stay in their lanes)
@@ -64,17 +74,17 @@ Per `NORTH-STAR.md` §14 and `PRD.md` §5:
 - Not a wiki (repo markdown is the knowledge base)
 - Not a messaging platform (Slack/Teams remain canonical)
 
-If you find yourself designing a feature that belongs to one of the above categories, stop and reread `PRD.md` §5.
+If you find yourself designing a feature that belongs to one of the above categories, stop and reread `docs/functional/PRD.md` §5.
 
 ---
 
-## Load-bearing decisions (abbreviated — see `DECISIONS.md` for rationale)
+## Load-bearing decisions (abbreviated — see `docs/architecture/decisions/` for rationale)
 
 - **ADR-001:** Prototype is the canonical artifact AND the coordination dashboard.
 - **ADR-002:** Contribution is the atomic unit; subsumes tasks/decisions/proposals/PRs.
 - **ADR-003:** `scope_kind` generalized from day one (files, doc_region, research_artifact, design_component, slice_config).
 - **ADR-004:** Fencing tokens mandatory on all locks from v1.
-- **ADR-005:** Decisions write to `decisions.md` first, datastore second.
+- **ADR-005:** Decisions write to repo first, datastore second.
 - **ADR-006:** Fit_check ships at v1 with eval harness + CI gate (≥75% precision at ≥60% recall).
 - **ADR-007:** No multi-tenant SaaS; self-hosted OSS only.
 - **ADR-008:** All 5 sync substrate scripts ship together; no phasing.
@@ -99,6 +109,9 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-027:** Reference implementation stack: GitHub + Supabase (Postgres + Realtime + Auth + pgvector) + Vercel (Functions + Hosting + Cron) + MCP. One valid implementation; ADR-012 still governs the architecture.
 - **ADR-028:** Identity service default = Supabase Auth (sub-decision of ADR-027). BYO via OIDC through `.atelier/config.yaml: identity.provider`.
 - **ADR-029:** Reference impl preserves GCP-portability. No `@vercel/edge`, `@vercel/kv`, Edge Config, or Supabase RPC helpers outside named adapters. Realtime wrapped in `BroadcastService` interface. Migration mapping documented per-capability.
+- **ADR-030:** Per-ADR file split — `DECISIONS.md` becomes `docs/architecture/decisions/ADR-NNN-<slug>.md` directory.
+- **ADR-031:** Three-tier consumer model — Specification / Reference Implementation / Reference Deployment, all first-class at v1.
+- **ADR-032:** Adopt extended documentation structure (claude-docs-toolkit seven layers + Atelier-specific extensions for `methodology/`, `architecture/protocol/`, `architecture/schema/`).
 
 Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR).
 
@@ -116,9 +129,9 @@ Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001
 
 ## How to propose changes
 
-- **Discovery content** (NORTH-STAR, STRATEGY, PRD, BRD, ARCHITECTURE, METHODOLOGY, DECISIONS) changes via PR.
-- **Companion/open-questions** (PRD-COMPANION, BRD-OPEN-QUESTIONS) changes via PR with a clear rationale line.
-- **Decisions** (DECISIONS.md) are append-only. If you want to reverse a decision, write a new decision with `reverses: ADR-<N>` frontmatter.
+- **Discovery content** (anything under `docs/strategic/`, `docs/functional/`, `docs/architecture/ARCHITECTURE.md`, `docs/methodology/`) changes via PR.
+- **Companion / open questions** (`docs/functional/PRD-COMPANION.md`, `docs/functional/BRD-OPEN-QUESTIONS.md`) changes via PR with a clear rationale line.
+- **Decisions** (`docs/architecture/decisions/`) are append-only. New ADRs are new files. Reversals are new files with `reverses: ADR-<N>` frontmatter (per ADR-030).
 - **territories.yaml / config.yaml** changes via PR with approval from the architect role.
 
-Any ambiguity, surface it rather than guessing. `BRD-OPEN-QUESTIONS.md` is the right place for unresolved items.
+Any ambiguity, surface it rather than guessing. `docs/functional/BRD-OPEN-QUESTIONS.md` is the right place for unresolved items.

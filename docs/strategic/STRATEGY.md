@@ -3,13 +3,13 @@
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `NORTH-STAR.md` (the destination), `PRD.md` (what), `ARCHITECTURE.md` (how), `DECISIONS.md` (log)
+**Related:** `NORTH-STAR.md` (the destination), `../functional/PRD.md` (what), `../architecture/ARCHITECTURE.md` (how), `../architecture/decisions` (log)
 
 ---
 
 ## What this doc is
 
-Evidence and framing that backs the scope, positioning, and product-shape decisions in `PRD.md` and `NORTH-STAR.md`. **Not** a decision record — product decisions live in `PRD.md` and `PRD-COMPANION.md`. **Not** a roadmap.
+Evidence and framing that backs the scope, positioning, and product-shape decisions in `../functional/PRD.md` and `NORTH-STAR.md`. **Not** a decision record — product decisions live in `../functional/PRD.md` and `../functional/PRD-COMPANION.md`. **Not** a roadmap.
 
 Read this when you want to know *why* Atelier takes the shape it does — why it's OSS not SaaS, why self-hosted not managed, why a template + protocol rather than a product replacement, and why fit_check is the load-bearing bet.
 

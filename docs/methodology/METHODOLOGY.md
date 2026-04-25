@@ -3,7 +3,7 @@
 **Status:** v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `NORTH-STAR.md`, `STRATEGY.md`, inherits from `big-blueprint` methodology
+**Related:** `../strategic/NORTH-STAR.md`, `../strategic/STRATEGY.md`, inherits from `big-blueprint` methodology
 
 ---
 
@@ -22,7 +22,7 @@ Atelier inherits the dual-track agile pattern (Marty Cagan / SVPG) as implemente
 ### Discovery track
 Frames the problem, shapes the solution, produces the spec.
 
-- **Canonical state:** repo (`PRD.md`, `PRD-COMPANION.md`, `BRD.md`, `BRD-OPEN-QUESTIONS.md`, `NORTH-STAR.md`, `STRATEGY.md`, `ARCHITECTURE.md`, `DECISIONS.md`, `traceability.json`, slice configs, prototype source).
+- **Canonical state:** repo (`../functional/PRD.md`, `../functional/PRD-COMPANION.md`, `../functional/BRD.md`, `../functional/BRD-OPEN-QUESTIONS.md`, `../strategic/NORTH-STAR.md`, `../strategic/STRATEGY.md`, `../architecture/ARCHITECTURE.md`, `../architecture/decisions`, `traceability.json`, slice configs, prototype source).
 - **External projections:** published docs (Confluence/Notion), design tool (Figma).
 - **Primary artifact:** the prototype web app — strategy + design + current-state panels, traceability route, and the `/atelier` coordination view.
 
@@ -116,33 +116,115 @@ The two substrates share the trace ID as a cross-reference but are independently
 
 ```
 atelier/
-├── README.md                   # Entry point, nav, vocabulary
-├── NORTH-STAR.md               # The complete design scope (destination doc)
-├── STRATEGY.md                 # Market context, competitive, red team, product scope
-├── METHODOLOGY.md              # This document
-├── PRD.md                      # Product requirements
-├── PRD-COMPANION.md            # Decisions triggered during design
-├── BRD.md                      # Business requirements — epics + stories with trace IDs
-├── BRD-OPEN-QUESTIONS.md       # Open items from analysis
-├── ARCHITECTURE.md             # Capability-level architecture (no vendor lock-in)
-├── DECISIONS.md                # Append-only decision log (canonical)
-├── traceability.json           # Registry — bidirectional links across docs + prototype
-├── .atelier/
-│   ├── config.yaml             # project_id, datastore binding, deploy targets
-│   └── territories.yaml        # Territory declarations
-├── scripts/
-│   ├── traceability/           # Registry generation + link injection
-│   └── sync/                   # publish-*, mirror-*, reconcile, triage
-├── prototype/                  # The canonical artifact web app
+├── README.md                       # Entry point, tier-routing, vocabulary
+├── CLAUDE.md / AGENTS.md           # Agent constitution (root — agents look here)
+├── traceability.json               # Cross-cutting trace-ID registry
+│
+├── docs/                           # Audience-layered documentation (per ADR-031, ADR-032)
+│   ├── methodology/                # Tier-3: adoptable way-of-working
+│   │   ├── METHODOLOGY.md          # (this document)
+│   │   └── adoption-guide.md
+│   ├── strategic/                  # NORTH-STAR.md, STRATEGY.md, BUILD-SEQUENCE.md
+│   ├── functional/                 # PRD.md, PRD-COMPANION.md, BRD.md, BRD-OPEN-QUESTIONS.md
+│   ├── architecture/
+│   │   ├── ARCHITECTURE.md         # Capability-level architecture
+│   │   ├── decisions/              # Per-ADR files (per ADR-030)
+│   │   ├── protocol/               # Tier-3: 12-tool open spec
+│   │   ├── schema/                 # Territory contracts, datastore, config schema
+│   │   ├── walks/                  # Scenario validations
+│   │   └── diagrams/
+│   ├── developer/                  # Tier-2: contributor + extender docs
+│   │   └── extending/
+│   ├── ops/                        # Tier-1: self-host runbooks (populates at M7)
+│   ├── testing/                    # Eval harness, fit_check methodology (M5)
+│   └── user/                       # Diátaxis: tutorials/guides/reference/explanation (v1)
+│
+├── prototype/                      # Canonical artifact web app
 │   ├── src/
-│   │   ├── app/                # Routes: /, /strategy, /design, /slices, /atelier, /traceability
-│   │   ├── components/         # Shared UI
-│   │   └── lib/                # Protocol clients, registry queries
+│   │   ├── app/                    # Routes: /, /strategy, /design, /slices, /atelier, /traceability
+│   │   ├── components/
+│   │   └── lib/
 │   └── eval/
-│       └── fit_check/          # Labeled eval set + runner
-└── research/                   # Analyst artifacts (research_artifact kind)
-    └── <trace-id>-<slug>.md    # One file per research artifact, trace-linked
+│       └── fit_check/              # Labeled eval set + runner
+│
+├── scripts/
+│   ├── traceability/               # Registry generation + link injection
+│   └── sync/                       # publish-*, mirror-*, reconcile, triage
+│
+├── research/                       # Analyst artifacts (research_artifact kind)
+│   └── <trace-id>-<slug>.md
+│
+└── .atelier/                       # Ephemeral state (per §6.1)
+    ├── config.yaml                 # project_id, datastore binding, identity, deploy targets
+    ├── territories.yaml            # Territory declarations
+    └── checkpoints/                # Pre-M2 session continuity (sunset at M2)
 ```
+
+Per ADR-031/032: docs are layered by audience-question (toolkit-derived) and by tier (Specification / Reference Implementation / Reference Deployment). Empty layer READMEs cite the BUILD-SEQUENCE milestone where they fill in.
+
+---
+
+## 6.1 Document organization (canonical vs ephemeral, audience layers, drift discipline)
+
+Atelier's doc set is informed by the [claude-docs-toolkit](https://github.com/) seven-layer model (Architecture / Developer / DevOps / Testing / Functional / Strategic / User), but Atelier compresses it because the project is its own first user — there is no separate "developer onboarding" track distinct from the strategic/architectural track at this stage.
+
+### Canonical state (root of repo)
+
+The files at the repo root are the **canonical state precedence list** declared in `CLAUDE.md`. They are append-edit-only via PR; never duplicated; never summarized in a parallel surface. The audience-question mapping:
+
+| File | Toolkit layer analog | Audience | Question |
+|---|---|---|---|
+| `../strategic/NORTH-STAR.md` | Strategic | Architects, leadership | What is the complete destination? |
+| `../strategic/STRATEGY.md` | Strategic | Architects, leadership | Why this shape, what's out of scope, what's the wedge? |
+| `../functional/PRD.md` | Functional | PM, stakeholders | What must the product do? |
+| `../functional/BRD.md` | Functional | PM, dev, QA | What are the stories with trace IDs? |
+| `../architecture/ARCHITECTURE.md` | Architecture | Senior engineers | How is the system designed (capability-level)? |
+| `METHODOLOGY.md` | Developer | Contributors | How does this repo work, what conventions apply? |
+| `../functional/PRD-COMPANION.md` | Strategic / Architecture | Architects | What design decisions were made and why? |
+| `../architecture/decisions` | Architecture / decisions | All | What's the append-only ADR log? |
+| `../functional/BRD-OPEN-QUESTIONS.md` | Strategic | Architects, PM | What's unresolved? |
+| `../strategic/BUILD-SEQUENCE.md` | Strategic / roadmap | Implementers | What's the order of construction (not feature scope)? |
+| `traceability.json` | Cross-cutting registry | Tooling, all | Where is this trace ID referenced? |
+| `README.md` | Cold-start entry | New readers | Where do I start? |
+| `CLAUDE.md` / `AGENTS.md` | Agent constitution | Agents | What rules govern my behavior in this repo? |
+
+### Ephemeral state (`.atelier/`)
+
+| Path | Lifetime | Purpose |
+|---|---|---|
+| `.atelier/config.yaml` | Project-lifetime | Project ID, datastore binding, deploy targets, identity provider, transcripts opt-in |
+| `.atelier/territories.yaml` | Project-lifetime | Territory declarations |
+| `.atelier/checkpoints/SESSION.md` | Pre-M2 only | Session-to-session continuity; **sunset when `get_context` (US-2.4) ships at M2** |
+
+Checkpoints are **not canonical**. They exist because the protocol primitive that replaces them (`get_context`) does not yet exist. Once M2 lands, `.atelier/checkpoints/` is removed and continuity becomes a tool call.
+
+### Drift discipline (the no-parallel-summary rule)
+
+Per `claude-docs-toolkit`'s "continuous documentation" principle: **a summary doc that repeats canonical content is the predictable failure mode.** Drift is not hypothetical — on 2026-04-25 we found and removed three drifted summaries (an ADR count, a decision count, a route count) from the original `HANDOFF.md` that copied state out of `../architecture/decisions`, `../functional/PRD-COMPANION.md`, and `../functional/PRD.md`. Each was correct when written; each was wrong by the next session.
+
+Rules:
+
+1. **Refer; don't replicate.** If a doc needs to mention "we have N decisions," link to `../functional/PRD-COMPANION.md` rather than embedding the count.
+2. **Author at the canonical site.** ADRs are added in `../architecture/decisions`, never in summary surfaces. Open questions live in `../functional/BRD-OPEN-QUESTIONS.md`, with `RESOLVED` markers updated in place — not echoed elsewhere.
+3. **CI catches drift, eventually.** ADR-008's traceability validator already checks trace-ID drift. A future check will flag ADR/decision-count duplication outside the canonical sources.
+4. **Audit on every milestone exit.** Each `../strategic/BUILD-SEQUENCE.md` milestone exit includes a drift sweep against the canonical-state precedence list.
+
+### Pre-M2 / post-M2 continuity transition
+
+| Capability | Pre-M2 (now) | Post-M2 |
+|---|---|---|
+| "What's the current state?" | Read `README.md §Status` + `../strategic/BUILD-SEQUENCE.md` + `git log` | Call `get_context` (US-2.4) |
+| "Where did the last session leave off?" | `.atelier/checkpoints/SESSION.md` | Call `get_context` with last `session_id` |
+| "What decisions affect my work?" | Read `../architecture/decisions` + `../functional/PRD-COMPANION.md` | `get_context` returns trace-ID-scoped recent decisions |
+| "What's open?" | Read `../functional/BRD-OPEN-QUESTIONS.md` | `get_context` returns territory-scoped open contributions |
+
+The pre-M2 path involves human reading. The post-M2 path is a single tool call. Both read from the same canonical state — the path is the only thing that changes.
+
+### Provenance of this organization
+
+- **claude-docs-toolkit** (`/Users/nino/Workspace/dev/tools/claude-docs-toolkit`, since archived) — seven-layer audience model, "continuous documentation" drift discipline, ADRs in their own subdirectory, Diátaxis for user docs (deferred to v1.x when end-user docs ship).
+- **big-blueprint** (`/Users/nino/Workspace/dev/wip/big-blueprint`) — root-level `CLAUDE.md` + `prototype/` + `research/` + `docs/` template; no parallel session-handoff doc (because state lives in the artifacts).
+- **hackathon-hive** (`/Users/nino/Workspace/dev/tools/hackathon-hive`) — session continuity as a protocol primitive (`hive_checkpoint` / `hive_get_context`), not a markdown surface. This is the model Atelier inherits at M2 via the 12-tool endpoint.
 
 ---
 

@@ -3,7 +3,7 @@
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `PRD.md`, `NORTH-STAR.md`, `BRD.md`, `ARCHITECTURE.md`, `DECISIONS.md`, `STRATEGY.md`
+**Related:** `PRD.md`, `../strategic/NORTH-STAR.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, `../architecture/decisions`, `../strategic/STRATEGY.md`
 
 ---
 
@@ -11,9 +11,9 @@
 
 This document captures the **decisions made during design** with their rationale, alternatives considered, and status. It is the working record of how the north-star shape was arrived at.
 
-Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, the change is landed in the downstream spec (`PRD.md`, `BRD.md`, `ARCHITECTURE.md`, or `NORTH-STAR.md`) and the entry stays here as the rationale record.
+Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, the change is landed in the downstream spec (`PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, or `../strategic/NORTH-STAR.md`) and the entry stays here as the rationale record.
 
-`DECISIONS.md` is a different artifact — it is the append-only canonical log Atelier writes to as the product operates (per `NORTH-STAR.md` §6). This document (`PRD-COMPANION.md`) is the design-time decisions log; `DECISIONS.md` is the runtime decisions log.
+`../architecture/decisions` is a different artifact — it is the append-only canonical log Atelier writes to as the product operates (per `../strategic/NORTH-STAR.md` §6). This document (`PRD-COMPANION.md`) is the design-time decisions log; `../architecture/decisions` is the runtime decisions log.
 
 ---
 
@@ -53,8 +53,11 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D30 | Review routing keyed by `territory.review_role` | Coordination | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D31 | Reference implementation stack: GitHub + Supabase + Vercel + MCP | Architecture | High | Adopt as reference (not architecture) | **DECIDED** (2026-04-25) |
 | D32 | Reference impl preserves GCP-portability; thin abstraction around Realtime; no proprietary Vercel/Supabase imports outside named adapters | Architecture | High | Adopt | **DECIDED** (2026-04-25) |
+| D33 | Per-ADR file split — `DECISIONS.md` becomes `docs/architecture/decisions/ADR-NNN-<slug>.md` directory | Methodology | Medium | Adopt | **DECIDED** (2026-04-25) — see ADR-030 |
+| D34 | Three-tier consumer model — Specification / Reference Implementation / Reference Deployment | Strategy | High | Adopt with standards-body labels in formal docs and action labels (Deploy / Extend / Implement) in README routing | **DECIDED** (2026-04-25) — see ADR-031 |
+| D35 | Adopt extended documentation structure (claude-docs-toolkit seven layers + Atelier extensions: `methodology/`, `architecture/protocol/`, `architecture/schema/`) | Methodology | High | Adopt; commit to upstreaming refinements to claude-docs-toolkit | **DECIDED** (2026-04-25) — see ADR-032 |
 
-D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `DECISIONS.md`. D22, D23, D31, D32 landed as ADR-026, ADR-028, ADR-027, ADR-029 on 2026-04-25.
+D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `../architecture/decisions/`. D22, D23, D31, D32 landed as ADR-026, ADR-028, ADR-027, ADR-029 on 2026-04-25. D33–D35 landed as ADR-030, ADR-031, ADR-032 on 2026-04-25 as part of the doc-organization cleanup.
 
 ---
 
@@ -78,9 +81,9 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Eliminates a whole second surface. Forces the artifact and the coordination to co-evolve. Makes the analyst case work (they already visit the prototype to see strategy — coordination is right there).
 
 **Impact on downstream docs:**
-- `NORTH-STAR.md` §4 — five routes, `/atelier` is the fifth
+- `../strategic/NORTH-STAR.md` §4 — five routes, `/atelier` is the fifth
 - `BRD.md` Epic 3 — stories US-3.1 to US-3.7
-- `ARCHITECTURE.md` §4 — prototype web app is both canonical artifact and coordination surface
+- `../architecture/ARCHITECTURE.md` §4 — prototype web app is both canonical artifact and coordination surface
 
 ---
 
@@ -100,7 +103,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Impact:**
 - `BRD.md` Epic 4 — unified contribution schema
-- `ARCHITECTURE.md` §5 — contributions table spec
+- `../architecture/ARCHITECTURE.md` §5 — contributions table spec
 
 ---
 
@@ -120,7 +123,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Impact:**
 - `BRD.md` US-4.4 — scope_kind test cases
-- `ARCHITECTURE.md` §5.1 — territories.scope_kind column
+- `../architecture/ARCHITECTURE.md` §5.1 — territories.scope_kind column
 
 ---
 
@@ -140,7 +143,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Impact:**
 - `BRD.md` US-7.1, US-7.2 — fencing-token stories
-- `ARCHITECTURE.md` §5.1, §7.4 — fencing tokens in schema and security
+- `../architecture/ARCHITECTURE.md` §5.1, §7.4 — fencing tokens in schema and security
 
 ---
 
@@ -160,7 +163,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Impact:**
 - `BRD.md` US-5.1, US-5.3 — repo-first + CI sync check
-- `ARCHITECTURE.md` §6.3 — four-step atomic operation
+- `../architecture/ARCHITECTURE.md` §6.3 — four-step atomic operation
 
 ---
 
@@ -181,8 +184,8 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Impact:**
 - `BRD.md` Epic 6 — US-6.1 through US-6.6
-- `ARCHITECTURE.md` §5.4, §6.4 — vector index + fit_check flow
-- `STRATEGY.md` §7 — the disconfirming test
+- `../architecture/ARCHITECTURE.md` §5.4, §6.4 — vector index + fit_check flow
+- `../strategic/STRATEGY.md` §7 — the disconfirming test
 
 ---
 
@@ -202,9 +205,9 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Consulting incumbents win SaaS distribution fights. Methodology + template + protocol is the credible play. Commercial wedge stays narrow and conditional.
 
 **Impact:**
-- `STRATEGY.md` §6, §7 — product-scope verdict
+- `../strategic/STRATEGY.md` §6, §7 — product-scope verdict
 - `PRD.md` §2, §8 — market positioning + go-to-market
-- `ARCHITECTURE.md` §9 — self-hosted deployment model
+- `../architecture/ARCHITECTURE.md` §9 — self-hosted deployment model
 
 ---
 
@@ -223,7 +226,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Destination-first. Phased substrate scripts create drift because teams adopt in phase-1 shape and then discover phase-2 adds don't fit their usage.
 
 **Impact:**
-- `NORTH-STAR.md` §8
+- `../strategic/NORTH-STAR.md` §8
 - `BRD.md` Epic 9 — all 7 stories v1-scope
 
 ---
@@ -243,9 +246,9 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Analysts, PMs, some designers are browser-native. Making them first-class composers is the core mixed-team claim.
 
 **Impact:**
-- `METHODOLOGY.md` §3 — six-class actor model
+- `../methodology/METHODOLOGY.md` §3 — six-class actor model
 - `BRD.md` Epic 16 — remote composer stories
-- `ARCHITECTURE.md` §6.1 — session locus enum includes `web`
+- `../architecture/ARCHITECTURE.md` §6.1 — session locus enum includes `web`
 
 ---
 
@@ -255,7 +258,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Context.** Without explicit scope boundaries, product will drift into adjacent categories as users request features. Drift destroys the destination.
 
-**Decision.** Explicit non-scope list in `NORTH-STAR.md` §14 and `PRD.md` §5: not SaaS, not agent framework, not workflow engine, not tracker UI, not chat app, not code editor, not design tool, not doc editor, not wiki, not messaging.
+**Decision.** Explicit non-scope list in `../strategic/NORTH-STAR.md` §14 and `PRD.md` §5: not SaaS, not agent framework, not workflow engine, not tracker UI, not chat app, not code editor, not design tool, not doc editor, not wiki, not messaging.
 
 **Rationale.** Each external tool remains canonical for its thing. Atelier is the spine; it doesn't replace any of the tools it connects.
 
@@ -271,7 +274,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 1. Phased rollout (M0 → M4 over 17+ weeks) — rejected (feature-at-a-time drift).
 2. Destination-first design; build order separate from design scope (adopted).
 
-**Decision.** Every capability in `NORTH-STAR.md` is specified and scoped at v1. Implementation sequencing is a delivery concern, not a design concern. No "Phase 2" in the design docs.
+**Decision.** Every capability in `../strategic/NORTH-STAR.md` is specified and scoped at v1. Implementation sequencing is a delivery concern, not a design concern. No "Phase 2" in the design docs.
 
 **Rationale.** The methodology exists to counter feature-at-a-time drift. Applying it to Atelier's own design is the proof-by-example.
 
@@ -304,7 +307,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Minimum viable surface for full protocol. Every tool maps to a BRD story.
 
 **Impact:**
-- `NORTH-STAR.md` §5 — complete tool table
+- `../strategic/NORTH-STAR.md` §5 — complete tool table
 - `BRD.md` Epic 2 — 12 stories
 
 ---
@@ -321,7 +324,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 
 **Impact:**
 - `BRD.md` Epic 4, Epic 8 — territory + contract stories
-- `ARCHITECTURE.md` §5, §6.6 — territories, contracts, flow
+- `../architecture/ARCHITECTURE.md` §5, §6.6 — territories, contracts, flow
 
 ---
 
@@ -336,8 +339,8 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Teams run multiple projects. Retrofit to plural after ship is expensive. Schema cost at v1 is trivial.
 
 **Impact:**
-- `ARCHITECTURE.md` §5.1 — projects table spec
-- `ARCHITECTURE.md` §9.2 — one hive, many projects deployment model
+- `../architecture/ARCHITECTURE.md` §5.1 — projects table spec
+- `../architecture/ARCHITECTURE.md` §9.2 — one hive, many projects deployment model
 
 ---
 
@@ -352,8 +355,8 @@ D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) a
 **Rationale.** Different timescales, different failure modes, different competitive landscapes, different product prospects. Conflating them made red-team findings from one substrate appear to apply to the other.
 
 **Impact:**
-- `METHODOLOGY.md` §5 — two substrates explicit
-- `STRATEGY.md` §3 — two competitive analyses
+- `../methodology/METHODOLOGY.md` §5 — two substrates explicit
+- `../strategic/STRATEGY.md` §3 — two competitive analyses
 
 ---
 
@@ -400,7 +403,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Impact:**
 - `BRD.md` US-9.7, US-13.5 — triage sandbox stories
-- `ARCHITECTURE.md` §7.5 — security
+- `../architecture/ARCHITECTURE.md` §7.5 — security
 
 ---
 
@@ -415,7 +418,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Repo-as-canonical applies to design too. Figma is to design as Confluence is to BRDs — feedback surface, not authority.
 
 **Impact:**
-- `METHODOLOGY.md` §2 — prototype is canonical design
+- `../methodology/METHODOLOGY.md` §2 — prototype is canonical design
 - `PRD.md` §4.10 — Figma as projection target
 
 ---
@@ -441,16 +444,16 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 | Maintainer health | ⚠ | Solo (`seanwessmith` + automation account), created 2026-03-10 |
 | Tool surface alignment | ✗ | 15+ tools centered on file-write (`switchman_write_file`, `_append_file`, etc.); competes with ADR-005's repo-first principle |
 
-**Decision.** Atelier owns the lock + fencing implementation in M2 (`BUILD-SEQUENCE.md`). Switchman's `scope_pattern + subsystem_tags` model is taken as **validation** of the territory-as-scope-pattern shape (D14/ADR-014); we borrow validation, not code.
+**Decision.** Atelier owns the lock + fencing implementation in M2 (`../strategic/BUILD-SEQUENCE.md`). Switchman's `scope_pattern + subsystem_tags` model is taken as **validation** of the territory-as-scope-pattern shape (D14/ADR-014); we borrow validation, not code.
 
 **Rationale.** ADR-004 makes fencing tokens mandatory on every lock from v1 — specifically to handle the stale-holder-comeback case where a partitioned session returns and tries to write to an artifact whose lease was reassigned. A lease-only model (TTL + stale-wave recovery) is sophisticated but not equivalent: without a monotonic token enforced at the storage layer, the late writer can still corrupt artifacts. Integrating Switchman would either (a) require layering fencing on top — defeating the integration's value, or (b) accept the gap — violating ADR-004.
 
 **Re-evaluation trigger.** If Switchman ships 1.0 with an explicit fencing-token API and a semver commitment, re-open D22 with a new ADR.
 
 **Impact on downstream docs:**
-- `BUILD-SEQUENCE.md` M2 — own-implementation of lock subsystem confirmed
+- `../strategic/BUILD-SEQUENCE.md` M2 — own-implementation of lock subsystem confirmed
 - `BRD-OPEN-QUESTIONS.md` §2 — RESOLVED
-- `DECISIONS.md` — ADR-026
+- `../architecture/decisions` — ADR-026
 
 ---
 
@@ -472,9 +475,9 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Re-evaluation triggers.** Supabase Auth deprecation, JWT-claim breaking change, or >50% of `atelier init` users overriding the default.
 
 **Impact on downstream docs:**
-- `ARCHITECTURE.md` §7.1 — references the default explicitly; capability stays vendor-neutral
+- `../architecture/ARCHITECTURE.md` §7.1 — references the default explicitly; capability stays vendor-neutral
 - `.atelier/config.yaml` — `identity:` section with `provider: supabase-auth` default
-- `DECISIONS.md` — ADR-028
+- `../architecture/decisions` — ADR-028
 - CLI gains `atelier identity provision`
 
 ---
@@ -522,9 +525,9 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Smallest schema change that supports the real shape of work. Reversal cost bounded (drop the array, keep first element).
 
 **Impact on downstream docs:**
-- `ARCHITECTURE.md` §5.1, §5.2 — schema and indexes
-- `NORTH-STAR.md` §5 — endpoint signatures
-- `DECISIONS.md` — ADR-021
+- `../architecture/ARCHITECTURE.md` §5.1, §5.2 — schema and indexes
+- `../strategic/NORTH-STAR.md` §5 — endpoint signatures
+- `../architecture/decisions` — ADR-021
 
 ---
 
@@ -545,9 +548,9 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Keeps the 12-tool surface intact (D13/ADR-013), makes create+claim transactional, matches how analyst-locus work actually flows.
 
 **Impact on downstream docs:**
-- `NORTH-STAR.md` §5 — `claim` signature note
-- `ARCHITECTURE.md` §6.2 — contribution lifecycle adds create-and-claim path
-- `DECISIONS.md` — ADR-022
+- `../strategic/NORTH-STAR.md` §5 — `claim` signature note
+- `../architecture/ARCHITECTURE.md` §6.2 — contribution lifecycle adds create-and-claim path
+- `../architecture/decisions` — ADR-022
 
 ---
 
@@ -567,8 +570,8 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Preserves attribution, keeps repo-first semantics (D5/ADR-005), bounds failure to retry-safe states.
 
 **Impact on downstream docs:**
-- `ARCHITECTURE.md` §7.8 — new section
-- `DECISIONS.md` — ADR-023
+- `../architecture/ARCHITECTURE.md` §7.8 — new section
+- `../architecture/decisions` — ADR-023
 - CLI gains `atelier rotate-committer-key` subcommand
 
 ---
@@ -589,10 +592,10 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Repo-first (D5/ADR-005), team choice on capture, no forced infra dependency.
 
 **Impact on downstream docs:**
-- `ARCHITECTURE.md` §5.1 — schema gains `transcript_ref`
+- `../architecture/ARCHITECTURE.md` §5.1 — schema gains `transcript_ref`
 - `.atelier/config.yaml` — `transcripts:` section
-- `METHODOLOGY.md` — PII review documentation (pending)
-- `DECISIONS.md` — ADR-024
+- `../methodology/METHODOLOGY.md` — PII review documentation (pending)
+- `../architecture/decisions` — ADR-024
 
 ---
 
@@ -600,7 +603,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-24). See ADR-025.
 
-**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #5 / Q4). `NORTH-STAR.md` §4 lens definitions partially covered review surfaces but did not specify which lens picks up which `kind × state` combination.
+**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #5 / Q4). `../strategic/NORTH-STAR.md` §4 lens definitions partially covered review surfaces but did not specify which lens picks up which `kind × state` combination.
 
 **Alternatives considered:**
 1. Per-territory `review_role` field (adopted).
@@ -612,9 +615,9 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Smallest change. Reuses existing territory-as-config pattern. Avoids global rule tables that compete with territory ownership.
 
 **Impact on downstream docs:**
-- `NORTH-STAR.md` §4 — lens routing note
+- `../strategic/NORTH-STAR.md` §4 — lens routing note
 - `.atelier/territories.yaml` — schema change with defaults
-- `DECISIONS.md` — ADR-025
+- `../architecture/decisions` — ADR-025
 
 ---
 
@@ -622,7 +625,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-25). See ADR-027.
 
-**Context.** ADR-012 keeps Atelier's architecture capability-level (no vendor lock-in), but the reference implementation needs a concrete stack. The "evolve hackathon-hive in place" direction (strategic conversation, 2026-04-24) implied Supabase + Vercel + MCP since hackathon-hive runs on it today; this decision formalizes that as the v1 reference and resolves the per-capability vendor mapping for all 10 capabilities in `NORTH-STAR.md` §13.
+**Context.** ADR-012 keeps Atelier's architecture capability-level (no vendor lock-in), but the reference implementation needs a concrete stack. The "evolve hackathon-hive in place" direction (strategic conversation, 2026-04-24) implied Supabase + Vercel + MCP since hackathon-hive runs on it today; this decision formalizes that as the v1 reference and resolves the per-capability vendor mapping for all 10 capabilities in `../strategic/NORTH-STAR.md` §13.
 
 **Alternatives considered:**
 1. **Adopt hackathon-hive's stack** (Supabase + Vercel + MCP) and fill the v1 gaps in place (adopted).
@@ -649,10 +652,10 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Re-evaluation triggers.** Supabase / Vercel pricing-or-policy changes; pgvector p95 degrading past the documented scale envelope (BRD-OPEN-QUESTIONS §7); Atelier ecosystem moving off MCP onto a different agent protocol.
 
 **Impact on downstream docs:**
-- `BUILD-SEQUENCE.md` M2 onward — implementation targets this stack
+- `../strategic/BUILD-SEQUENCE.md` M2 onward — implementation targets this stack
 - `.atelier/config.yaml` — env-var bindings get reference comments (vendor-neutral; reference-named)
-- `DECISIONS.md` — ADR-027 (parent), ADR-028 (identity sub-decision), ADR-029 (portability constraint)
-- `NORTH-STAR.md` §13 unchanged — capabilities remain vendor-neutral
+- `../architecture/decisions` — ADR-027 (parent), ADR-028 (identity sub-decision), ADR-029 (portability constraint)
+- `../strategic/NORTH-STAR.md` §13 unchanged — capabilities remain vendor-neutral
 
 ---
 
@@ -676,8 +679,8 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Re-evaluation triggers.** GCP deprecates Cloud SQL Postgres or Identity Platform; zero migration interest after 12 months; or a Vercel/Supabase-only feature becomes load-bearing for the v1 value prop.
 
 **Impact on downstream docs:**
-- `BUILD-SEQUENCE.md` M2 — `BroadcastService` interface added to "Produces"
-- `DECISIONS.md` — ADR-029
+- `../strategic/BUILD-SEQUENCE.md` M2 — `BroadcastService` interface added to "Produces"
+- `../architecture/decisions` — ADR-029
 - `docs/migration-to-gcp.md` — runbook ships when M2 lands
 - M7 hardening — lint rule banning proprietary imports outside adapters
 
@@ -685,9 +688,9 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 ## References
 
-- `DECISIONS.md` — append-only canonical runtime decision log (distinct from this doc)
-- `NORTH-STAR.md` — the destination these decisions collectively define
-- `STRATEGY.md` — market / competitive / red team context
+- `../architecture/decisions` — append-only canonical runtime decision log (distinct from this doc)
+- `../strategic/NORTH-STAR.md` — the destination these decisions collectively define
+- `../strategic/STRATEGY.md` — market / competitive / red team context
 - `PRD.md` — product requirements
 - `BRD.md` — stories with trace IDs
-- `ARCHITECTURE.md` — capability-level architecture
+- `../architecture/ARCHITECTURE.md` — capability-level architecture

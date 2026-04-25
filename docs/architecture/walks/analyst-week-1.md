@@ -12,7 +12,7 @@
 
 Per `BRD-OPEN-QUESTIONS.md §1`, the territory model must be validated against a concrete analyst-week-1 scenario before code is written. This document walks that scenario step by step, mapping each step to (a) the endpoint tool invoked, (b) the schema rows touched, (c) the prototype view that surfaces the result. Where any step requires a concept not yet in the design, the gap is named and a fix is proposed.
 
-This is the prerequisite for M2 in `BUILD-SEQUENCE.md` — design gaps must close before the schema solidifies.
+This is the prerequisite for M2 in `../../strategic/BUILD-SEQUENCE.md` — design gaps must close before the schema solidifies.
 
 ---
 
@@ -205,4 +205,4 @@ After landing the five fixes above, BRD-OPEN-QUESTIONS §1 sub-questions resolve
 3. Land Gap #2 (remote-locus commit) and Gap #3 (transcripts) together: both touch the write path through the endpoint.
 4. Land Gap #5 (review-lens routing): smallest, last.
 
-Each lands as a new ADR in `DECISIONS.md` plus the named doc edits. After all five land, mark `BRD-OPEN-QUESTIONS.md §1` as **RESOLVED** with a back-reference to this walk.
+Each lands as a new ADR in `../decisions` plus the named doc edits. After all five land, mark `BRD-OPEN-QUESTIONS.md §1` as **RESOLVED** with a back-reference to this walk.

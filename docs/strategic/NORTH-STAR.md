@@ -3,7 +3,7 @@
 **Status:** v1.0 locked
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `STRATEGY.md` (why), `PRD.md` (what), `BRD.md` (stories), `ARCHITECTURE.md` (how), `PRD-COMPANION.md` (decisions), `DECISIONS.md` (log)
+**Related:** `STRATEGY.md` (why), `../functional/PRD.md` (what), `../functional/BRD.md` (stories), `../architecture/ARCHITECTURE.md` (how), `../functional/PRD-COMPANION.md` (decisions), `../architecture/decisions` (log)
 
 ---
 

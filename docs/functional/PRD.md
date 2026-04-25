@@ -3,7 +3,7 @@
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `NORTH-STAR.md` (destination), `STRATEGY.md` (why), `BRD.md` (stories), `ARCHITECTURE.md` (how), `PRD-COMPANION.md` (decisions)
+**Related:** `../strategic/NORTH-STAR.md` (destination), `../strategic/STRATEGY.md` (why), `BRD.md` (stories), `../architecture/ARCHITECTURE.md` (how), `PRD-COMPANION.md` (decisions)
 
 ---
 
@@ -13,7 +13,7 @@ Atelier is a **self-hostable OSS project template + agent interop protocol + ref
 
 The product ships as:
 1. A CLI (`atelier`) that scaffolds and operates projects.
-2. A repo template with opinionated structure (`NORTH-STAR.md`, `PRD.md`, `BRD.md`, `ARCHITECTURE.md`, `DECISIONS.md`, traceability registry, prototype app, sync scripts, constitution files).
+2. A repo template with opinionated structure (`../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, `../architecture/decisions`, traceability registry, prototype app, sync scripts, constitution files).
 3. An agent-facing endpoint implementing an open interop protocol with 12 tools.
 4. A Next-style prototype web app that serves as both canonical artifact and coordination dashboard.
 5. A coordination datastore schema (relational + pub/sub + vector index) for blackboard state.
@@ -26,7 +26,7 @@ Atelier does not replace Jira, Linear, Confluence, Notion, Figma, Slack, Claude 
 
 ## 2. Market context
 
-See `STRATEGY.md` for full competitive analysis. Summary:
+See `../strategic/STRATEGY.md` for full competitive analysis. Summary:
 
 - **SDLC sync substrate market** is commoditized — GitHub Spec-Kit, Linear Agents, Atlassian Rovo Dev collectively occupy ~80% with distribution Atelier cannot match.
 - **Coordination substrate market** has genuine gaps — Anthropic Claude Code Agent Teams and Switchman close file-level coordination but do not address non-code territories or mixed-locus teams.
@@ -76,7 +76,7 @@ See `STRATEGY.md` for full competitive analysis. Summary:
 
 ## 4. Feature scope
 
-Complete feature set. All features ship at v1 per `NORTH-STAR.md` §17. No phasing.
+Complete feature set. All features ship at v1 per `../strategic/NORTH-STAR.md` §17. No phasing.
 
 ### 4.1 Project lifecycle (Epic 1)
 - `atelier init <name>` — scaffold repo with full structure, prototype, constitution files, traceability registry seed
@@ -87,7 +87,7 @@ Complete feature set. All features ship at v1 per `NORTH-STAR.md` §17. No phasi
 - `atelier doctor` — diagnose project health
 
 ### 4.2 Agent interop endpoint (Epic 2)
-Twelve tools across five categories: Session, Context, Contribution, Lock, Decision, Contract. See `NORTH-STAR.md` §5.
+Twelve tools across five categories: Session, Context, Contribution, Lock, Decision, Contract. See `../strategic/NORTH-STAR.md` §5.
 
 ### 4.3 Canonical artifact — the prototype (Epic 3)
 Five routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`. Role-aware lenses at `/atelier`. Live state via pub/sub broadcast from coordination datastore.
@@ -140,7 +140,7 @@ Five routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceabi
 - Messaging webhook publisher
 
 ### 4.11 CLI tooling (Epic 11)
-Complete CLI surface per `NORTH-STAR.md` §10.
+Complete CLI surface per `../strategic/NORTH-STAR.md` §10.
 
 ### 4.12 Observability (Epic 12)
 Admin-gated `/atelier/observability` sub-route. Telemetry for every action: session heartbeats, contribution transitions, lock ledger, fit_check match rate, triage accuracy, sync lag, vector-index health.
@@ -161,7 +161,7 @@ Remote MCP transport hardened for web agent clients. Auth token propagation via 
 
 ## 5. Scope boundaries — what's OUT
 
-Per `NORTH-STAR.md` §14, explicit exclusions so the product does not drift into adjacent categories:
+Per `../strategic/NORTH-STAR.md` §14, explicit exclusions so the product does not drift into adjacent categories:
 
 - **Not a SaaS.** Teams self-host.
 - **Not an agent framework.** IDE agents and web agents stay in their lanes; Atelier exposes the endpoint, not the agent.
@@ -253,11 +253,11 @@ See `BRD-OPEN-QUESTIONS.md` for the full list. Top three at v1 boundary:
 
 ## 11. References
 
-- `NORTH-STAR.md` — complete design scope
-- `STRATEGY.md` — market + competitive + red team
+- `../strategic/NORTH-STAR.md` — complete design scope
+- `../strategic/STRATEGY.md` — market + competitive + red team
 - `BRD.md` — epics and user stories with trace IDs
-- `ARCHITECTURE.md` — capability-level architecture
+- `../architecture/ARCHITECTURE.md` — capability-level architecture
 - `PRD-COMPANION.md` — decisions triggered during design
-- `DECISIONS.md` — append-only canonical decision log
-- `METHODOLOGY.md` — how this repo is organized
+- `../architecture/decisions` — append-only canonical decision log
+- `../methodology/METHODOLOGY.md` — how this repo is organized
 - Predecessors: `ai-hive/docs/architecture.md`, `ai-hive/docs/document-resonance.md`, `hackathon-hive/README.md`, `bc-subscriptions/METHODOLOGY.md`, `big-blueprint/template/`

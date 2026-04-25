@@ -1,6 +1,6 @@
 # Solution Architecture: Atelier
 
-**Companion to:** `PRD.md` v1.0, `BRD.md` v1.0, `NORTH-STAR.md` v1.0
+**Companion to:** `../functional/PRD.md` v1.0, `../functional/BRD.md` v1.0, `../strategic/NORTH-STAR.md` v1.0
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
@@ -25,7 +25,7 @@
 
 ## 1. Solution context
 
-From `PRD.md` and `BRD.md`, the system must:
+From `../functional/PRD.md` and `../functional/BRD.md`, the system must:
 
 - Scaffold projects with opinionated structure and conventions (`atelier init`)
 - Expose an agent interop endpoint with 12 tools usable by IDE + web + terminal agent clients
@@ -50,7 +50,7 @@ The architecture must remain vendor-neutral. Any stack that provides the require
 4. **Authority by locus + scope.** Trust is assigned per field, per artifact, not per actor. Principals' harnesses are trusted because the principal is in the loop; pipelines are trusted because contracts are narrow; triage is never trusted to merge.
 5. **Graceful degradation.** Every capability has a documented fallback when a dependency is unavailable. `decisions.md` survives datastore outage. Keyword search survives vector-index outage. Repo PRs survive endpoint outage.
 6. **Fencing tokens mandatory.** Every lock carries a monotonic token. Every write to locked artifact validates the token server-side. No silent data loss from GC pauses.
-7. **Design-for-full, not feature-at-a-time.** Every capability in `NORTH-STAR.md` is present at v1. Phasing is a delivery concern, not a design concern.
+7. **Design-for-full, not feature-at-a-time.** Every capability in `../strategic/NORTH-STAR.md` is present at v1. Phasing is a delivery concern, not a design concern.
 8. **Vendor-neutral.** No technology in the capability map is load-bearing. Implementations are swappable behind the capability interface.
 
 ---
@@ -487,7 +487,7 @@ For composers whose locus is `web` (or `terminal` without local repo access), ag
 - **Synchronicity.** `update` (and `claim`-with-content_stub) blocks until the commit succeeds. On commit failure, the datastore mirror is **not** written and the tool returns a retry-safe error (`retryable=true`, idempotency key carries forward).
 - **Audit.** Every committer write logs `(commit_sha, composer_id, session_id, action, artifact_scope)` to telemetry. Queryable in `/atelier/observability` (§8.2).
 - **Rotation.** Deploy-key rotation is a CLI operation; in-flight contributions are unaffected because the rotation only affects subsequent commits. Old key is revoked at the git provider on rotation success.
-- **Failure boundaries.** Loss of the deploy-key credential blocks remote-locus writes with a clear error; IDE-locus composers are unaffected. Rotation runbook in `METHODOLOGY.md`.
+- **Failure boundaries.** Loss of the deploy-key credential blocks remote-locus writes with a clear error; IDE-locus composers are unaffected. Rotation runbook in `../methodology/METHODOLOGY.md`.
 
 This satisfies ADR-005 (repo-first) for remote-locus composers — the commit is the success criterion, not the datastore write.
 
@@ -562,7 +562,7 @@ Upgrade path: `atelier datastore init` promotes local to production datastore wi
 
 ## 10. Open architectural decisions
 
-See `PRD-COMPANION.md` for decisions already made. Open items:
+See `../functional/PRD-COMPANION.md` for decisions already made. Open items:
 
 | ID | Decision | Impact | Notes |
 |---|---|---|---|

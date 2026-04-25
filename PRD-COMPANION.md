@@ -42,7 +42,7 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D19 | MCP as likely agent interop protocol (but specify protocol-agnostically) | Protocol | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D20 | Triage never auto-merges; all external-sourced content requires human approval | Security | High | Adopt | **DECIDED** (2026-04-24) |
 | D21 | Figma is feedback surface, not design source-of-truth | UX | Medium | Adopt | **DECIDED** (2026-04-24) |
-| D22 | Switchman evaluated as dependency for file-level locks (not own-impl by default) | Architecture | Medium | Evaluate | **OPEN** |
+| D22 | Switchman evaluated as dependency for file-level locks (rejected: no fencing-token API) | Architecture | Medium | Own-implementation | **DECIDED** (2026-04-25) |
 | D23 | Identity-service default (self-hosted OIDC vs external provider vs BYO) | Architecture | Medium | BYO with a default | **OPEN** |
 | D24 | Embedding model default for fit_check | Architecture | Medium | Benchmark 3+ options | **OPEN** |
 | D25 | Naming: `Atelier` over `Hivemind OS` / `Hive` / `Commons` / `Loom` | Product | Medium | Adopt `Atelier` | **DECIDED** (2026-04-24) |
@@ -420,17 +420,35 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 ### D22 — Switchman as dependency for file-level locks
 
-**Status:** OPEN (evaluation in progress)
+**Status:** DECIDED (2026-04-25). Own-implementation. See ADR-026.
 
-**Context.** Switchman (v0.x, full product April 2026) implements file locks with fencing tokens. Likely stable enough to be a dependency rather than own-implementation.
+**Context.** Switchman (MIT-licensed, MCP-native, supports Claude Code/Cursor/Codex/Windsurf/Aider/Cline) was the leading candidate to satisfy Atelier's lock primitive without own-implementation work. The original assumption — that Switchman exposes fencing tokens — turned out to be false on review of the public source.
 
 **Alternatives:**
-1. Integrate Switchman — saves ~2 weeks; inherits their roadmap risk.
-2. Build own — more control; more v1 scope.
+1. Integrate Switchman — saves ~2 weeks; inherits roadmap risk (rejected).
+2. Build own (adopted).
 
-**Recommendation.** Integrate if Switchman has fencing-tokens in public API and a clean MCP surface. Evaluate before v1 commit.
+**Evaluation findings (2026-04-25, against `github.com/switchman-dev/switchman`):**
 
-**Decision pending.** Requires Switchman API review.
+| Criterion | Result | Notes |
+|---|---|---|
+| License | ✓ MIT | Compatible with Atelier's OSS distribution |
+| MCP-native | ✓ | Native MCP tool surface |
+| Fencing tokens in public API | ✗ | Lease + `scope_pattern` + `subsystem_tags` model; no monotonic per-resource counter exposed |
+| API stability | ✗ | v0.1.28 (in 6 weeks), no semver commitment, "early access" status |
+| Maintainer health | ⚠ | Solo (`seanwessmith` + automation account), created 2026-03-10 |
+| Tool surface alignment | ✗ | 15+ tools centered on file-write (`switchman_write_file`, `_append_file`, etc.); competes with ADR-005's repo-first principle |
+
+**Decision.** Atelier owns the lock + fencing implementation in M2 (`BUILD-SEQUENCE.md`). Switchman's `scope_pattern + subsystem_tags` model is taken as **validation** of the territory-as-scope-pattern shape (D14/ADR-014); we borrow validation, not code.
+
+**Rationale.** ADR-004 makes fencing tokens mandatory on every lock from v1 — specifically to handle the stale-holder-comeback case where a partitioned session returns and tries to write to an artifact whose lease was reassigned. A lease-only model (TTL + stale-wave recovery) is sophisticated but not equivalent: without a monotonic token enforced at the storage layer, the late writer can still corrupt artifacts. Integrating Switchman would either (a) require layering fencing on top — defeating the integration's value, or (b) accept the gap — violating ADR-004.
+
+**Re-evaluation trigger.** If Switchman ships 1.0 with an explicit fencing-token API and a semver commitment, re-open D22 with a new ADR.
+
+**Impact on downstream docs:**
+- `BUILD-SEQUENCE.md` M2 — own-implementation of lock subsystem confirmed
+- `BRD-OPEN-QUESTIONS.md` §2 — RESOLVED
+- `DECISIONS.md` — ADR-026
 
 ---
 

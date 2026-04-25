@@ -95,6 +95,7 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-023:** Remote-locus commits via per-project endpoint git committer (ARCH §7.8).
 - **ADR-024:** Agent-session transcripts as repo-sidecar files, opt-in via `.atelier/config.yaml`.
 - **ADR-025:** Review routing keyed by `territory.review_role`.
+- **ADR-026:** Atelier owns the lock + fencing implementation; Switchman not adopted (no fencing-token API).
 
 Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR).
 

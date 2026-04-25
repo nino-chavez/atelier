@@ -1,6 +1,6 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-04-25T09:00:00Z",
+  "generated_at": "2026-04-25T09:45:00Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
@@ -10,7 +10,8 @@
     "decisions": 30,
     "open-questions": 15,
     "sections": 0,
-    "prototype-slices": 0
+    "prototype-slices": 0,
+    "adrs": 26
   },
   "entries": [
     {

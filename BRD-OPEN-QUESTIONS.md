@@ -51,7 +51,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Evaluate Switchman's public surface before v1 commit. If it's stable with fencing + clean MCP, integrate and inherit ~2 weeks of work. If any concern, own-implementation.
 
-**Status.** OPEN. Pending evaluation.
+**Status.** **RESOLVED** (2026-04-25). Own-implementation. See ADR-026 and PRD-COMPANION D22 for the full evaluation rubric. Headline: Switchman is MIT/MCP-native but its lease+scope model exposes **no fencing tokens**, which disqualifies it under ADR-004 (fencing mandatory on every lock from v1). Re-evaluation trigger: Switchman 1.0 with explicit fencing-token API + semver commitment.
 
 ---
 

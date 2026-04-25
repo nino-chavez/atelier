@@ -134,8 +134,10 @@ If a feature request maps to one of these categories, push back or create a `BRD
 These should be resolved before implementation begins or very early in implementation:
 
 1. ~~**Territory model validation on the analyst case.**~~ **RESOLVED 2026-04-24.** See `walks/analyst-week-1.md`. Five gaps surfaced and landed as ADR-021 through ADR-025. Schema is now stable.
-2. **Switchman as dependency vs. own-implementation for file locks.** Evaluate Switchman's public API, fencing-token support, license compatibility, and maintainer health. If stable with fencing, integrate. If not, own-implementation with fencing from v1. (D22 in PRD-COMPANION.) Per `BUILD-SEQUENCE.md §7`, this should be resolved during M1 to derisk M2's lock subsystem.
-3. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability. (D24 in PRD-COMPANION.)
+2. ~~**Switchman as dependency vs. own-implementation for file locks.**~~ **RESOLVED 2026-04-25.** Own-implementation. Switchman lacks fencing-token API; disqualified per ADR-004. See ADR-026 and PRD-COMPANION D22.
+3. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability. (D24 in PRD-COMPANION.) Lower urgency — needed at M5 entry, not before.
+
+**Now blocking M1/M2:** identity service default (D23) and reference-stack pick (HANDOFF Option D). Stack pick is partially implied by the "evolve hackathon-hive in place" approach (Supabase + Vercel + MCP) but should be formally landed as an ADR.
 
 ---
 

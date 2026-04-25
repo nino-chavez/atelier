@@ -1,13 +1,13 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-04-24T16:30:00Z",
+  "generated_at": "2026-04-25T09:00:00Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
   "counts": {
     "brd-epics": 16,
     "brd-stories": 95,
-    "decisions": 25,
+    "decisions": 30,
     "open-questions": 15,
     "sections": 0,
     "prototype-slices": 0
@@ -341,6 +341,56 @@
       "docPath": "PRD-COMPANION.md",
       "docUrl": "#d25--naming-atelier",
       "prototypePages": []
+    },
+    {
+      "id": "D26",
+      "label": "Multi-trace-ID support on contributions and decisions",
+      "kind": "decision",
+      "docPath": "PRD-COMPANION.md",
+      "docUrl": "#d26--multi-trace-id-support-on-contributions-and-decisions",
+      "prototypePages": [],
+      "adr": "ADR-021",
+      "source": "walks/analyst-week-1.md"
+    },
+    {
+      "id": "D27",
+      "label": "claim atomic-creates open contributions",
+      "kind": "decision",
+      "docPath": "PRD-COMPANION.md",
+      "docUrl": "#d27--claim-atomic-creates-open-contributions",
+      "prototypePages": [],
+      "adr": "ADR-022",
+      "source": "walks/analyst-week-1.md"
+    },
+    {
+      "id": "D28",
+      "label": "Remote-locus commits via per-project endpoint git committer",
+      "kind": "decision",
+      "docPath": "PRD-COMPANION.md",
+      "docUrl": "#d28--remote-locus-commits-via-per-project-endpoint-git-committer",
+      "prototypePages": [],
+      "adr": "ADR-023",
+      "source": "walks/analyst-week-1.md"
+    },
+    {
+      "id": "D29",
+      "label": "Transcripts as repo-sidecar files, opt-in by config",
+      "kind": "decision",
+      "docPath": "PRD-COMPANION.md",
+      "docUrl": "#d29--transcripts-as-repo-sidecar-files-opt-in-by-config",
+      "prototypePages": [],
+      "adr": "ADR-024",
+      "source": "walks/analyst-week-1.md"
+    },
+    {
+      "id": "D30",
+      "label": "Review routing keyed by territory.review_role",
+      "kind": "decision",
+      "docPath": "PRD-COMPANION.md",
+      "docUrl": "#d30--review-routing-keyed-by-territoryreview_role",
+      "prototypePages": [],
+      "adr": "ADR-025",
+      "source": "walks/analyst-week-1.md"
     }
   ]
 }

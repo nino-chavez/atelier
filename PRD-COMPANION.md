@@ -46,6 +46,13 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D23 | Identity-service default (self-hosted OIDC vs external provider vs BYO) | Architecture | Medium | BYO with a default | **OPEN** |
 | D24 | Embedding model default for fit_check | Architecture | Medium | Benchmark 3+ options | **OPEN** |
 | D25 | Naming: `Atelier` over `Hivemind OS` / `Hive` / `Commons` / `Loom` | Product | Medium | Adopt `Atelier` | **DECIDED** (2026-04-24) |
+| D26 | Multi-trace-ID support on contributions and decisions (`text[]` with GIN index) | Data model | High | Adopt | **DECIDED** (2026-04-24) |
+| D27 | `claim` atomic-creates open contributions when called with `contribution_id=null` | Protocol | High | Adopt | **DECIDED** (2026-04-24) |
+| D28 | Remote-locus commits via per-project endpoint git committer | Architecture | High | Adopt | **DECIDED** (2026-04-24) |
+| D29 | Transcripts as repo-sidecar files, opt-in by config | Architecture | Medium | Adopt | **DECIDED** (2026-04-24) |
+| D30 | Review routing keyed by `territory.review_role` | Coordination | Medium | Adopt | **DECIDED** (2026-04-24) |
+
+D26–D30 were surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md`) and landed as ADR-021 through ADR-025 respectively in `DECISIONS.md`.
 
 ---
 
@@ -461,6 +468,118 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Rationale.** Names the actual thing — a shared studio where contributors work on one canonical artifact. Avoids "platform/OS" vocabulary that fights the scope boundaries. Vocabulary is coherent: the unit is `contribution`, the verb is `contribute`, the place is `atelier`.
 
 **Impact.** All doc headers, CLI command, package name, template naming.
+
+---
+
+### D26 — Multi-trace-ID support on contributions and decisions
+
+**Status:** DECIDED (2026-04-24). See ADR-021.
+
+**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #4). `contributions.trace_id` and `decisions.trace_id` were singular; cross-cutting work (research touching US-1.3 and US-1.5, decisions affecting two epics) had no clean representation.
+
+**Alternatives considered:**
+1. Convert both columns to `text[]` with GIN index (adopted).
+2. Keep singular; force splits into separate rows (rejected — fragments rationale, breaks `WHERE trace_id='X'` query semantics).
+3. Many-to-many `contribution_traces` table (rejected — adds a join for marginal benefit).
+
+**Decision.** Both columns become `text[]`. Singular case is one-element. Endpoint tools accept either form.
+
+**Rationale.** Smallest schema change that supports the real shape of work. Reversal cost bounded (drop the array, keep first element).
+
+**Impact on downstream docs:**
+- `ARCHITECTURE.md` §5.1, §5.2 — schema and indexes
+- `NORTH-STAR.md` §5 — endpoint signatures
+- `DECISIONS.md` — ADR-021
+
+---
+
+### D27 — `claim` atomic-creates open contributions
+
+**Status:** DECIDED (2026-04-24). See ADR-022.
+
+**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #1). Ad-hoc analyst research had no pre-existing `open` contribution to claim, but the 12-tool surface (D13/ADR-013) has no `create_contribution`.
+
+**Alternatives considered:**
+1. Overload `claim` with `contribution_id=null` for atomic create-and-claim (adopted).
+2. Add `create_contribution` (rejected — would push surface to 13 tools, requires amending ADR-013).
+3. Repo-commit-only creation (rejected — friction for web-locus composers).
+4. Overload `update` instead of `claim` (rejected — less semantically clean).
+
+**Decision.** `claim` overloads to atomic-create-and-claim when called with `contribution_id=null` plus `kind`, `trace_ids`, `territory_id`, optional `content_stub`.
+
+**Rationale.** Keeps the 12-tool surface intact (D13/ADR-013), makes create+claim transactional, matches how analyst-locus work actually flows.
+
+**Impact on downstream docs:**
+- `NORTH-STAR.md` §5 — `claim` signature note
+- `ARCHITECTURE.md` §6.2 — contribution lifecycle adds create-and-claim path
+- `DECISIONS.md` — ADR-022
+
+---
+
+### D28 — Remote-locus commits via per-project endpoint git committer
+
+**Status:** DECIDED (2026-04-24). See ADR-023.
+
+**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #2). ARCH §6.2 implied agents write to artifacts, but a web-locus analyst has no local filesystem — the endpoint must commit on their behalf, with identity, signing, failure handling, and sync timing unspecified.
+
+**Alternatives considered:**
+1. Per-project endpoint git committer with composer co-authorship; synchronous commit; failure rolls back datastore (adopted).
+2. Async queue: write datastore first, eventual commit (rejected — diverges repo and datastore, violates D5/ADR-005).
+3. Browser pushes with composer's GitHub credentials (rejected — collides with the goal of analysts who don't touch the repo).
+
+**Decision.** Endpoint holds a project-scoped deploy key (rotatable). Commits authored as `<composer.display_name> via Atelier <atelier-bot@<project>>` with `Co-Authored-By: <composer email>`. `update` blocks until commit succeeds.
+
+**Rationale.** Preserves attribution, keeps repo-first semantics (D5/ADR-005), bounds failure to retry-safe states.
+
+**Impact on downstream docs:**
+- `ARCHITECTURE.md` §7.8 — new section
+- `DECISIONS.md` — ADR-023
+- CLI gains `atelier rotate-committer-key` subcommand
+
+---
+
+### D29 — Transcripts as repo-sidecar files, opt-in by config
+
+**Status:** DECIDED (2026-04-24). See ADR-024.
+
+**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #3 / Q3). Transcripts have provenance, eval-feedback, and audit value but carry size and PII risk.
+
+**Alternatives considered:**
+1. Sidecar in repo, opt-in via config (adopted).
+2. External blob store (rejected — adds infra dependency on every deploy).
+3. Don't capture; rely on agent client's own session history (rejected — loses cross-locus story).
+
+**Decision.** Schema gains `contributions.transcript_ref text` (nullable). Capture is opt-in via `.atelier/config.yaml: transcripts.capture: false` (default). Sidecars are gitignored by default; opt-in commits them under a documented PII review.
+
+**Rationale.** Repo-first (D5/ADR-005), team choice on capture, no forced infra dependency.
+
+**Impact on downstream docs:**
+- `ARCHITECTURE.md` §5.1 — schema gains `transcript_ref`
+- `.atelier/config.yaml` — `transcripts:` section
+- `METHODOLOGY.md` — PII review documentation (pending)
+- `DECISIONS.md` — ADR-024
+
+---
+
+### D30 — Review routing keyed by `territory.review_role`
+
+**Status:** DECIDED (2026-04-24). See ADR-025.
+
+**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #5 / Q4). `NORTH-STAR.md` §4 lens definitions partially covered review surfaces but did not specify which lens picks up which `kind × state` combination.
+
+**Alternatives considered:**
+1. Per-territory `review_role` field (adopted).
+2. Per-kind global rules in `.atelier/config.yaml` (rejected — competes with territory ownership).
+3. Routing as a contract that lenses subscribe to (rejected — heaviest, deferred until needed).
+
+**Decision.** `.atelier/territories.yaml` schema gains `review_role` per territory entry. Lenses query union of (territories owned by composer's role) and (territories with `review_role` matching composer's role).
+
+**Rationale.** Smallest change. Reuses existing territory-as-config pattern. Avoids global rule tables that compete with territory ownership.
+
+**Impact on downstream docs:**
+- `NORTH-STAR.md` §4 — lens routing note
+- `.atelier/territories.yaml` — schema change with defaults
+- `DECISIONS.md` — ADR-025
 
 ---
 

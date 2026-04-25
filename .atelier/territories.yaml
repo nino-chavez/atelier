@@ -1,16 +1,18 @@
 # Atelier project territories
 #
 # Each territory declares a named domain within the project: who owns it,
-# what kind of artifacts it contains, what scope pattern bounds it, and which
-# contracts it publishes/consumes.
+# what kind of artifacts it contains, what scope pattern bounds it, which
+# contracts it publishes/consumes, and which role reviews contributions that
+# reach state=review (ADR-025).
 #
 # Referenced by: contributions (via territory_id), locks (via artifact_scope),
-# contracts (via territory_id), role-aware lenses (via owner_role).
+# contracts (via territory_id), role-aware lenses (via owner_role + review_role).
 
 territories:
 
   - name: methodology
     owner_role: architect
+    review_role: architect
     scope_kind: doc_region
     scope_pattern:
       - "NORTH-STAR.md#*"
@@ -28,6 +30,7 @@ territories:
 
   - name: product
     owner_role: pm
+    review_role: pm
     scope_kind: doc_region
     scope_pattern:
       - "PRD.md#*"
@@ -45,6 +48,7 @@ territories:
 
   - name: requirements
     owner_role: analyst
+    review_role: pm
     scope_kind: doc_region
     scope_pattern:
       - "BRD.md#*"
@@ -63,6 +67,7 @@ territories:
 
   - name: architecture
     owner_role: architect
+    review_role: architect
     scope_kind: doc_region
     scope_pattern:
       - "ARCHITECTURE.md#*"
@@ -80,6 +85,7 @@ territories:
 
   - name: strategy-research
     owner_role: analyst
+    review_role: pm
     scope_kind: research_artifact
     scope_pattern:
       - "research/**/*"
@@ -96,6 +102,7 @@ territories:
 
   - name: protocol
     owner_role: dev
+    review_role: dev
     scope_kind: files
     scope_pattern:
       - "prototype/src/lib/protocol/**"
@@ -113,6 +120,7 @@ territories:
 
   - name: prototype-app
     owner_role: dev
+    review_role: dev
     scope_kind: files
     scope_pattern:
       - "prototype/src/app/**"
@@ -131,6 +139,7 @@ territories:
 
   - name: prototype-design
     owner_role: designer
+    review_role: designer
     scope_kind: design_component
     scope_pattern:
       - "prototype/src/components/**"
@@ -146,6 +155,7 @@ territories:
 
   - name: decisions
     owner_role: architect
+    review_role: architect
     scope_kind: doc_region
     scope_pattern:
       - "decisions.md#*"
@@ -160,6 +170,7 @@ territories:
 
   - name: traceability
     owner_role: architect
+    review_role: architect
     scope_kind: files
     scope_pattern:
       - "traceability.json"
@@ -177,6 +188,7 @@ territories:
 
   - name: evaluation
     owner_role: dev
+    review_role: dev
     scope_kind: files
     scope_pattern:
       - "prototype/eval/fit_check/**"

@@ -109,6 +109,8 @@ The prototype web app has five routes, all present from v1:
 
 Same canonical state, different first-view cuts. Same freshness contract. Same server-side filter/sort. Same scale budget (paginate at 50, virtualize at 500).
 
+**Review routing.** Contributions transitioning to `state=review` surface in the lens whose role matches the contribution's territory `review_role` (ADR-025). For example, a research artifact in the `strategy-research` territory (`review_role=pm`) appears in the PM lens; a protocol contribution (`review_role=dev`) appears in the dev lens for peer review.
+
 ---
 
 ## 5. Agent-facing endpoint — the protocol surface
@@ -122,7 +124,7 @@ Twelve tools, grouped by concern. All present on day one. Exposed via whatever a
 | Session | `deregister` | End session, release held resources |
 | Context | `get_context` | Constitution + recent decisions + territory state + traceability registry |
 | Context | `fit_check` | Semantic search: is this already done or in flight? |
-| Contribution | `claim` | Claim an open contribution |
+| Contribution | `claim` | Claim an open contribution. Atomic create-and-claim when called with `contribution_id=null` + `kind`, `trace_ids`, `territory_id`, optional `content_stub` (ADR-022) |
 | Contribution | `update` | Transition contribution state |
 | Contribution | `release` | Release a claimed contribution |
 | Lock | `acquire_lock` | Lock artifact_scope with fencing token |
@@ -132,10 +134,11 @@ Twelve tools, grouped by concern. All present on day one. Exposed via whatever a
 
 **Write path for non-code artifacts** (the analyst case, first-class):
 
-- Web agent calls `claim` on a `research_artifact` contribution
-- Agent authors research; content lands in `research/US-X.Y-<slug>.md` via `update`
-- `log_decision` captures the research conclusion, written to `decisions.md`
-- `release` transitions the contribution to `review`
+- Web agent calls `claim(null, kind="research", trace_ids, territory_id)` to atomic-create-and-claim a `research_artifact` contribution (ADR-022)
+- Agent authors research; content lands in `research/US-X.Y-<slug>.md` via `update`. For remote-locus composers, the endpoint commits on their behalf per ADR-023 / ARCH §7.8
+- Optionally, the agent-session transcript is captured as a sidecar (`research/US-X.Y-<slug>.transcript.jsonl`) when `transcripts.capture=true` per ADR-024
+- `log_decision` captures the research conclusion (with `trace_ids` array per ADR-021), written to `decisions.md`
+- `release` transitions the contribution to `review`; the lens that surfaces it is determined by `territory.review_role` (ADR-025)
 - Other composers are notified via pub/sub broadcast
 
 Same flow, different artifact kind. The protocol is locus-agnostic.

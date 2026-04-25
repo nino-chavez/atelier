@@ -86,10 +86,17 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-014:** Territory + contract model extended to non-code.
 - **ADR-015:** One hive, many projects (plural schema from v1).
 - **ADR-016:** Two orthogonal substrates (SDLC sync + coordination).
-- **ADR-017:** `/atelier` coordination route inside the prototype.
-- **ADR-018:** Five role-aware lenses.
-- **ADR-019:** MCP as likely agent interop protocol; spec protocol-agnostically.
-- **ADR-020:** Triage never auto-merges; all external content requires human approval.
+- **ADR-017:** Five role-aware lenses at `/atelier`: analyst, dev, PM, designer, stakeholder.
+- **ADR-018:** Triage never auto-merges; all external content requires human approval.
+- **ADR-019:** Figma is feedback surface, not design source-of-truth.
+- **ADR-020:** Naming: Atelier (rejected: Hivemind OS, Hive, Commons, Loom).
+- **ADR-021:** Multi-trace-ID support on contributions and decisions (`text[]` with GIN index).
+- **ADR-022:** `claim` atomic-creates open contributions when called with `contribution_id=null`.
+- **ADR-023:** Remote-locus commits via per-project endpoint git committer (ARCH §7.8).
+- **ADR-024:** Agent-session transcripts as repo-sidecar files, opt-in via `.atelier/config.yaml`.
+- **ADR-025:** Review routing keyed by `territory.review_role`.
+
+Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR).
 
 ---
 

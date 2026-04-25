@@ -203,12 +203,13 @@ contributions
   id (uuid, pk)
   project_id (fk)
   author_session_id (fk, nullable when open)
-  trace_id
+  trace_ids (text[])                              -- ADR-021
   territory_id (fk)
   artifact_scope (text[], interpreted per territory.scope_kind)
   state (open | claimed | in_progress | review | merged | rejected | blocked)
   kind (implementation | decision | research | design | proposal)
   content_ref (path or URL)
+  transcript_ref (text, nullable)                 -- ADR-024 (sidecar transcript path/URL)
   fencing_token (bigint, nullable)
   blocked_by (fk, nullable)
   created_at
@@ -218,7 +219,7 @@ decisions
   id (uuid, pk)
   project_id (fk)
   session_id (fk)
-  trace_id
+  trace_ids (text[])                              -- ADR-021
   category (architecture | product | design | research | convention)
   summary
   rationale
@@ -269,7 +270,8 @@ telemetry
 | sessions | (heartbeat_at) WHERE status='active' | Stale-session detection |
 | locks | (project_id, artifact_scope[]) | Conflict check before acquire (GIN index on array) |
 | decisions | (project_id, created_at DESC) | Recent-decisions feed |
-| decisions | (trace_id) | Trace-scoped decision lookup |
+| decisions | GIN (trace_ids) | Trace-scoped decision lookup (ADR-021) |
+| contributions | GIN (trace_ids) | Trace-scoped contribution lookup (ADR-021) |
 | telemetry | (project_id, action, created_at DESC) | Observability queries |
 
 ### 5.3 Authorization (row-level)
@@ -311,16 +313,21 @@ Composer → deregister(session_token)
 ### 6.2 Contribution lifecycle
 
 ```
-Create: contribution inserted with state=open
-Claim: Agent → claim(contribution_id) → state=claimed, author_session_id set
-   Endpoint checks for conflicting contributions via fit_check → warns if match
+Create paths (per ADR-022):
+  (a) Pre-existing open row (e.g., from BRD ingestion):
+      Agent → claim(contribution_id) → state=claimed, author_session_id set
+  (b) Atomic create-and-claim (ad-hoc work, esp. analyst):
+      Agent → claim(null, kind, trace_ids, territory_id, optional content_stub)
+        Endpoint inserts (state=open) and transitions to claimed in one transaction
+   In both paths the endpoint runs fit_check on the new claim → warns if match
 Acquire lock: Agent → acquire_lock(artifact_scope) → returns fencing_token
 Write: Agent writes to artifact (file, doc region, etc.) passing fencing_token
+   For remote-locus composers, the endpoint commits on their behalf — see §7.8 (ADR-023)
    Endpoint validates token on every write-through
 Update state: Agent → update(contribution_id, new_state)
    in_progress → review (when agent pushes branch / artifact is ready)
 Release lock: Agent → release_lock(lock_id)
-Review: Human merges PR or accepts research artifact
+Review: routed by territory.review_role (ADR-025). Approver merges PR or accepts research artifact
    Triggers state=merged, contribution archived
 ```
 
@@ -471,6 +478,18 @@ Territory owner → publish_contract(name, schema)
 
 - Per-composer rate limits on endpoint (configurable; sensible defaults).
 - Per-project global rate limits on expensive operations (fit_check, publish-docs).
+
+### 7.8 Remote-locus write attribution (ADR-023)
+
+For composers whose locus is `web` (or `terminal` without local repo access), agent writes to repo-resident artifacts route through a per-project endpoint git committer:
+
+- **Identity.** The endpoint holds a project-scoped deploy key (rotatable via `atelier rotate-committer-key`). Commits authored as `<composer.display_name> via Atelier <atelier-bot@<project>>` with `Co-Authored-By: <composer email>` so attribution survives in `git log`.
+- **Synchronicity.** `update` (and `claim`-with-content_stub) blocks until the commit succeeds. On commit failure, the datastore mirror is **not** written and the tool returns a retry-safe error (`retryable=true`, idempotency key carries forward).
+- **Audit.** Every committer write logs `(commit_sha, composer_id, session_id, action, artifact_scope)` to telemetry. Queryable in `/atelier/observability` (§8.2).
+- **Rotation.** Deploy-key rotation is a CLI operation; in-flight contributions are unaffected because the rotation only affects subsequent commits. Old key is revoked at the git provider on rotation success.
+- **Failure boundaries.** Loss of the deploy-key credential blocks remote-locus writes with a clear error; IDE-locus composers are unaffected. Rotation runbook in `METHODOLOGY.md`.
+
+This satisfies ADR-005 (repo-first) for remote-locus composers — the commit is the success criterion, not the datastore write.
 
 ---
 

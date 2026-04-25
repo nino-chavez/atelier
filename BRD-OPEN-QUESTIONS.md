@@ -25,7 +25,17 @@
 
 **Recommendation.** Walk the scenario end-to-end through the schema + endpoint + prototype views **before any code is written**. If a step requires a concept not yet in the design, add it to the design — don't code around it.
 
-**Status.** This is the top-priority pre-build question.
+**Status.** **RESOLVED** (2026-04-24). Walk completed in `walks/analyst-week-1.md`. Five gaps surfaced and landed:
+
+| Gap | ADR | Sub-question resolved |
+|---|---|---|
+| #1 — Contribution creation path for ad-hoc work | ADR-022 (claim atomic-creates) | Q: who creates the open row? A: `claim` does, atomically |
+| #2 — Remote-locus repo write path unspecified | ADR-023 (per-project endpoint committer) | Implicit gap surfaced and closed via ARCH §7.8 |
+| #3 — Transcript storage | ADR-024 (sidecar, opt-in) | Q3 |
+| #4 — Multi-trace-ID support | ADR-021 (`trace_ids text[]`) | Q2 |
+| #5 — Lens routing for `state=review` | ADR-025 (`territory.review_role`) | Q4 |
+
+Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly support the flow?) — **yes**, confirmed against `.atelier/territories.yaml`. No schema change needed.
 
 ---
 

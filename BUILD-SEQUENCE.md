@@ -64,7 +64,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Produces.** Repo conventions, 20 ADRs, `traceability.json` registry, `.atelier/territories.yaml`, `.atelier/config.yaml`, `CLAUDE.md` agent constitution, complete v1 design corpus.
 
-**Operationalizes.** ADR-005, ADR-011, ADR-012, ADR-014, ADR-015, ADR-018, ADR-025.
+**Operationalizes.** ADR-005, ADR-011, ADR-012, ADR-014, ADR-015, ADR-020 (naming).
 
 **Advances.** Pre-BRD; this is methodology setup, not a BRD epic.
 
@@ -100,7 +100,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Produces.** Relational schema with `contributions`, `decisions`, `scopes`, `locks`, `composers`, `sessions`, `contracts` tables. The 12-tool agent endpoint per ADR-013, with fit_check returning `unknown` (real fit_check arrives in M5). Locks with fencing tokens from day one.
 
-**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013, ADR-014, ADR-015, ADR-019.
+**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-locus committer), ADR-024 (transcript schema field).
 
 **Advances.** BRD Epic 2 (endpoint), Epic 4 (territory + contribution), Epic 5 (decision durability — write path), Epic 7 (locks + fencing), Epic 8 (territory contracts).
 
@@ -116,9 +116,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** Prototype web app with five routes (`/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`). The `/atelier` route renders the five role-aware lenses (analyst, dev, PM, designer, stakeholder) per ADR-018, backed by M2's endpoint.
+**Produces.** Prototype web app with five routes (`/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`). The `/atelier` route renders the five role-aware lenses (analyst, dev, PM, designer, stakeholder) per ADR-017, backed by M2's endpoint.
 
-**Operationalizes.** ADR-001, ADR-017, ADR-018, ADR-021.
+**Operationalizes.** ADR-001 (prototype is canonical artifact + dashboard), ADR-017 (5 lenses), ADR-019 (Figma is feedback only), ADR-025 (review routing via territory.review_role).
 
 **Advances.** BRD Epic 3 (canonical artifact prototype), Epic 15 (role-aware lenses).
 
@@ -170,9 +170,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** External web-agent composers (Claude Code, Cursor, custom MCP clients) as first-class actors per ADR-009. Triage queue requiring human approval for all external-sourced content per ADR-020. Auth/authz scoped to remote-principal class.
+**Produces.** External web-agent composers (Claude Code, Cursor, custom MCP clients) as first-class actors per ADR-009. Triage queue requiring human approval for all external-sourced content per ADR-018. Auth/authz scoped to remote-principal class.
 
-**Operationalizes.** ADR-009, ADR-020.
+**Operationalizes.** ADR-009, ADR-018 (triage never auto-merges).
 
 **Advances.** BRD Epic 16 (remote composer support), Epic 10 (external integrations), Epic 13 (security — auth/authz path for remote composers).
 

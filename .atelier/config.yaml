@@ -72,6 +72,16 @@ fit_check:
   ci_precision_gate: 0.75
   ci_recall_gate: 0.60
 
+# Agent-session transcript capture (ADR-024). Opt-in.
+# When capture=true, the endpoint writes a sidecar transcript next to
+# each contribution's content_ref (e.g., research/foo.md +
+# research/foo.transcript.jsonl). Sidecars are gitignored unless explicitly
+# committed under a documented PII review (see METHODOLOGY).
+transcripts:
+  capture: false
+  format: jsonl
+  sidecar_suffix: ".transcript"
+
 # Session + lock policy defaults. Overridable per-territory.
 policy:
   session_heartbeat_interval_seconds: 30

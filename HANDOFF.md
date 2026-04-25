@@ -18,10 +18,10 @@ Origin: synthesizes `bc-subscriptions` (reference impl of big-blueprint methodol
 
 ## Current state
 
-- **Phase:** Pre-implementation. Complete v1 design scope captured. Zero code.
-- **Scaffold:** 19 files, ~4000 lines of docs + config in this directory.
-- **Git:** initialized, staged, no initial commit yet.
-- **Immediate next step:** Walk one analyst-case scenario end-to-end through the schema + endpoint + prototype views before writing any code (see `BRD-OPEN-QUESTIONS.md §1`).
+- **Phase:** Pre-implementation. Design scope captured + analyst-case walk completed (5 design ADRs landed). Zero code.
+- **Scaffold:** ~22 files, ~5000 lines of docs + config in this directory.
+- **Git:** initialized, public remote at `Signal-x-Studio-LLC/atelier`, two commits on `main`.
+- **Immediate next step:** Pick the reference-implementation stack (Option D below) or begin M1 of `BUILD-SEQUENCE.md` (SDLC sync substrate). The schema design is now stable — analyst-week-1 walk closed the open territory questions.
 
 ---
 
@@ -51,9 +51,9 @@ Origin: synthesizes `bc-subscriptions` (reference impl of big-blueprint methodol
 
 ## Load-bearing decisions (don't re-litigate without a new red team)
 
-The 20 ADRs in `DECISIONS.md` represent choices made across multiple session iterations, often after explicit user corrections. Before challenging any of them, read the ADR's rationale + the corresponding entry in `PRD-COMPANION.md`. If you still think a change is warranted, propose a new decision that references and reverses the prior ADR — don't silently modify the earlier choice.
+The 25 ADRs in `DECISIONS.md` represent choices made across multiple session iterations, often after explicit user corrections (the last 5 surfaced from the analyst-case walk on 2026-04-24, see `walks/analyst-week-1.md`). Before challenging any of them, read the ADR's rationale + the corresponding entry in `PRD-COMPANION.md`. If you still think a change is warranted, propose a new decision that references and reverses the prior ADR — don't silently modify the earlier choice.
 
-Shortlist of the 20, grouped by "this will bite you if you forget":
+Shortlist grouped by "this will bite you if you forget":
 
 **Scope guardrails** (most likely to be accidentally violated):
 - **ADR-007** — No SaaS. Self-hosted OSS only.
@@ -66,12 +66,12 @@ Shortlist of the 20, grouped by "this will bite you if you forget":
 - **ADR-002** — Contribution is the atomic unit. One schema subsumes tasks, decisions, proposals, PRs.
 - **ADR-003** — `scope_kind` generalized from day one (files, doc_region, research_artifact, design_component, slice_config).
 - **ADR-016** — Two orthogonal substrates (SDLC sync + coordination). Don't conflate them.
-- **ADR-021** — Figma is feedback surface only. Design lives in the prototype (repo-canonical).
+- **ADR-019** — Figma is feedback surface only. Design lives in the prototype (repo-canonical).
 
 **Safety / durability** (silent violations cause data loss):
 - **ADR-004** — Fencing tokens on every lock from v1. Never ship locks without fencing.
 - **ADR-005** — Decisions write to `decisions.md` first, datastore second. Repo is authoritative.
-- **ADR-020** — Triage never auto-merges. External content requires human approval.
+- **ADR-018** — Triage never auto-merges. External content requires human approval.
 
 **Protocol / architecture**:
 - **ADR-013** — 12 tools, exactly. Protocol-agnostic spec (MCP is the v1 reference).
@@ -80,13 +80,20 @@ Shortlist of the 20, grouped by "this will bite you if you forget":
 
 **Personas / actors**:
 - **ADR-009** — Remote-principal actor class. Web agents are first-class composers, not second-class reviewers.
-- **ADR-018** — Five role-aware lenses at `/atelier`: analyst, dev, PM, designer, stakeholder.
+- **ADR-017** — Five role-aware lenses at `/atelier`: analyst, dev, PM, designer, stakeholder.
 
 **Process**:
 - **ADR-008** — All 5 sync substrate scripts ship together.
 
 **Naming**:
-- **ADR-025** — Atelier. Rejected: Hivemind OS (platform-coded), Hive (too narrow), Commons (too generic).
+- **ADR-020** — Atelier. Rejected: Hivemind OS (platform-coded), Hive (too narrow), Commons (too generic).
+
+**Walk-derived (added 2026-04-24, see `walks/analyst-week-1.md`):**
+- **ADR-021** — Multi-trace-ID support on contributions and decisions (`text[]` with GIN index).
+- **ADR-022** — `claim` atomic-creates open contributions when called with `contribution_id=null`.
+- **ADR-023** — Remote-locus commits via per-project endpoint git committer (ARCH §7.8).
+- **ADR-024** — Agent-session transcripts as repo-sidecar files, opt-in by config.
+- **ADR-025** — Review routing keyed by `territory.review_role`.
 
 ---
 
@@ -126,9 +133,9 @@ If a feature request maps to one of these categories, push back or create a `BRD
 
 These should be resolved before implementation begins or very early in implementation:
 
-1. **Territory model validation on the analyst case.** Walk one analyst-week-1-research scenario (analyst claims a `research_artifact` contribution, runs fit_check, authors via web agent, logs decision, releases for PM review) end-to-end through the schema + endpoint + prototype views. If any step requires a concept not yet in the design, the design changes before code is written.
-2. **Switchman as dependency vs. own-implementation for file locks.** Evaluate Switchman's public API, fencing-token support, license compatibility, and maintainer health. If stable with fencing, integrate. If not, own-implementation with fencing from v1.
-3. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability.
+1. ~~**Territory model validation on the analyst case.**~~ **RESOLVED 2026-04-24.** See `walks/analyst-week-1.md`. Five gaps surfaced and landed as ADR-021 through ADR-025. Schema is now stable.
+2. **Switchman as dependency vs. own-implementation for file locks.** Evaluate Switchman's public API, fencing-token support, license compatibility, and maintainer health. If stable with fencing, integrate. If not, own-implementation with fencing from v1. (D22 in PRD-COMPANION.) Per `BUILD-SEQUENCE.md §7`, this should be resolved during M1 to derisk M2's lock subsystem.
+3. **Embedding model default for fit_check.** Benchmark ≥3 candidates on the seed eval set. Default should prefer a self-hostable option for regulated-team viability. (D24 in PRD-COMPANION.)
 
 ---
 
@@ -136,8 +143,9 @@ These should be resolved before implementation begins or very early in implement
 
 Each is ~1–2 hours of focused work.
 
-**Option A — Walk the analyst case (highest priority).**
-Prompt: "Walk `BRD-OPEN-QUESTIONS.md §1` end-to-end. Use actual US-1.3 as the trace ID. Trace each step through the schema in `ARCHITECTURE.md §5`, the endpoint tools in `NORTH-STAR.md §5`, and the prototype routes in `NORTH-STAR.md §4`. If any step reveals a gap, name the gap and propose the design change before coding."
+**Option A — Walk a second scenario (dev-locus or designer-locus).**
+The analyst case is closed (`walks/analyst-week-1.md`). The next-most-divergent locus is dev (claims a `files` contribution, acquires a lock, writes via local repo, races a remote-locus committer) or designer (claims a `design_component`, surfaces feedback from Figma via triage, releases through `prototype-design.review_role=designer`).
+Prompt: "Walk a dev-week-1 scenario end-to-end through the schema + endpoint + prototype views. Pay attention to lock contention with a concurrent remote-locus composer. Surface any gaps as new ADRs."
 
 **Option B — Resolve open ADRs (Switchman, identity, embedding).**
 Prompt: "Resolve `PRD-COMPANION.md` OPEN decisions: D22 (Switchman), D23 (identity service default), D24 (embedding model). For each, produce a concrete recommendation with evidence, then update the decision's status and append a new ADR to `DECISIONS.md`."

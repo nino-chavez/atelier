@@ -392,3 +392,98 @@ timestamp: 2026-04-24T15:40:00Z
 **Consequences.** All documentation, CLI command, package name, and template naming follow. Marketing copy uses the studio metaphor consistently.
 
 ---
+
+---
+id: ADR-021
+trace_id: BRD:Epic-4
+category: architecture
+session: walk-analyst-week-1-2026-04-24
+composer: nino-chavez
+timestamp: 2026-04-24T16:00:00Z
+---
+
+# Multi-trace-ID support on contributions and decisions
+
+**Summary.** `contributions.trace_id` and `decisions.trace_id` become `trace_ids text[]`. Singular case is a one-element array. GIN indexes replace btree on the trace columns. Endpoint tools accept either `trace_ids: string[]` or a singular `trace_id: string` (treated as one-element).
+
+**Rationale.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #4). Cross-cutting work — research on US-1.3 that reveals implications for US-1.5, an architectural decision that affects two epics — must be modelable as a single contribution or decision. Forcing splits into separate rows fragments rationale; a "primary trace_id with mentions in body" pattern breaks `WHERE trace_id='X'` queries. An array is the smallest schema change that supports the real shape of work without compromising query semantics.
+
+**Consequences.** ARCH §5.1 schema updates. ARCH §5.2 changes the trace_id indexes to GIN. NORTH-STAR §5 endpoint signatures accept both forms. Reversal cost is bounded: drop the array, keep the first element.
+
+---
+
+---
+id: ADR-022
+trace_id: BRD:Epic-2
+category: architecture
+session: walk-analyst-week-1-2026-04-24
+composer: nino-chavez
+timestamp: 2026-04-24T16:05:00Z
+---
+
+# Claim atomic-creates open contributions
+
+**Summary.** `claim` overloads to support atomic create-and-claim when invoked with `contribution_id=null` plus `kind`, `trace_ids`, `territory_id`, and optional `content_stub`. Tool surface stays at 12 — ADR-013 is unaffected.
+
+**Rationale.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #1). Ad-hoc analyst research has no pre-existing `open` contribution to claim, but the 12-tool surface has no `create_contribution`. Adding one would push to 13 tools and require amending ADR-013. Overloading `claim` keeps the surface stable, makes the create+claim transaction atomic at the datastore boundary, and matches the way analyst-locus work actually flows — the act of starting research is the act of claiming it.
+
+**Consequences.** NORTH-STAR §5 documents the dual-mode signature. ARCH §6.2 contribution lifecycle adds the create-and-claim path. A scaffold row (state=open, author_session_id=null, content_ref=null, transcript_ref=null) is inserted and immediately transitioned to claimed in one transaction. ADR-013 stands.
+
+---
+
+---
+id: ADR-023
+trace_id: BRD:Epic-16
+category: architecture
+session: walk-analyst-week-1-2026-04-24
+composer: nino-chavez
+timestamp: 2026-04-24T16:10:00Z
+---
+
+# Remote-locus commits via per-project endpoint committer
+
+**Summary.** Remote-locus composers (locus=web; terminal sessions without repo access) write to the repo via a per-project endpoint git committer. Commits authored as `<composer.display_name> via Atelier <atelier-bot@<project>>` with `Co-Authored-By: <composer email>`. `update` blocks until commit succeeds; on failure, datastore is not updated and tool returns a retry-safe error. Audit log captures `(commit_sha, composer_id, session_id)`.
+
+**Rationale.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #2). ARCH §6.2 implies agents write to artifacts, but a web-locus analyst has no local filesystem — the endpoint must commit on their behalf. Identity, signing, failure handling, and sync timing were unspecified, leaving both a security gap and a durability gap. Synchronous commit by a per-project committer with composer co-authorship preserves attribution, keeps repo-first semantics (ADR-005), and bounds failure to retry-safe states.
+
+**Consequences.** New ARCH §7.8 — Remote-locus write attribution. Endpoint holds a project-scoped deploy key, rotatable via `atelier rotate-committer-key`. Audit log queryable in `/atelier/observability`. Datastore mirror only follows successful commit. CLI gains the rotation subcommand.
+
+---
+
+---
+id: ADR-024
+trace_id: BRD:Epic-4
+category: architecture
+session: walk-analyst-week-1-2026-04-24
+composer: nino-chavez
+timestamp: 2026-04-24T16:15:00Z
+---
+
+# Transcripts as repo-sidecar files, opt-in by config
+
+**Summary.** Agent-session transcripts are stored as sidecar files in the repo (e.g., `research/US-1.3-deploy-research.transcript.jsonl`). Schema gains `contributions.transcript_ref text` (nullable). Capture is opt-in via `.atelier/config.yaml: transcripts.capture: false` (default). Sidecars are gitignored by default; opt-in commits them under a documented PII review.
+
+**Rationale.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #3). Transcripts carry provenance, eval-feedback, and audit value but also size and PII risk. Repo-sidecar with config opt-in keeps repo-first semantics (ADR-005), lets teams choose, and avoids forcing an external blob-store dependency on every Atelier deploy.
+
+**Consequences.** ARCH §5.1 contributions table gains `transcript_ref text`. `.atelier/config.yaml` gains a `transcripts:` section. METHODOLOGY documents size + PII implications and the opt-in review flow. Captured transcripts contribute to fit_check eval feedback only when explicitly tagged for inclusion.
+
+---
+
+---
+id: ADR-025
+trace_id: BRD:Epic-15
+category: design
+session: walk-analyst-week-1-2026-04-24
+composer: nino-chavez
+timestamp: 2026-04-24T16:20:00Z
+---
+
+# Review routing keyed by territory.review_role
+
+**Summary.** Contributions transitioning to `state=review` are routed to lenses by `territories.review_role`. Default mappings: `strategy-research → pm`, `protocol → dev` (peer), `requirements → pm`, `prototype-app → dev` (peer), `prototype-design → designer` (peer), `methodology/architecture/decisions → architect`. Lenses query the union of (territories owned by composer's role) and (territories with review_role matching composer's role).
+
+**Rationale.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #5). NORTH-STAR §4 lens definitions partially covered review surfaces but did not specify which lens picks up which `kind × state` combination. Per-territory `review_role` is the smallest change that resolves it cleanly, reuses the existing territory-as-config pattern, and avoids global rule tables that would compete with territory ownership.
+
+**Consequences.** `.atelier/territories.yaml` schema gains a `review_role` field per territory entry. NORTH-STAR §4 lens descriptions reference territory.review_role. Default values committed in this repo's territories.yaml serve as a reference example for projects scaffolded by `atelier init`.
+
+---

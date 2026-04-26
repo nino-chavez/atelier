@@ -46,6 +46,22 @@ Figma is a feedback surface, not a design source of truth. Designs live in the p
 
 ---
 
+## 2.1 The slice is the unit of authoring
+
+Features ship as **slices**, not as horizontal layers. A slice is a vertical cut through strategy, design, and implementation that crosses every territory the feature needs. The `/slices/[id]` route renders all three layers per slice — strategy panel, design panel, current-state panel — making each slice a single observable artifact that PM, designer, dev, and stakeholder all see through their respective lenses.
+
+**Why vertical.** Building a feature horizontally — all schema first, then all endpoints, then all UI — defers integration and feedback until the end. By then the layers have drifted from each other and from the spec. Building vertically (one tracer bullet through every layer for one slice, then the next slice) keeps the spine integrated continuously and surfaces problems while they're still cheap to fix. This is the walking-skeleton (Cockburn) / tracer-bullet (Hunt & Thomas) discipline applied to mixed human-agent teams.
+
+**Architectural enforcement.** The prototype renders by slice and only by slice. A feature that doesn't appear in a `/slices/[id]` route is invisible to the team. This isn't a soft convention — the route is the canonical viewing surface, so slice-less work has no home in the artifact.
+
+**Boundary discipline.** Slices cross territory boundaries by going through published contracts (per ADR-014), not by reaching into territory internals. A slice can consume contracts from multiple territories; a slice can publish a contract for downstream slices to consume. This preserves Ousterhout-style deep-module discipline: the territory is the deep module, the contract is the simple interface, the slice is the consumer.
+
+**Anti-pattern.** "We'll build the whole schema first, then all the endpoints, then the UI." This works in solo execution; it fails in mixed-team coordination because no one has a working artifact to react to until the end. Designers wait for the UI; PMs wait for the slice; stakeholders wait for everything. Triage backs up. Find_similar can't tell duplicates from in-flight work because nothing has shipped to the slice yet.
+
+**Adopting teams: structure work as slices.** When using Atelier on your project, the unit of authoring is the slice, not the layer. Atelier's prototype enforces this architecturally; the methodology states it as principle so the discipline survives moving to a different reference implementation.
+
+---
+
 ## 3. Actor model — six classes
 
 Six actor classes; the sixth is the remote-principal case for mixed-surface teams (web composers without local repo access).
@@ -303,7 +319,7 @@ Agents reading context via `get_context` receive trace-ID-scoped state. Agents w
 
 ## 10. The load-bearing claims
 
-Atelier's shape is old (dual-track agile + blackboard coordination). What's new operates at two layers:
+Atelier's shape is old (dual-track agile + blackboard coordination). What's new operates at three layers:
 
 **SDLC sync substrate** — lets agents participate in a human-designed SDLC without eroding the authority model.
 1. Trace ID (`US-X.Y`) as the single join key across systems.
@@ -312,10 +328,15 @@ Atelier's shape is old (dual-track agile + blackboard coordination). What's new 
 
 **Coordination substrate (blackboard)** — lets multiple composers + their agents share canonical state without collision.
 1. Blackboard over hierarchy — no bottleneck composer, graceful degradation.
-2. Fit-check as a first-class primitive — duplication prevention before work starts, not after conflicting PRs.
+2. find_similar as a first-class primitive — duplication prevention before work starts, not after conflicting PRs.
 3. Append-only decision log written repo-first — survives coordination-datastore downtime.
 4. Fencing tokens on every lock — prevents Kleppmann-style data loss from GC pauses.
 
 **The prototype as canonical artifact + dashboard** — the reframe that unifies the two substrates into one composer-facing surface. Same web app, different routes, different lenses.
 
-The three together are the Atelier thesis. A team could adopt any one without the others; all three combined are the reference implementation.
+**Slice-based authoring** — the workflow discipline that binds the substrates and the prototype together (per §2.1).
+1. The slice is the unit of authoring — vertical cut through strategy + design + implementation, not horizontal layers.
+2. The `/slices/[id]` route is the canonical viewing surface — slice-less work is invisible to the team.
+3. Slices cross territory boundaries through published contracts only — deep-module discipline preserved at the workflow layer.
+
+The four together are the Atelier thesis. A team could adopt any one without the others; all four combined are the reference implementation.

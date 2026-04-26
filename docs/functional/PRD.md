@@ -224,7 +224,7 @@ Commercial surfaces are tracked in [`../strategic/risks.md`](../strategic/risks.
 **No marketing funnel at v1.** Strategic bets that gate any future commercial activity are tracked in [`../strategic/risks.md`](../strategic/risks.md).
 
 **Adoption targets:**
-- Solo developers using big-blueprint-style prototyping → drop-in upgrade to Atelier template
+- Solo developers using prototype-as-canonical patterns → drop-in upgrade to Atelier template
 - Mixed teams currently suffering from context fragmentation → reference-impl-first adoption
 - Enterprise teams with regulated-RTM needs → targeted consultative sales (not self-serve) once managed surface exists
 
@@ -242,11 +242,7 @@ Commercial surfaces are tracked in [`../strategic/risks.md`](../strategic/risks.
 
 ## 10. Open questions
 
-See `BRD-OPEN-QUESTIONS.md` for the full list. Top three at v1 boundary:
-
-1. **Territory model validation on the analyst case.** Walk one analyst-week-1-research scenario end-to-end through schema + endpoint + prototype views. If it doesn't flow cleanly, the model changes before code is written.
-2. **Switchman as dependency vs. own-implementation for file locks.** If Switchman is a stable dependency with fencing tokens, integrate and inherit. If not, build own with fencing from v1.
-3. **Embedding model choice** for find_similar. Defaults and swappability; implications for self-hosted deployments with no external AI API.
+See `BRD-OPEN-QUESTIONS.md` for the active list and `PRD-COMPANION.md` for the OPEN/PROPOSED design-decisions staging area. Refer; don't replicate (per the drift-discipline rule in `../methodology/METHODOLOGY.md §6.1`).
 
 ---
 
@@ -259,4 +255,3 @@ See `BRD-OPEN-QUESTIONS.md` for the full list. Top three at v1 boundary:
 - `PRD-COMPANION.md` — decisions triggered during design
 - `../architecture/decisions` — append-only canonical decision log
 - `../methodology/METHODOLOGY.md` — how this repo is organized
-- Predecessors: `ai-hive/docs/architecture.md`, `ai-hive/docs/document-resonance.md`, `hackathon-hive/README.md`, `bc-subscriptions/METHODOLOGY.md`, `big-blueprint/template/`

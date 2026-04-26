@@ -105,40 +105,36 @@ Two focused red-team rounds were conducted, one per substrate, in the 2026-04-24
 
 **Premise tested:** Build a hosted multi-composer coordination service.
 
-**First-round red team (initial session):** Cited GitHub spec-kit, Linear Agents, Atlassian Rovo Dev, Backstage as competitors. **Verdict was correct for SDLC sync and wrong for coordination.** User pushed back: "I'm not convinced the tools you research actually solve what hackathon-hive solves."
-
-**Second-round red team (focused on coordination):** Revised competitor list to:
+**Competitor list (Q2 2026):**
 - Anthropic Claude Code Agent Teams (experimentally shipped; Anthropic owns the client)
 - Switchman (shipping; full product April 2026; MCP-server-based across 5+ clients)
 - GitHub Squad + `/fleet` (shipping; GitHub-native)
 - Microsoft Conductor (MIT; workflow layer)
 - Atlassian Rovo Dev (Atlassian-native)
 
-Resonance doc's original competitive survey was ~1 year stale (dated early 2025); all of the above shipped in the subsequent 12 months.
-
 **Findings:**
 
-1. **Agent Teams and Switchman close file-level coordination.** Both ship concurrent-coding primitives (task claim, file locks) that hackathon-hive's current implementation duplicates.
-2. **Non-code coordination is genuinely novel.** No incumbent addresses multi-composer work on non-code artifacts (strategy docs, research, design) via the same substrate. Find_similar on decisions + research is unique.
+1. **Agent Teams and Switchman close file-level coordination.** Both ship concurrent-coding primitives (task claim, file locks) that overlap with Atelier's lock subsystem.
+2. **Non-code coordination is genuinely novel.** No incumbent addresses multi-composer work on non-code artifacts (strategy docs, research, design) via the same substrate. find_similar on decisions + research is unique.
 3. **Mixed-surface support is genuinely novel.** Incumbents assume all composers are on the codebase. Web-agent composers as first-class are not supported anywhere.
-4. **Production SaaS cost similar: ~$750k–$1.2M year 1.** Against free incumbents (Agent Teams, Switchman OSS), the math does not work.
+4. **Production SaaS cost: ~$750k–$1.2M year 1.** Against free incumbents (Agent Teams, Switchman OSS), the math does not work.
 
-**Disconfirming test (both rounds converged):** Build `find_similar` standalone with vector index + labeled eval set. 2-week spike. Target ≥75% precision at ≥60% recall. The bet and its fallback path are tracked in [`risks.md`](./risks.md) Bet 1.
+**Disconfirming test:** Build `find_similar` standalone with vector index + labeled eval set. 2-week spike. Target ≥75% precision at ≥60% recall. The bet and its fallback path are tracked in [`risks.md`](./risks.md) Bet 1.
 
 **Verdict:** Not a standalone SaaS. Publish the schema + agent-endpoint tool surface as a spec ("Atelier Coordination Protocol"). Contribute find_similar and non-code territory contracts to Switchman as PRs/plugins if the test confirms. Don't build SaaS against Switchman/Agent Teams.
 
 ---
 
-## 5. Engineering risks inherited from predecessor work
+## 5. v1 design constraints
 
-`hackathon-hive` is the working coordination implementation that seeds Atelier's protocol. Real engineering risks flagged during red-team review that Atelier must address from v1:
+Four engineering choices are baked into Atelier's v1 design. They shape the schema, the protocol, and the security model from day one — not as v2 hardenings to apply later.
 
-1. **File locks lack fencing tokens.** Current implementation is Redlock-style distributed mutex. Kleppmann's critique applies literally: a GC pause past TTL causes silent overwrite. Data loss risk. **Atelier ships fencing tokens on every lock from v1; retrofitting later is not an option.**
-2. **`find_similar` is specified but not implemented in hackathon-hive MVP.** The single most differentiated primitive is currently vaporware. **Atelier implements find_similar at v1 with the eval harness; it is not deferred.**
-3. **"Graceful degradation via decisions.md" is aspirational.** No repo-canonical decision writer exists in hackathon-hive; the log lives only in Postgres. **Atelier writes a per-ADR file under `../architecture/decisions/` first (per ADR-005, ADR-030) and mirrors to the datastore second; a CI check validates the two stay in sync.**
-4. **Single bearer token shared across team; RLS decorative (service role bypasses).** **Atelier uses per-composer signed tokens from v1; service-role bypass is explicitly contained server-side.**
+1. **Fencing tokens on every lock (per ADR-004).** Lease-based mutexes (Redlock-style) are vulnerable to Kleppmann's GC-pause-past-TTL pattern: a holder pauses past lease expiry, returns, and writes after the lease has been reassigned. Atelier ships per-resource monotonic fencing tokens validated server-side on every write to a locked artifact. Cheap at v1, expensive to retrofit.
+2. **find_similar at v1 with eval harness (per ADR-006).** Without semantic duplicate detection, the disconfirming test for the project's value proposition cannot run (see [`risks.md`](./risks.md) Bet 1). find_similar is not a v2 feature.
+3. **Decisions write repo-first (per ADR-005, ADR-030).** Graceful degradation requires the rationale archive to survive a coordination-datastore outage. `log_decision` writes a per-ADR file under `../architecture/decisions/` first; the datastore mirror is a read-model. A CI check validates the two stay in sync.
+4. **Per-composer signed tokens; no shared bearer (per ARCH §7.1).** Single shared bearer tokens make audit attribution impossible and reduce RLS to decoration (service-role bypass becomes too easy). Per-composer signed tokens from v1; service-role bypass is contained server-side.
 
-These are not "bugs to fix later." They are design constraints on v1.
+**Provenance.** All four were surfaced during red-team review of predecessor coordination work. The patterns themselves are well-established in distributed-systems literature; the predecessor experience made the cost of skipping them concrete.
 
 ---
 
@@ -200,9 +196,7 @@ Both red-team rounds converged on this threshold as the load-bearing strategic b
 - **claude.ai / ChatGPT** with remote MCP access to the same project context
 
 ### Absorbs (as explicit design)
-- **Hackathon-hive's coordination substrate** — blackboard, task board, decisions, locks — with v1 engineering fixes (fencing tokens, `decisions.md` writer, find_similar implementation)
-- **Big-blueprint's prototype-as-canonical-artifact model** — strategy panels, design panels, current-state panels, traceability registry, demo reel
-- **bc-subscriptions' reference-implementation pattern** — one repo as source-of-truth, dual-track agile, trace IDs as join keys
+Atelier evolved from prior work on coordination substrates, prototype-as-canonical-artifact, and reference-implementation patterns for dual-track agile. See [`../methodology/METHODOLOGY.md §6.1`](../methodology/METHODOLOGY.md) for the doc-organization provenance.
 
 ---
 

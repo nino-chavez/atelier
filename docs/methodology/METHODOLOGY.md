@@ -3,7 +3,7 @@
 **Status:** v1.0
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-24
-**Related:** `../strategic/NORTH-STAR.md`, `../strategic/STRATEGY.md`, inherits from `big-blueprint` methodology
+**Related:** `../strategic/NORTH-STAR.md`, `../strategic/STRATEGY.md`
 
 ---
 
@@ -15,9 +15,9 @@ How this repository itself is organized. Atelier is a self-referential project: 
 
 ---
 
-## 1. Inherited foundation — dual-track agile
+## 1. Foundation — dual-track agile
 
-Atelier inherits the dual-track agile pattern (Marty Cagan / SVPG) as implemented in bc-subscriptions, with one critical reframe: the **prototype is the canonical artifact**, not just a discovery aid.
+Atelier uses the dual-track agile pattern (Marty Cagan / SVPG), with one critical reframe: the **prototype is the canonical artifact**, not just a discovery aid.
 
 ### Discovery track
 Frames the problem, shapes the solution, produces the spec.
@@ -38,9 +38,7 @@ The **sync substrate** bridges the two tracks. Publishes (repo → external) are
 
 ## 2. The prototype is the canonical artifact
 
-This is the reframe that distinguishes Atelier from bc-subscriptions' approach.
-
-In bc-subscriptions, the prototype was a high-fidelity illustration of the BRD — valuable for stakeholder alignment but not itself canonical. Canonical state lived in the markdown (BRD/PRD/ARCHITECTURE).
+In conventional dual-track-agile setups, the prototype is a high-fidelity illustration of the spec — valuable for stakeholder alignment but not itself canonical. Canonical state lives in the markdown (BRD/PRD/ARCHITECTURE) and the prototype is downstream of it.
 
 In Atelier, **the prototype is both the product artifact and the coordination dashboard.** It renders live from repo + datastore state. Composers interact with project state *through* the prototype. The `/atelier` route is the shared workspace. The `/strategy`, `/design`, `/slices/[id]`, and `/traceability` routes are how every composer sees the same canonical state through their role-specific lens.
 
@@ -50,7 +48,7 @@ Figma is a feedback surface, not a design source of truth. Designs live in the p
 
 ## 3. Actor model — six classes
 
-Extended from bc-subscriptions' five-class model to add the remote-principal case required for mixed-surface teams.
+Six actor classes; the sixth is the remote-principal case for mixed-surface teams (web composers without local repo access).
 
 | Class | Surface | Scope | Attribution | Authority |
 |---|---|---|---|---|
@@ -244,7 +242,6 @@ The pre-M2 path involves human reading. The post-M2 path is a single tool call. 
 
 - **claude-docs-toolkit** — seven-layer audience model, "continuous documentation" drift discipline, ADRs in their own subdirectory, Diátaxis for user docs (deferred to v1.x when end-user docs ship).
 - **big-blueprint** — root-level `CLAUDE.md` + `prototype/` + `research/` + `docs/` template; no parallel session-handoff doc (because state lives in the artifacts).
-- **hackathon-hive** — session continuity as a protocol primitive (`hive_checkpoint` / `hive_get_context`), not a markdown surface. This is the model Atelier will inherit at M2 via the 12-tool endpoint.
 
 ---
 

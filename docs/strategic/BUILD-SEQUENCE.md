@@ -148,7 +148,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Advances.** BRD Epic 14 (composer lifecycle), Epic 4 (concurrency aspects).
 
-**Bootstrap function.** Two or more composers (human or agent) can now author concurrently with each other observable in `/atelier`. The "hackathon-hive" capability is fully active.
+**Bootstrap function.** Two or more composers (human or agent) can now author concurrently with each other observable in `/atelier`. The multi-composer coordination capability is fully active.
 
 **Demoable.** Two remote agents author against the same `research_artifact`; the second is fenced out; both are visible to each other in the analyst lens with live presence.
 

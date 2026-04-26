@@ -61,5 +61,6 @@ Per the ADR-hygiene rule in `../../methodology/METHODOLOGY.md §6.1`, vocabulary
 | `Constitution` | `Charter` | Lighter metaphor; less politically loaded | Vocabulary tables, prose throughout. |
 | `Locus` | `Surface` | Plain English; Latin loanword was obscure | Vocabulary tables, prose throughout. Schema field name `session.locus` preserved in ADR-009 / ADR-023 for historical accuracy; will be `session.surface` in M2 implementation. |
 | `Dev/Analyst/PM/Designer Principal` | `Dev/Analyst/PM/Designer Composer` | Reconciled vocabulary: Composer = role-bearing participant; Principal = security-identity layer | PRD §3 personas. |
+| `Hive` (deployment-only) | `Guild` (team + shared instance) | Hive = wax cells (structure only); Guild = workers + workshop + standards. Bundles team and infrastructure into one concept (they always co-vary), aligns with `atelier`/`composer` workshop register, and removes "welcome to the hive" cult-y onboarding feel. Wide-scope rename: guild also subsumes the implicit "team" noun. | Vocabulary tables, prose throughout. ADR-015 / ADR-020 bodies preserved; PRD-COMPANION D-entries preserved as historical rationale. Proper nouns `hackathon-hive`, `ai-hive`, `Hivemind OS` (rejected name) preserved. |
 
 ADR files (append-only) reference the original terms; current docs use the new terms.

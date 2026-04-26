@@ -101,7 +101,7 @@ Two focused red-team rounds were conducted, one per substrate, in the 2026-04-24
 
 **Verdict:** Not a standalone commercial product. Methodology as public artifact + template as OSS scaffold + optionally a single managed sync-adapter Forge app for Jira in the regulated-RTM segment.
 
-### 4.2 Round 2 — Coordination substrate (hive) as a SaaS product
+### 4.2 Round 2 — Coordination substrate (guild) as a SaaS product
 
 **Premise tested:** Build a hosted multi-composer coordination service.
 

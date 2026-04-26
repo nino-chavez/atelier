@@ -36,7 +36,7 @@ From `../functional/PRD.md` and `../functional/BRD.md`, the system must:
 - Enforce fencing tokens on every lock to prevent data loss from GC pauses
 - Synchronize repo state with external tools (delivery tracker, published-doc system, design tool) via 5 substrate scripts
 - Triage external comments into proposal contributions that require human merge
-- Scale to typical team sizes (2–20 composers, 1–5 projects per hive) with graceful degradation when dependencies fail
+- Scale to typical team sizes (2–20 composers, 1–5 projects per guild) with graceful degradation when dependencies fail
 
 The architecture must remain vendor-neutral. Any stack that provides the required capabilities is a valid implementation.
 
@@ -535,15 +535,15 @@ Atelier ships as a template. Teams run `atelier init`, then:
 
 No Atelier service, no tenant database, no central auth.
 
-### 9.2 One hive, many projects
+### 9.2 One guild, many projects
 
-A "hive" is one team's deployed infrastructure (one datastore + one endpoint + one prototype deploy per team). A hive hosts multiple projects, each with its own project_id, repo, and configuration.
+A "guild" is a team and the shared Atelier instance they coordinate through (one datastore + one endpoint, plus deployed prototype(s) — see §9.3 for prototype topology). A guild hosts multiple projects, each with its own `project_id`, repo, and configuration.
 
 Schema supports plural projects from v1 (see §5.1). No retrofit later.
 
 ### 9.3 Infrastructure requirements
 
-Per hive:
+Per guild:
 - 1 coordination datastore (relational + pub/sub + identity + vector index)
 - 1 serverless runtime deployment (agent endpoint)
 - 1 static/edge hosting deployment per project (prototype web app)

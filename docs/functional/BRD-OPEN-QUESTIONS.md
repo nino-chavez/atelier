@@ -115,24 +115,24 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 - `atelier upgrade` runs migrations. What about authored content that conflicts with new defaults?
 - Are migrations idempotent? Reversible?
 - How does the datastore schema get migrated? Compatibility window for in-flight contributions across versions?
-- Do projects have to upgrade in lockstep if they share a hive?
+- Do projects have to upgrade in lockstep if they share a guild?
 
-**Recommendation.** Migrations are additive-preferred (no destructive changes). Conflicts reported, not auto-resolved. Datastore schema supports N and N−1 simultaneously for a grace window. Projects upgrade independently within a hive.
+**Recommendation.** Migrations are additive-preferred (no destructive changes). Conflicts reported, not auto-resolved. Datastore schema supports N and N−1 simultaneously for a grace window. Projects upgrade independently within a guild.
 
 **Status.** OPEN.
 
 ---
 
-## 7 · Scale ceiling per hive
+## 7 · Scale ceiling per guild
 
-**Scenario.** One hive hosts N projects with M composers total. What are the design limits?
+**Scenario.** One guild hosts N projects with M composers total. What are the design limits?
 
 **Open questions:**
-- Is the blackboard pub/sub single-channel per-project or per-hive? Pub/sub load scales accordingly.
+- Is the blackboard pub/sub single-channel per-project or per-guild? Pub/sub load scales accordingly.
 - Vector index size: embeddings for all decisions + contributions + BRD sections + research across all projects. What's the ceiling before query p95 degrades?
 - Reaper cron runs across all projects — does it parallelize per-project or scan one table?
 
-**Recommendation.** Document supported scale envelope (e.g., up to 10 projects × 20 composers × 10K contributions per project = 2M rows). Beyond that, recommend multiple hives per team.
+**Recommendation.** Document supported scale envelope (e.g., up to 10 projects × 20 composers × 10K contributions per project = 2M rows). Beyond that, recommend multiple guilds per team.
 
 **Status.** OPEN. Benchmark required.
 
@@ -183,7 +183,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 11 · Solo-to-hive transition
+## 11 · Solo-to-guild transition
 
 **Scenario.** A solo dev starts a project with `atelier init --local-only`. Six months later, they want to add collaborators.
 
@@ -246,10 +246,10 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 **Scenario.** A team wants different Atelier environments (staging, production). How?
 
 **Open questions:**
-- One hive with multiple projects representing environments, or one project with multiple deploy targets?
+- One guild with multiple projects representing environments, or one project with multiple deploy targets?
 - Are sessions/contributions shared across environments or isolated?
 
-**Recommendation.** Environments are separate projects within one hive. Each has its own repo branch, datastore schema namespace, deploy target. Cross-environment references via trace IDs if needed. Documented pattern, not a schema construct.
+**Recommendation.** Environments are separate projects within one guild. Each has its own repo branch, datastore schema namespace, deploy target. Cross-environment references via trace IDs if needed. Documented pattern, not a schema construct.
 
 **Status.** DOCUMENTED convention (no schema change).
 

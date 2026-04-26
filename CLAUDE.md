@@ -95,7 +95,7 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-012:** Capability-level architecture; no vendor lock-in.
 - **ADR-013:** 12-tool agent endpoint surface.
 - **ADR-014:** Territory + contract model extended to non-code.
-- **ADR-015:** One hive, many projects (plural schema from v1).
+- **ADR-015:** One guild, many projects (plural schema from v1).
 - **ADR-016:** Two orthogonal substrates (SDLC sync + coordination).
 - **ADR-017:** Five role-aware lenses at `/atelier`: analyst, dev, PM, designer, stakeholder.
 - **ADR-018:** Triage never auto-merges; all external content requires human approval.

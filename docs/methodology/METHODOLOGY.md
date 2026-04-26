@@ -56,7 +56,7 @@ Extended from bc-subscriptions' five-class model to add the remote-principal cas
 |---|---|---|---|---|
 | **Principal + IDE harness** | Local IDE | Repo + datastore via `ide` session | Human identity | Full — harness inherits principal |
 | **Principal + web harness** | Browser + remote protocol | Datastore + repo via proposals | Human identity | Full for their territory; contributes to repo via PRs |
-| **Hive collaboration** | Shared coordination layer | Hive-scoped drafts | Per-principal identities | Proposes; repo entry requires PR |
+| **Guild collaboration** | Shared coordination layer | Guild-scoped drafts | Per-principal identities | Proposes; repo entry requires PR |
 | **Pipeline agent** | CI / scheduled / webhook | External systems, registry mirror | Bot account | Deterministic contract; never authors canonical state |
 | **Triage agent** | Server / function | Proposal contributions | Bot account (cites origin) | Proposes; human merge required |
 | **App agent** | Product runtime | Product data | Per product's rules | Not SDLC — uses trace IDs for observability only |
@@ -300,7 +300,7 @@ Agents reading context via `get_context` receive trace-ID-scoped state. Agents w
 - **Not a new agile framework.** Dual-track agile is Cagan/SVPG.
 - **Not a replacement for Jira, Confluence, Linear, Figma, or Slack.** They remain best-in-class for what they do.
 - **Not autonomous.** Every cross-boundary change is either a deterministic publish or a human-reviewed PR/merge.
-- **Not a multi-tenant platform.** One team, one hive, many projects within that hive.
+- **Not a multi-tenant platform.** One team, one guild, many projects within that guild.
 
 ---
 

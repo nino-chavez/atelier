@@ -73,8 +73,8 @@ Build sequencing across M0–M7 is in [`docs/strategic/BUILD-SEQUENCE.md`](./doc
 | Term | Meaning |
 |---|---|
 | **Atelier** | The product. The shared studio. |
-| **Hive** | An Atelier deployment hosting one or more projects (one team's instance — datastore + endpoint + deploys). Per ADR-015. |
-| **Project** | One repo + one coordination datastore + one deployed prototype + linked tools. A hive contains N projects. |
+| **Guild** | A team and the shared Atelier instance they coordinate through — composers + one datastore + one endpoint + one prototype deploy. Hosts one or more projects. Per ADR-015. |
+| **Project** | One repo + linked external tools, scoped within a guild via `project_id`. Projects share their guild's datastore and endpoint with `project_id` isolation. |
 | **Composer** | The role-bearing participant — a human (or their authorized agent) authoring canonical state in coordination contexts. |
 | **Principal** | The security-identity layer — the signed identity a composer authenticates as (per OAuth/OIDC vocabulary). A composer participates as a principal. |
 | **Session** | A composer's active connection to a project from a specific surface. |

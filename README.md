@@ -54,11 +54,17 @@ Doc structure follows the claude-docs-toolkit seven-layer audience model with At
 
 ---
 
-## The irreducible bet
+## What ships at v1
 
-**Fit_check precision.** Semantic search that answers "is this already done or in flight?" at ≥75% precision with ≥60% recall. Ships at v1 with an evaluation harness and CI gate (per ADR-006).
+Every capability in [`docs/strategic/NORTH-STAR.md`](./docs/strategic/NORTH-STAR.md) ships at v1, including:
 
-If the bar holds, Atelier has a defensible commercial wedge (optional managed fit_check service). If it misses, the Specification and Reference Implementation tiers still ship as planned — fit_check performance determines the commercial story, not the feature scope. Every feature described in [`docs/strategic/NORTH-STAR.md`](./docs/strategic/NORTH-STAR.md) ships together.
+- **Fit_check** — semantic search answering "is this already done or in flight?" with an evaluation harness and CI gate enforcing ≥75% precision at ≥60% recall (per ADR-006).
+- The 12-tool agent endpoint (per ADR-013).
+- The five role-aware lenses at `/atelier` (per ADR-017).
+- The five SDLC sync substrate scripts (per ADR-008).
+- The territory + contract model with fencing tokens (per ADR-004, ADR-014).
+
+Build sequencing across M0–M7 is in [`docs/strategic/BUILD-SEQUENCE.md`](./docs/strategic/BUILD-SEQUENCE.md). Strategic bets the build depends on — and what would change if those bets don't hold — are tracked in [`docs/strategic/risks.md`](./docs/strategic/risks.md).
 
 ---
 

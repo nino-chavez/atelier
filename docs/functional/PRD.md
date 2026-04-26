@@ -31,7 +31,7 @@ See `../strategic/STRATEGY.md` for full competitive analysis. Summary:
 - **SDLC sync substrate market** is commoditized — GitHub Spec-Kit, Linear Agents, Atlassian Rovo Dev collectively occupy ~80% with distribution Atelier cannot match.
 - **Coordination substrate market** has genuine gaps — Anthropic Claude Code Agent Teams and Switchman close file-level coordination but do not address non-code territories or mixed-locus teams.
 - **Atelier's wedge** is (a) canonical artifact as prototype, (b) non-code territories as first-class, (c) mixed-locus composer participation via web-agent clients, (d) fit_check as load-bearing duplicate-detection primitive.
-- **Commercial scope deliberately narrow.** Atelier ships as OSS. Managed fit_check is the only plausible commercial surface and is conditional on the disconfirming test.
+- **Commercial scope deliberately narrow.** Atelier ships as OSS. Potential commercial surfaces are tracked in [`../strategic/risks.md`](../strategic/risks.md); none ship at v1.
 
 ---
 
@@ -104,11 +104,11 @@ Six routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceabil
 - CI check validates repo/datastore sync on every push
 - Graceful degradation: repo write always succeeds even if datastore unreachable
 
-### 4.6 Fit_check — the disconfirming test (Epic 6)
+### 4.6 Fit_check (Epic 6)
 - Vector-index-backed semantic search over decisions, contributions, BRD/PRD sections, research artifacts
 - Labeled eval set at `atelier/eval/fit_check/*.yaml`
 - `atelier eval fit_check` reports precision/recall
-- CI gate at ≥75% precision, ≥60% recall
+- CI gate at ≥75% precision, ≥60% recall (per ADR-006)
 - Composer accept/reject feeds back to eval
 - Keyword-search fallback with explicit UI banner
 
@@ -212,9 +212,8 @@ Any stack that provides these, deployable behind a single self-hostable command,
 - Triage accept rate ≥80% (proposals accepted as-is or with minor edits)
 - Session reaper rate < 5% (indicates crash recovery, not overload)
 
-### 7.3 Commercial (conditional on disconfirming test)
-- Managed fit_check signups (only if precision holds)
-- Forge app installs (only if regulated-RTM segment materializes)
+### 7.3 Commercial
+Commercial surfaces are tracked in [`../strategic/risks.md`](../strategic/risks.md), not as v1 PRD scope. None gate v1 features.
 
 ---
 
@@ -222,7 +221,7 @@ Any stack that provides these, deployable behind a single self-hostable command,
 
 **OSS-first.** Publish the template, protocol, and reference implementation on the primary versioned-file-store platform (likely GitHub). Documentation site hosted on static hosting. Methodology doc published publicly as credibility/consulting artifact.
 
-**No marketing funnel at v1.** The disconfirming test (fit_check precision) runs first. Marketing activates only if the test confirms commercial viability.
+**No marketing funnel at v1.** Strategic bets that gate any future commercial activity are tracked in [`../strategic/risks.md`](../strategic/risks.md).
 
 **Adoption targets:**
 - Solo developers using big-blueprint-style prototyping → drop-in upgrade to Atelier template

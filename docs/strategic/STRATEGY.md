@@ -123,7 +123,7 @@ Resonance doc's original competitive survey was ~1 year stale (dated early 2025)
 3. **Mixed-locus support is genuinely novel.** Incumbents assume all composers are on the codebase. Web-agent composers as first-class are not supported anywhere.
 4. **Production SaaS cost similar: ~$750k–$1.2M year 1.** Against free incumbents (Agent Teams, Switchman OSS), the math does not work.
 
-**Disconfirming test (both rounds converged):** Build `fit_check` standalone with vector index + labeled eval set. 2-week spike. Target ≥75% precision at ≥60% recall. If it hits, `fit_check` is the commercial wedge. If it misses, Atelier becomes methodology + template + spec.
+**Disconfirming test (both rounds converged):** Build `fit_check` standalone with vector index + labeled eval set. 2-week spike. Target ≥75% precision at ≥60% recall. The bet and its fallback path are tracked in [`risks.md`](./risks.md) Bet 1.
 
 **Verdict:** Not a standalone SaaS. Publish the schema + agent-endpoint tool surface as a spec ("Atelier Coordination Protocol"). Contribute fit_check and non-code territory contracts to Switchman as PRs/plugins if the test confirms. Don't build SaaS against Switchman/Agent Teams.
 
@@ -153,27 +153,19 @@ Rationale:
 - **Template, not product.** The value is in the scaffolding + convention — what you get after `atelier init` — not in a hosted experience.
 - **Protocol, not integration.** Atelier doesn't integrate with each tool individually; it defines the interop protocol that composers (agents + humans) use to participate in a project. Integrations with Jira/Confluence/Figma are straightforward because they're separate from the protocol's core.
 
-**Potential commercial surfaces** (all conditional on fit_check precision holding):
+**Potential commercial surfaces** (none ship at v1; each depends on a strategic bet tracked in [`risks.md`](./risks.md)):
 
-1. Managed fit_check service (hosted vector index + eval harness + precision SLA).
-2. Single-focus Forge app for Jira (or equivalent) in the regulated-RTM segment.
+1. Managed fit_check service — depends on Bet 1 (fit_check precision).
+2. Single-focus Forge app for Jira in the regulated-RTM segment — depends on Bet 2 (regulated-RTM segment exists).
 3. Consulting / adoption support for enterprise teams.
-
-None of these ship at v1. All are evaluated only after the disconfirming test reports.
 
 ---
 
-## 7. The disconfirming test
+## 7. The fit_check threshold and its strategic role
 
-**Fit_check precision at ≥75% at ≥60% recall on a labeled eval set.**
+The spec ships fit_check with an eval harness and CI gate enforcing **≥75% precision at ≥60% recall** on a labeled eval set (per ADR-006). The eval set ships with the template. The `atelier eval fit_check` CLI command produces the report.
 
-Both red-team rounds converged on this single test. The eval set ships with the template. The CI gate enforces the threshold. The `atelier eval fit_check` CLI command produces the report.
-
-**If the threshold holds:** Atelier has a defensible commercial wedge. The managed fit_check service becomes a credible offering on top of the three OSS tiers (per ADR-031).
-
-**If the threshold misses:** the three open-source tiers (Specification / Reference Implementation / Reference Deployment) still ship as planned. Coordination and sync still work; duplicate-detection becomes a weak suggestion rather than a strong match. The commercial wedge closes; the educational/methodological value remains.
-
-**Either way, every feature in `NORTH-STAR.md` ships.** Fit_check's performance determines the *commercial* story. It does not gate any product feature.
+Both red-team rounds converged on this threshold as the load-bearing strategic bet. Whether the threshold is achievable with current embedding models — and what changes about Atelier's commercial story if it isn't — is tracked in [`risks.md`](./risks.md) Bet 1. The spec stands regardless of how the bet resolves; what changes is the commercial path forward, not the feature scope.
 
 ---
 

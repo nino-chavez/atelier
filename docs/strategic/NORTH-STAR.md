@@ -310,11 +310,11 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 
 ---
 
-## 16. The bet, designed-in
+## 16. The fit_check threshold
 
-Fit_check precision is the load-bearing technical bet. The whole system works whether or not it hits ≥75% precision. If it does, Atelier has a defensible commercial wedge (managed fit_check). If it doesn't, the Specification and Reference Implementation tiers (per ADR-031) still ship as planned.
+Fit_check ships with an eval harness and CI gate enforcing ≥75% precision at ≥60% recall on a labeled eval set drawn from this repo's own decisions corpus (per ADR-006).
 
-**Either way, everything above ships.** Fit_check's performance determines the *commercial* story. It does not gate *any* feature.
+The threshold is part of the spec. Whether the threshold can actually be hit by current embedding models is a strategic bet tracked separately in [`risks.md`](./risks.md). The spec stands regardless of how the bet resolves.
 
 ---
 

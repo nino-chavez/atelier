@@ -19,7 +19,8 @@ The following documents are authoritative. When they disagree with each other, t
 7. `docs/functional/PRD-COMPANION.md` — design-time decisions with rationale
 8. `docs/architecture/decisions/` — append-only canonical runtime decision log (one file per ADR per ADR-030)
 9. `docs/functional/BRD-OPEN-QUESTIONS.md` — known open items
-10. `traceability.json` — trace-ID registry
+10. `docs/strategic/risks.md` — load-bearing strategic bets and their fallback paths (separate from spec by design)
+11. `traceability.json` — trace-ID registry
 
 If you would change the canonical state, explain which doc and why before modifying.
 

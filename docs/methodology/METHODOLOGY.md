@@ -181,9 +181,10 @@ The files at the repo root are the **canonical state precedence list** declared 
 | `../architecture/ARCHITECTURE.md` | Architecture | Senior engineers | How is the system designed (capability-level)? |
 | `METHODOLOGY.md` | Developer | Contributors | How does this repo work, what conventions apply? |
 | `../functional/PRD-COMPANION.md` | Strategic / Architecture | Architects | What design decisions were made and why? |
-| `../architecture/decisions` | Architecture / decisions | All | What's the append-only ADR log? |
+| `../architecture/decisions/` | Architecture / decisions | All | What's the append-only ADR log? |
 | `../functional/BRD-OPEN-QUESTIONS.md` | Strategic | Architects, PM | What's unresolved? |
 | `../strategic/BUILD-SEQUENCE.md` | Strategic / roadmap | Implementers | What's the order of construction (not feature scope)? |
+| `../strategic/risks.md` | Strategic / risk register | Architects, leadership | What load-bearing strategic bets does the build depend on, and what changes if they don't hold? |
 | `traceability.json` | Cross-cutting registry | Tooling, all | Where is this trace ID referenced? |
 | `README.md` | Cold-start entry | New readers | Where do I start? |
 | `CLAUDE.md` / `AGENTS.md` | Agent constitution | Agents | What rules govern my behavior in this repo? |
@@ -208,6 +209,25 @@ Rules:
 2. **Author at the canonical site.** ADRs are added in `../architecture/decisions`, never in summary surfaces. Open questions live in `../functional/BRD-OPEN-QUESTIONS.md`, with `RESOLVED` markers updated in place — not echoed elsewhere.
 3. **CI catches drift, eventually.** ADR-008's traceability validator already checks trace-ID drift. A future check will flag ADR/decision-count duplication outside the canonical sources.
 4. **Audit on every milestone exit.** Each `../strategic/BUILD-SEQUENCE.md` milestone exit includes a drift sweep against the canonical-state precedence list.
+
+### Spec vs. contingency separation
+
+Spec docs (`NORTH-STAR`, `PRD`, `BRD`, `ARCHITECTURE`) describe **what gets built** in destination-first present tense per ADR-011. They do not hedge ("if X holds, then Y") — hedging implies the destination depends on a bet, which contradicts destination-first design.
+
+Contingency thinking — "what changes if our load-bearing assumptions don't hold" — lives in `../strategic/risks.md`, not in spec docs. The spec stands regardless of how a bet resolves; what changes is the commercial path forward, not the feature scope.
+
+If you find yourself writing "if it misses..." or "if the bar holds..." in a spec doc, move that thinking to `risks.md` and keep the spec sentence about what's being built.
+
+### ADR hygiene (when *not* to write an ADR)
+
+ADRs record **load-bearing choices with alternatives and ongoing consequences.** Cleanups, principle-application, and corrections of past confusion are *not* ADR-worthy — they're just work.
+
+Test: **"If we'd done this right from the start, would the ADR survive?"**
+
+- ADRs that pass: ADR-030 (per-ADR file split — real alternatives, real consequences), ADR-031 (three-tier consumer model — real alternatives, real consequences), ADR-027 (reference stack pick — real alternatives, real consequences).
+- ADRs that would *fail* the test: "ADR for separating contingency from spec" (no alternatives — just applying separation-of-concerns), "ADR for moving doc X to layer Y" (no alternatives — just good organization), "ADR for fixing a stale reference" (no alternatives — just maintenance).
+
+When in doubt, ask: *what's the alternative I'd be rejecting, and what's the consequence if I reverse the choice?* If both are weak, just do the work — don't ADR-document your own oversight.
 
 ### Pre-M2 / post-M2 continuity transition
 

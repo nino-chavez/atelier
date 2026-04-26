@@ -26,7 +26,7 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D3 | `scope_kind` generalized from day one (files, doc_region, research_artifact, design_component) | Data model | High | Adopt | **DECIDED** (2026-04-24) |
 | D4 | Fencing tokens mandatory on all locks from v1 | Security | High | Adopt | **DECIDED** (2026-04-24) |
 | D5 | Decisions write to `decisions.md` first, datastore second | Durability | High | Adopt | **DECIDED** (2026-04-24) |
-| D6 | Fit_check ships at v1 with eval harness + CI gate (≥75% precision at ≥60% recall) | Product | High | Adopt | **DECIDED** (2026-04-24) |
+| D6 | Find_similar ships at v1 with eval harness + CI gate (≥75% precision at ≥60% recall) | Product | High | Adopt | **DECIDED** (2026-04-24) |
 | D7 | No multi-tenant SaaS; self-hosted OSS only | Product scope | High | Adopt | **DECIDED** (2026-04-24) |
 | D8 | All 5 sync substrate scripts ship together; no phasing | Scope | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D9 | Remote-principal actor class (web-agent composers as first-class) | Actor model | High | Adopt | **DECIDED** (2026-04-24) |
@@ -44,11 +44,11 @@ Each decision is tagged **OPEN**, **PROPOSED**, or **DECIDED**. Once decided, th
 | D21 | Figma is feedback surface, not design source-of-truth | UX | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D22 | Switchman evaluated as dependency for file-level locks (rejected: no fencing-token API) | Architecture | Medium | Own-implementation | **DECIDED** (2026-04-25) |
 | D23 | Identity-service default (self-hosted OIDC vs external provider vs BYO) | Architecture | Medium | BYO with a default | **OPEN** |
-| D24 | Embedding model default for fit_check | Architecture | Medium | Benchmark 3+ options | **OPEN** |
+| D24 | Embedding model default for find_similar | Architecture | Medium | Benchmark 3+ options | **OPEN** |
 | D25 | Naming: `Atelier` over `Hivemind OS` / `Hive` / `Commons` / `Loom` | Product | Medium | Adopt `Atelier` | **DECIDED** (2026-04-24) |
 | D26 | Multi-trace-ID support on contributions and decisions (`text[]` with GIN index) | Data model | High | Adopt | **DECIDED** (2026-04-24) |
 | D27 | `claim` atomic-creates open contributions when called with `contribution_id=null` | Protocol | High | Adopt | **DECIDED** (2026-04-24) |
-| D28 | Remote-locus commits via per-project endpoint git committer | Architecture | High | Adopt | **DECIDED** (2026-04-24) |
+| D28 | Remote-surface commits via per-project endpoint git committer | Architecture | High | Adopt | **DECIDED** (2026-04-24) |
 | D29 | Transcripts as repo-sidecar files, opt-in by config | Architecture | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D30 | Review routing keyed by `territory.review_role` | Coordination | Medium | Adopt | **DECIDED** (2026-04-24) |
 | D31 | Reference implementation stack: GitHub + Supabase + Vercel + MCP | Architecture | High | Adopt as reference (not architecture) | **DECIDED** (2026-04-25) |
@@ -167,24 +167,24 @@ D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analy
 
 ---
 
-### D6 — Fit_check ships at v1 with eval harness + CI gate
+### D6 — Find_similar ships at v1 with eval harness + CI gate
 
 **Status:** DECIDED (2026-04-24)
 
-**Context.** Fit_check is specified in ai-hive architecture but not implemented in hackathon-hive MVP. It's the single most differentiated primitive. Red team: "if you ship without it, there's no moat."
+**Context.** Find_similar is specified in ai-hive architecture but not implemented in hackathon-hive MVP. It's the single most differentiated primitive. Red team: "if you ship without it, there's no moat."
 
 **Alternatives considered:**
-1. Defer fit_check to post-v1 — rejected (destination-first; see D11).
+1. Defer find_similar to post-v1 — rejected (destination-first; see D11).
 2. Ship keyword-only at v1 — rejected (doesn't test the semantic hypothesis).
-3. Ship full vector-index-backed fit_check with eval harness and CI gate (adopted).
+3. Ship full vector-index-backed find_similar with eval harness and CI gate (adopted).
 
-**Decision.** Fit_check ships at v1. Eval harness in `atelier/eval/fit_check/*.yaml` with labeled positive pairs + negatives + adversarials. CI gate at ≥75% precision and ≥60% recall. Accept/reject feedback loop.
+**Decision.** Find_similar ships at v1. Eval harness in `atelier/eval/find_similar/*.yaml` with labeled positive pairs + negatives + adversarials. CI gate at ≥75% precision and ≥60% recall. Accept/reject feedback loop.
 
-**Rationale.** The disconfirming test. If precision holds, commercial wedge exists; if not, Atelier is methodology + template. Either way, every other feature ships — fit_check performance doesn't gate them.
+**Rationale.** The disconfirming test. If precision holds, commercial wedge exists; if not, Atelier is methodology + template. Either way, every other feature ships — find_similar performance doesn't gate them.
 
 **Impact:**
 - `BRD.md` Epic 6 — US-6.1 through US-6.6
-- `../architecture/ARCHITECTURE.md` §5.4, §6.4 — vector index + fit_check flow
+- `../architecture/ARCHITECTURE.md` §5.4, §6.4 — vector index + find_similar flow
 - `../strategic/STRATEGY.md` §7 — the disconfirming test
 
 ---
@@ -200,7 +200,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analy
 2. OSS + optional managed services — considered; kept optional for commercial surface conditional on D6's disconfirming test.
 3. OSS-only, self-hosted, no managed anything (adopted for v1).
 
-**Decision.** Atelier ships as OSS template. Teams self-host. No central Atelier service, no tenant database, no billing. Commercial surface (managed fit_check) is conditional on D6 outcome and not part of v1.
+**Decision.** Atelier ships as OSS template. Teams self-host. No central Atelier service, no tenant database, no billing. Commercial surface (managed find_similar) is conditional on D6 outcome and not part of v1.
 
 **Rationale.** Consulting incumbents win SaaS distribution fights. Methodology + template + protocol is the credible play. Commercial wedge stays narrow and conditional.
 
@@ -239,7 +239,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analy
 
 **Alternatives considered:**
 1. Force analysts into terminals — rejected (defeats the mixed-team thesis).
-2. Extend actor model with `web` locus + remote-protocol transport (adopted).
+2. Extend actor model with `web` surface + remote-protocol transport (adopted).
 
 **Decision.** Actor model has 6 classes (was 5). Principal + IDE harness and Principal + web harness are distinct. Web-principals authenticate with per-composer tokens and call the same 12-tool endpoint via remote protocol.
 
@@ -248,7 +248,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analy
 **Impact:**
 - `../methodology/METHODOLOGY.md` §3 — six-class actor model
 - `BRD.md` Epic 16 — remote composer stories
-- `../architecture/ARCHITECTURE.md` §6.1 — session locus enum includes `web`
+- `../architecture/ARCHITECTURE.md` §6.1 — session surface enum includes `web`
 
 ---
 
@@ -302,7 +302,7 @@ D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analy
 
 **Context.** Ai-hive architecture specified 13 tools. Hackathon-hive implements 12. Reviewed for consolidation.
 
-**Decision.** 12 tools: register/heartbeat/deregister (session), get_context/fit_check (context), claim/update/release (contribution), acquire_lock/release_lock (lock), log_decision (decision), publish_contract+get_contracts (contract, counted as one tool surface).
+**Decision.** 12 tools: register/heartbeat/deregister (session), get_context/find_similar (context), claim/update/release (contribution), acquire_lock/release_lock (lock), log_decision (decision), publish_contract+get_contracts (contract, counted as one tool surface).
 
 **Rationale.** Minimum viable surface for full protocol. Every tool maps to a BRD story.
 
@@ -482,11 +482,11 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 ---
 
-### D24 — Embedding model default for fit_check
+### D24 — Embedding model default for find_similar
 
 **Status:** OPEN
 
-**Decision pending.** Default model choice for fit_check vector index. Candidates:
+**Decision pending.** Default model choice for find_similar vector index. Candidates:
 - OpenAI `text-embedding-3-small` (adequate, cheap, external API)
 - Cohere Embed v3 (adequate, external)
 - Self-hostable models (e.g., BGE-large-en) — eliminates external AI dependency for self-host compliance
@@ -540,12 +540,12 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Alternatives considered:**
 1. Overload `claim` with `contribution_id=null` for atomic create-and-claim (adopted).
 2. Add `create_contribution` (rejected — would push surface to 13 tools, requires amending ADR-013).
-3. Repo-commit-only creation (rejected — friction for web-locus composers).
+3. Repo-commit-only creation (rejected — friction for web-surface composers).
 4. Overload `update` instead of `claim` (rejected — less semantically clean).
 
 **Decision.** `claim` overloads to atomic-create-and-claim when called with `contribution_id=null` plus `kind`, `trace_ids`, `territory_id`, optional `content_stub`.
 
-**Rationale.** Keeps the 12-tool surface intact (D13/ADR-013), makes create+claim transactional, matches how analyst-locus work actually flows.
+**Rationale.** Keeps the 12-tool surface intact (D13/ADR-013), makes create+claim transactional, matches how analyst-surface work actually flows.
 
 **Impact on downstream docs:**
 - `../strategic/NORTH-STAR.md` §5 — `claim` signature note
@@ -554,11 +554,11 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 ---
 
-### D28 — Remote-locus commits via per-project endpoint git committer
+### D28 — Remote-surface commits via per-project endpoint git committer
 
 **Status:** DECIDED (2026-04-24). See ADR-023.
 
-**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #2). ARCH §6.2 implied agents write to artifacts, but a web-locus analyst has no local filesystem — the endpoint must commit on their behalf, with identity, signing, failure handling, and sync timing unspecified.
+**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #2). ARCH §6.2 implied agents write to artifacts, but a web-surface analyst has no local filesystem — the endpoint must commit on their behalf, with identity, signing, failure handling, and sync timing unspecified.
 
 **Alternatives considered:**
 1. Per-project endpoint git committer with composer co-authorship; synchronous commit; failure rolls back datastore (adopted).
@@ -585,7 +585,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 **Alternatives considered:**
 1. Sidecar in repo, opt-in via config (adopted).
 2. External blob store (rejected — adds infra dependency on every deploy).
-3. Don't capture; rely on agent client's own session history (rejected — loses cross-locus story).
+3. Don't capture; rely on agent client's own session history (rejected — loses cross-surface story).
 
 **Decision.** Schema gains `contributions.transcript_ref text` (nullable). Capture is opt-in via `.atelier/config.yaml: transcripts.capture: false` (default). Sidecars are gitignored by default; opt-in commits them under a documented PII review.
 

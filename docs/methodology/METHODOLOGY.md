@@ -50,9 +50,9 @@ Figma is a feedback surface, not a design source of truth. Designs live in the p
 
 ## 3. Actor model — six classes
 
-Extended from bc-subscriptions' five-class model to add the remote-principal case required for mixed-locus teams.
+Extended from bc-subscriptions' five-class model to add the remote-principal case required for mixed-surface teams.
 
-| Class | Locus | Scope | Attribution | Authority |
+| Class | Surface | Scope | Attribution | Authority |
 |---|---|---|---|---|
 | **Principal + IDE harness** | Local IDE | Repo + datastore via `ide` session | Human identity | Full — harness inherits principal |
 | **Principal + web harness** | Browser + remote protocol | Datastore + repo via proposals | Human identity | Full for their territory; contributes to repo via PRs |
@@ -61,7 +61,7 @@ Extended from bc-subscriptions' five-class model to add the remote-principal cas
 | **Triage agent** | Server / function | Proposal contributions | Bot account (cites origin) | Proposes; human merge required |
 | **App agent** | Product runtime | Product data | Per product's rules | Not SDLC — uses trace IDs for observability only |
 
-**Principle:** authority follows locus + scope, not role. A principal's harness is trusted because the principal is in the loop. A pipeline agent is trusted because its contract is narrow. A triage agent is never trusted to merge because its input is unsanitized external comments. A web-principal is trusted for their territory because they authenticate to the datastore with per-composer tokens.
+**Principle:** authority follows surface + scope, not role. A principal's harness is trusted because the principal is in the loop. A pipeline agent is trusted because its contract is narrow. A triage agent is never trusted to merge because its input is unsanitized external comments. A web-principal is trusted for their territory because they authenticate to the datastore with per-composer tokens.
 
 ---
 
@@ -104,7 +104,7 @@ Components (all ship at v1):
 - File / doc-region / artifact locks with fencing tokens
 - Append-only decision log (per-ADR files under `../architecture/decisions/` + datastore mirror)
 - Session heartbeats and stale reaper
-- Fit_check (semantic duplicate detection with eval harness)
+- Find_similar (semantic duplicate detection with eval harness)
 - Territory / department contracts
 - Agent-facing endpoint exposing 12 tools
 
@@ -117,7 +117,7 @@ The two substrates share the trace ID as a cross-reference but are independently
 ```
 atelier/
 ├── README.md                       # Entry point, tier-routing, vocabulary
-├── CLAUDE.md / AGENTS.md           # Agent constitution (root — agents look here)
+├── CLAUDE.md / AGENTS.md           # Agent charter (root — agents look here)
 ├── traceability.json               # Cross-cutting trace-ID registry
 │
 ├── docs/                           # Audience-layered documentation (per ADR-031, ADR-032)
@@ -136,7 +136,7 @@ atelier/
 │   ├── developer/                  # Tier-2: contributor + extender docs
 │   │   └── extending/
 │   ├── ops/                        # Tier-1: self-host runbooks (populates at M7)
-│   ├── testing/                    # Eval harness, fit_check methodology (M5)
+│   ├── testing/                    # Eval harness, find_similar methodology (M5)
 │   └── user/                       # Diátaxis: tutorials/guides/reference/explanation (v1)
 │
 ├── prototype/                      # Canonical artifact web app
@@ -145,7 +145,7 @@ atelier/
 │   │   ├── components/
 │   │   └── lib/
 │   └── eval/
-│       └── fit_check/              # Labeled eval set + runner
+│       └── find_similar/              # Labeled eval set + runner
 │
 ├── scripts/
 │   ├── traceability/               # Registry generation + link injection
@@ -187,7 +187,7 @@ The files at the repo root are the **canonical state precedence list** declared 
 | `../strategic/risks.md` | Strategic / risk register | Architects, leadership | What load-bearing strategic bets does the build depend on, and what changes if they don't hold? |
 | `traceability.json` | Cross-cutting registry | Tooling, all | Where is this trace ID referenced? |
 | `README.md` | Cold-start entry | New readers | Where do I start? |
-| `CLAUDE.md` / `AGENTS.md` | Agent constitution | Agents | What rules govern my behavior in this repo? |
+| `CLAUDE.md` / `AGENTS.md` | Agent charter | Agents | What rules govern my behavior in this repo? |
 
 ### Ephemeral state (`.atelier/`)
 
@@ -274,11 +274,11 @@ Agents reading context via `get_context` receive trace-ID-scoped state. Agents w
 
 ### Discovery track — multi-composer
 1. Coordination substrate is active (sessions registered, blackboard live).
-2. Principals claim contributions; locks prevent clobber; `fit_check` catches duplicate proposals before work starts.
+2. Principals claim contributions; locks prevent clobber; `find_similar` catches duplicate proposals before work starts.
 3. Decision log captures rationale as work proceeds.
 4. Outputs land in repo via normal PR flow; downstream publish unchanged.
 
-### Discovery track — analyst (remote locus)
+### Discovery track — analyst (remote surface)
 1. Analyst's web agent authenticates to the agent endpoint with their session token.
 2. Analyst claims a `research_artifact` contribution via their web agent.
 3. Agent authors research; content is written to `research/<trace-id>-<slug>.md` via `update`.
@@ -289,7 +289,7 @@ Agents reading context via `get_context` receive trace-ID-scoped state. Agents w
 ### Delivery track — multi-composer
 1. Contribution in `claimed` state publishes to delivery tracker via `publish-delivery`.
 2. Engineer branches `feat/US-X.Y-<slug>`, implements, opens PR.
-3. `fit_check` runs on branch creation; warns if semantic overlap with prior work.
+3. `find_similar` runs on branch creation; warns if semantic overlap with prior work.
 4. PR merge → trace ID → registry reporter reflects status on next nightly mirror.
 5. Status transitions in the delivery tracker are **not** written back to the repo.
 

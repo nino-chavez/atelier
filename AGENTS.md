@@ -32,10 +32,10 @@ See `.atelier/territories.yaml` for the canonical declaration. Key rules:
 
 ## Agent-specific rules
 
-These rules describe the **target operating state** (post-M2 when the 12-tool endpoint exists). Pre-M2, the equivalent is reading the constitution files directly and following the rules manually; see `.atelier/checkpoints/SESSION.md` for the pre-M2 fallback.
+These rules describe the **target operating state** (post-M2 when the 12-tool endpoint exists). Pre-M2, the equivalent is reading the charter files directly and following the rules manually; see `.atelier/checkpoints/SESSION.md` for the pre-M2 fallback.
 
-1. **Read before writing.** Always pull `get_context` (post-M2) or read the constitution files directly (pre-M2) before making changes.
-2. **Run `fit_check` before creating contributions** (post-M5 when fit_check ships). The cost of checking is much lower than the cost of duplication.
+1. **Read before writing.** Always pull `get_context` (post-M2) or read the charter files directly (pre-M2) before making changes.
+2. **Run `find_similar` before creating contributions** (post-M5 when find_similar ships). The cost of checking is much lower than the cost of duplication.
 3. **Claim before editing** (post-M2 when claim/lock primitives exist). Any edit to a shared artifact requires a claimed contribution and an acquired lock.
 4. **Use fencing tokens on every write** (post-M2 when locks exist). Writes without current fencing token will be rejected server-side (ADR-004).
 5. **Log decisions when making architectural/strategic/convention choices.** Keyword: "because". If the choice carries a 'because', it's a decision and belongs as a new file under `docs/architecture/decisions/ADR-NNN-<slug>.md` (per ADR-030). This rule applies pre-M2 (write the file directly) and post-M2 (call `log_decision`).

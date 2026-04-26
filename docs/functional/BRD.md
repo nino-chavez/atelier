@@ -24,7 +24,7 @@ See `README.md` for the canonical vocabulary table. Additional terms specific to
 | **Contribution** | The atomic unit of work; subsumes tasks, decisions, proposals, PRs, drafts |
 | **Artifact_scope** | The target of a lock or contribution; files, doc regions, research artifacts, or design components |
 | **Fencing token** | Monotonic per-project counter attached to every lock; required on every write to locked artifact |
-| **Constitution** | Repo-resident governance files read by every agent: `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `.atelier/*` |
+| **Charter** | Repo-resident governance files read by every agent: `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `.atelier/*` |
 | **Lens** | A role-specific first-view cut over shared state in the prototype's `/atelier` route |
 
 ---
@@ -64,7 +64,7 @@ All stories v1-scope. No phase tags.
 | 3 | Canonical artifact (prototype web app) | US-3.1 to US-3.7 |
 | 4 | Territory + contribution model | US-4.1 to US-4.6 |
 | 5 | Decision durability | US-5.1 to US-5.5 |
-| 6 | Fit_check + eval harness | US-6.1 to US-6.6 |
+| 6 | Find_similar + eval harness | US-6.1 to US-6.6 |
 | 7 | Locks + fencing tokens | US-7.1 to US-7.5 |
 | 8 | Territory contracts | US-8.1 to US-8.4 |
 | 9 | Sync substrate (all 5 scripts) | US-9.1 to US-9.7 |
@@ -123,7 +123,7 @@ Acceptance:
 As a dev principal, I want `atelier doctor` so that I can diagnose project drift.
 
 Acceptance:
-- Given a project, when I run doctor, then it reports session health, lock ledger sanity, fit_check precision, sync lag, and any drift between repo and datastore.
+- Given a project, when I run doctor, then it reports session health, lock ledger sanity, find_similar precision, sync lag, and any drift between repo and datastore.
 - Given detected issues, when doctor runs, then it suggests remediation (e.g., "run `atelier reconcile`").
 
 **US-1.7 — Upgrade scaffold to new Atelier version**
@@ -143,7 +143,7 @@ Goal: 12 tools, all present at v1, accessible via the chosen agent interop proto
 As a dev principal (via agent), I want to register a session so that my agent is known to the project.
 
 Acceptance:
-- Given a valid composer token + locus, when `register` is called, then a session row is inserted with heartbeat timestamp and an endpoint-scoped session token is returned.
+- Given a valid composer token + surface, when `register` is called, then a session row is inserted with heartbeat timestamp and an endpoint-scoped session token is returned.
 
 **US-2.2 — Heartbeat**
 As any composer (via agent), I want `heartbeat` so that my session stays live.
@@ -162,15 +162,15 @@ Acceptance:
 As any composer (via agent), I want `get_context` so that my agent knows the current state of the project.
 
 Acceptance:
-- Given a session, when get_context is called, then the response contains constitution files, last N decisions, territory state, contribution summary for active territory, and traceability registry slice.
+- Given a session, when get_context is called, then the response contains charter files, last N decisions, territory state, contribution summary for active territory, and traceability registry slice.
 - Given a trace_id parameter, when get_context is called, then the response is filtered to that trace ID's scope.
 
-**US-2.5 — Fit_check**
-As any composer (via agent), I want `fit_check` so that I can detect duplication before starting work.
+**US-2.5 — Find_similar**
+As any composer (via agent), I want `find_similar` so that I can detect duplication before starting work.
 
 Acceptance:
-- Given a description string + optional trace_id, when fit_check is called, then matches above similarity threshold are returned with sources (decisions, contributions, BRD/PRD sections, research artifacts) and similarity scores.
-- Given the vector index is unavailable, when fit_check is called, then keyword search runs and the response includes a `degraded: true` flag.
+- Given a description string + optional trace_id, when find_similar is called, then matches above similarity threshold are returned with sources (decisions, contributions, BRD/PRD sections, research artifacts) and similarity scores.
+- Given the vector index is unavailable, when find_similar is called, then keyword search runs and the response includes a `degraded: true` flag.
 
 **US-2.6 — Claim contribution**
 As any composer (via agent), I want to claim an open contribution so that other composers see it's taken.
@@ -354,44 +354,44 @@ Acceptance:
 
 ---
 
-### Epic 6 — Fit_check + eval harness
+### Epic 6 — Find_similar + eval harness
 
 **US-6.1 — Semantic search implementation**
-As any composer (via agent), I want fit_check to use vector search so that semantic duplicates are caught, not just keyword matches.
+As any composer (via agent), I want find_similar to use vector search so that semantic duplicates are caught, not just keyword matches.
 
 Acceptance:
-- Given a description string, when fit_check is called, then embeddings are generated, a nearest-neighbor search runs against the vector index, and matches above threshold are returned with similarity scores.
+- Given a description string, when find_similar is called, then embeddings are generated, a nearest-neighbor search runs against the vector index, and matches above threshold are returned with similarity scores.
 
 **US-6.2 — Eval set ships with template**
-As a dev principal, I want `atelier/eval/fit_check/*.yaml` seeded at init so that precision can be measured from day one.
+As a dev principal, I want `atelier/eval/find_similar/*.yaml` seeded at init so that precision can be measured from day one.
 
 Acceptance:
-- Given `atelier init`, then `atelier/eval/fit_check/` contains seed positive pairs, seed negative pairs, and adversarial cases.
+- Given `atelier init`, then `atelier/eval/find_similar/` contains seed positive pairs, seed negative pairs, and adversarial cases.
 
 **US-6.3 — Eval runner CLI**
-As a dev principal, I want `atelier eval fit_check` to report precision/recall so that I can verify the disconfirming test.
+As a dev principal, I want `atelier eval find_similar` to report precision/recall so that I can verify the disconfirming test.
 
 Acceptance:
-- Given the eval set, when I run the command, then precision, recall, F1, and per-case verdicts are printed and written to `eval-results/fit_check-<timestamp>.json`.
+- Given the eval set, when I run the command, then precision, recall, F1, and per-case verdicts are printed and written to `eval-results/find_similar-<timestamp>.json`.
 
 **US-6.4 — CI gate**
-As a dev principal, I want CI to fail PRs that drop fit_check precision below 75% at recall 60% so that the disconfirming test is enforced.
+As a dev principal, I want CI to fail PRs that drop find_similar precision below 75% at recall 60% so that the disconfirming test is enforced.
 
 Acceptance:
-- Given a PR that touches fit_check logic or eval set, when CI runs, then `atelier eval fit_check` runs and fails the check if thresholds are not met.
+- Given a PR that touches find_similar logic or eval set, when CI runs, then `atelier eval find_similar` runs and fails the check if thresholds are not met.
 
 **US-6.5 — Keyword fallback with banner**
-As any composer, I want fit_check to degrade to keyword search when embeddings are unavailable and surface this in UI so that I don't get silent weak matches.
+As any composer, I want find_similar to degrade to keyword search when embeddings are unavailable and surface this in UI so that I don't get silent weak matches.
 
 Acceptance:
-- Given the vector index is unavailable, when fit_check is called, then keyword search runs and responses carry `degraded: true`.
+- Given the vector index is unavailable, when find_similar is called, then keyword search runs and responses carry `degraded: true`.
 - Given `degraded: true`, when UI renders matches, then an explicit banner states "keyword fallback — semantic search unavailable."
 
 **US-6.6 — Accept/reject feedback loop**
-As any composer, I want to accept or reject fit_check matches so that the eval set improves over time.
+As any composer, I want to accept or reject find_similar matches so that the eval set improves over time.
 
 Acceptance:
-- Given a fit_check response in UI, when I accept or reject a match, then the decision is recorded and periodically rolled into the eval set (human-reviewed).
+- Given a find_similar response in UI, when I accept or reject a match, then the decision is recorded and periodically rolled into the eval set (human-reviewed).
 
 ---
 
@@ -541,14 +541,14 @@ Acceptance:
 As a PM principal, I want notifications to route to Slack/Teams so that the team sees significant events without checking the prototype.
 
 Acceptance:
-- Given configured webhook, when a contribution transitions, a decision logs, or fit_check flags a high-confidence match, then a message is sent to the configured channel.
+- Given configured webhook, when a contribution transitions, a decision logs, or find_similar flags a high-confidence match, then a message is sent to the configured channel.
 
 ---
 
 ### Epic 11 — CLI tooling
 
 See `PRD.md` §4.11 for the full surface. All 9 commands ship at v1:
-`atelier init`, `datastore init`, `deploy`, `invite`, `territory add`, `sync <target>`, `reconcile`, `eval fit_check`, `doctor`.
+`atelier init`, `datastore init`, `deploy`, `invite`, `territory add`, `sync <target>`, `reconcile`, `eval find_similar`, `doctor`.
 
 US-11.1 through US-11.9 map 1:1 to the commands. Acceptance: each command has `--help`, documented exit codes, and a corresponding end-to-end test.
 
@@ -566,7 +566,7 @@ Acceptance:
 As an admin composer, I want `/atelier/observability` so that I can see system health.
 
 Acceptance:
-- Given admin role, when I visit the route, then I see sections for sessions, contributions, locks, decisions, fit_check match rate, triage accuracy, sync lag, vector-index health.
+- Given admin role, when I visit the route, then I see sections for sessions, contributions, locks, decisions, find_similar match rate, triage accuracy, sync lag, vector-index health.
 
 **US-12.3 — Session heartbeat dashboard**
 As an admin, I want to see heartbeat status per session so that reaper activity is visible.
@@ -574,8 +574,8 @@ As an admin, I want to see heartbeat status per session so that reaper activity 
 Acceptance:
 - Given active and recently-reaped sessions, when I view, then each shows heartbeat interval health, last seen, and reaper actions taken.
 
-**US-12.4 — Fit_check match-rate report**
-As a dev principal, I want to see fit_check match rates over time so that precision regressions are visible.
+**US-12.4 — Find_similar match-rate report**
+As a dev principal, I want to see find_similar match rates over time so that precision regressions are visible.
 
 Acceptance:
 - Given historical eval runs, when I view, then a trend chart shows precision/recall per run with markers on threshold breaches.
@@ -703,11 +703,11 @@ As an analyst principal, I want OAuth/SSO sign-in to the prototype so that I don
 Acceptance:
 - Given identity service configured with OAuth, when I sign in, then a composer token is issued and stored securely in the browser session.
 
-**US-16.6 — Cross-locus visibility**
-As any composer, I want to see sessions from all loci in `/atelier` so that I know who's active regardless of their tool.
+**US-16.6 — Cross-surface visibility**
+As any composer, I want to see sessions from all surfaces in `/atelier` so that I know who's active regardless of their tool.
 
 Acceptance:
-- Given sessions from ide, web, and terminal loci, when I view `/atelier` sessions list, then all three kinds render with locus icon + last heartbeat.
+- Given sessions from ide, web, and terminal surfaces, when I view `/atelier` sessions list, then all three kinds render with surface icon + last heartbeat.
 
 ---
 
@@ -715,7 +715,7 @@ Acceptance:
 
 | NFR | Target | Stories impacted |
 |---|---|---|
-| **Fit_check precision** | ≥75% at ≥60% recall on eval set | Epic 6 |
+| **Find_similar precision** | ≥75% at ≥60% recall on eval set | Epic 6 |
 | **Agent endpoint p95** | < 500ms for read tools, < 1s for write tools | Epic 2 |
 | **Pub/sub delivery p95** | < 2s end-to-end | Epic 2, Epic 3 |
 | **Publish-sync p95** | < 60s after commit | Epic 9 |
@@ -734,7 +734,7 @@ See `BRD-OPEN-QUESTIONS.md` for detail. Highlights:
 
 1. Territory-model validation on the analyst case.
 2. Switchman dependency vs. own-implementation for file locks.
-3. Embedding-model default + swappability for fit_check.
+3. Embedding-model default + swappability for find_similar.
 4. Contract-breaking-change heuristics (what counts as breaking).
 5. Identity-service default (self-hosted OIDC, external provider, or bring-your-own).
 6. Upgrade-path semantics when a project on template vN is migrated to vN+1.

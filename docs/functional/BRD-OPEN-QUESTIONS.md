@@ -8,11 +8,11 @@
 
 ## 1 · Territory-model validation on the analyst case
 
-**Scenario.** An analyst composer begins week-1 competitive research on US-1.3. They connect their web-based agent client via remote protocol, register a session with `locus=web`, and need to:
+**Scenario.** An analyst composer begins week-1 competitive research on US-1.3. They connect their web-based agent client via remote protocol, register a session with `surface=web`, and need to:
 
 1. Read the current strategy context for US-1.3
 2. Claim a research artifact contribution
-3. Run fit_check to see if prior research exists
+3. Run find_similar to see if prior research exists
 4. Author research content via their agent
 5. Log decisions about findings
 6. Release the contribution for PM review
@@ -30,7 +30,7 @@
 | Gap | ADR | Sub-question resolved |
 |---|---|---|
 | #1 — Contribution creation path for ad-hoc work | ADR-022 (claim atomic-creates) | Q: who creates the open row? A: `claim` does, atomically |
-| #2 — Remote-locus repo write path unspecified | ADR-023 (per-project endpoint committer) | Implicit gap surfaced and closed via ARCH §7.8 |
+| #2 — Remote-surface repo write path unspecified | ADR-023 (per-project endpoint committer) | Implicit gap surfaced and closed via ARCH §7.8 |
 | #3 — Transcript storage | ADR-024 (sidecar, opt-in) | Q3 |
 | #4 — Multi-trace-ID support | ADR-021 (`trace_ids text[]`) | Q2 |
 | #5 — Lens routing for `state=review` | ADR-025 (`territory.review_role`) | Q4 |
@@ -55,9 +55,9 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 3 · Embedding-model default + swappability for fit_check
+## 3 · Embedding-model default + swappability for find_similar
 
-**Scenario.** Fit_check's precision depends on the embedding model's semantic representation of decisions + contributions + BRD/PRD sections + research artifacts.
+**Scenario.** Find_similar's precision depends on the embedding model's semantic representation of decisions + contributions + BRD/PRD sections + research artifacts.
 
 **Open questions:**
 - What's the default? Candidates:
@@ -140,14 +140,14 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ## 8 · Cross-composer cost accounting
 
-**Scenario.** Each composer's agent consumes LLM tokens (for their own agent usage and for Atelier-side operations like fit_check embedding). How does a team manage aggregate spend?
+**Scenario.** Each composer's agent consumes LLM tokens (for their own agent usage and for Atelier-side operations like find_similar embedding). How does a team manage aggregate spend?
 
 **Open questions:**
 - Is there a composer-level budget or project-level budget?
-- Is fit_check embedding cost charged per call (borne by the caller) or amortized (borne by the project)?
+- Is find_similar embedding cost charged per call (borne by the caller) or amortized (borne by the project)?
 - How does the admin see cost breakdown? Is this v1 scope?
 
-**Recommendation.** Out of v1 scope for most categories. Fit_check embedding cost is amortized to the project. Observability includes token-usage telemetry so teams can see cost retrospectively. Active cost-governance is a v1.x addition if demand surfaces.
+**Recommendation.** Out of v1 scope for most categories. Find_similar embedding cost is amortized to the project. Observability includes token-usage telemetry so teams can see cost retrospectively. Active cost-governance is a v1.x addition if demand surfaces.
 
 **Status.** OPEN (scoped OUT of v1 unless demand flips).
 
@@ -173,11 +173,11 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 **Scenario.** A composer is offline for an extended period. What works? What doesn't?
 
 **Open questions:**
-- Can a dev work in the repo with their agent offline? Yes — git + `get_context` can fall back to local constitution files + local decisions.md cache.
+- Can a dev work in the repo with their agent offline? Yes — git + `get_context` can fall back to local charter files + local decisions.md cache.
 - Can they claim contributions offline? No — that requires datastore.
 - What happens on reconnect? Replay? Merge conflicts?
 
-**Recommendation.** Document the capability matrix. Offline: read canonical state + edit files + commit. Online-required: claim contributions, acquire locks, log decisions, fit_check. On reconnect: session re-registers; conflicts reported, not auto-resolved.
+**Recommendation.** Document the capability matrix. Offline: read canonical state + edit files + commit. Online-required: claim contributions, acquire locks, log decisions, find_similar. On reconnect: session re-registers; conflicts reported, not auto-resolved.
 
 **Status.** OPEN. Document for v1.
 
@@ -198,9 +198,9 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 12 · Fit_check sensitivity trade-off
+## 12 · Find_similar sensitivity trade-off
 
-**Scenario.** Fit_check returns matches above similarity threshold. Too sensitive = false positives blocking legitimate work. Too loose = duplicate implementations slip through.
+**Scenario.** Find_similar returns matches above similarity threshold. Too sensitive = false positives blocking legitimate work. Too loose = duplicate implementations slip through.
 
 **Open questions:**
 - Where does the default threshold sit? 0.75? 0.80? 0.85?
@@ -219,7 +219,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Open questions (closed by ADR-030):**
 - Is the decision log a single file or partitioned? → **Per-ADR file from v1**, one file per ADR under `../architecture/decisions/`. Each file is independently navigable, diffable, and `git blame`-able.
-- How does fit_check handle a large decision log? → Vector index ingests one embedding per ADR file. Sharding becomes a query-time concern only at very large scales (>10K ADRs); not a v1 problem.
+- How does find_similar handle a large decision log? → Vector index ingests one embedding per ADR file. Sharding becomes a query-time concern only at very large scales (>10K ADRs); not a v1 problem.
 - Is there a "decisions view" in the prototype? → Yes: `/atelier/decisions` route per Epic 12 plans, surfacing the directory's index README plus per-ADR detail.
 
 **Status.** **RESOLVED** (2026-04-25) by ADR-030 (per-ADR file split). Per-file model from v1 means there is no "single-file growth" problem to defer; the problem is structurally avoided.

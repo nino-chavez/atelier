@@ -32,7 +32,7 @@ From `../functional/PRD.md` and `../functional/BRD.md`, the system must:
 - Serve a prototype web app as both canonical artifact and coordination dashboard
 - Manage coordination state (sessions, contributions, decisions, locks, contracts) in a blackboard datastore with pub/sub broadcast
 - Persist decisions to the repo first (repo-authoritative) and mirror to the datastore for query
-- Provide fit_check with semantic search, a labeled eval set, and a CI precision gate
+- Provide find_similar with semantic search, a labeled eval set, and a CI precision gate
 - Enforce fencing tokens on every lock to prevent data loss from GC pauses
 - Synchronize repo state with external tools (delivery tracker, published-doc system, design tool) via 5 substrate scripts
 - Triage external comments into proposal contributions that require human merge
@@ -47,7 +47,7 @@ The architecture must remain vendor-neutral. Any stack that provides the require
 1. **Repo as canonical state.** The versioned file store is authoritative for discovery fields, decisions, strategic artifacts, and design components. The datastore mirrors and serves real-time coordination; it is not the system of record for content.
 2. **Publish-pull asymmetry.** Publishes (repo → external) are deterministic and idempotent. Pulls (external → repo) are probabilistic and human-gated.
 3. **Blackboard over hierarchy.** Composers coordinate through shared state, not through a lead or orchestrator. No single point of failure among composers.
-4. **Authority by locus + scope.** Trust is assigned per field, per artifact, not per actor. Principals' harnesses are trusted because the principal is in the loop; pipelines are trusted because contracts are narrow; triage is never trusted to merge.
+4. **Authority by surface + scope.** Trust is assigned per field, per artifact, not per actor. Principals' harnesses are trusted because the principal is in the loop; pipelines are trusted because contracts are narrow; triage is never trusted to merge.
 5. **Graceful degradation.** Every capability has a documented fallback when a dependency is unavailable. The per-ADR decision log under `decisions/` survives datastore outage. Keyword search survives vector-index outage. Repo PRs survive endpoint outage.
 6. **Fencing tokens mandatory.** Every lock carries a monotonic token. Every write to locked artifact validates the token server-side. No silent data loss from GC pauses.
 7. **Design-for-full, not feature-at-a-time.** Every capability in `../strategic/NORTH-STAR.md` is present at v1. Phasing is a delivery concern, not a design concern.
@@ -184,7 +184,7 @@ sessions
   id (uuid, pk)
   project_id (fk)
   composer_id (fk)
-  locus (ide | web | terminal | passive)
+  surface (ide | web | terminal | passive)
   agent_client (free text — e.g., "claude-code", "claude.ai", "cursor")
   status (active | idle | dead)
   heartbeat_at
@@ -286,9 +286,9 @@ telemetry
 ### 5.4 Vector index
 
 - Embeddings generated on: new decisions, merged contributions, BRD/PRD section commits, research artifact commits.
-- Refresh: real-time on writes; full rebuild available via `atelier eval fit_check --rebuild-index`.
+- Refresh: real-time on writes; full rebuild available via `atelier eval find_similar --rebuild-index`.
 - Model: swappable via config. Default documented in `.atelier/config.yaml`.
-- Query: `fit_check` runs cosine similarity; threshold configurable; top-k returned.
+- Query: `find_similar` runs cosine similarity; threshold configurable; top-k returned.
 
 ---
 
@@ -297,7 +297,7 @@ telemetry
 ### 6.1 Session lifecycle
 
 ```
-Composer → Agent client → register(project_id, locus, composer_token)
+Composer → Agent client → register(project_id, surface, composer_token)
    → Endpoint validates token, inserts session row, returns session_token + context
 Composer → heartbeat(session_token) every 30s
    → Endpoint updates heartbeat_at
@@ -319,10 +319,10 @@ Create paths (per ADR-022):
   (b) Atomic create-and-claim (ad-hoc work, esp. analyst):
       Agent → claim(null, kind, trace_ids, territory_id, optional content_stub)
         Endpoint inserts (state=open) and transitions to claimed in one transaction
-   In both paths the endpoint runs fit_check on the new claim → warns if match
+   In both paths the endpoint runs find_similar on the new claim → warns if match
 Acquire lock: Agent → acquire_lock(artifact_scope) → returns fencing_token
 Write: Agent writes to artifact (file, doc region, etc.) passing fencing_token
-   For remote-locus composers, the endpoint commits on their behalf — see §7.8 (ADR-023)
+   For remote-surface composers, the endpoint commits on their behalf — see §7.8 (ADR-023)
    Endpoint validates token on every write-through
 Update state: Agent → update(contribution_id, new_state)
    in_progress → review (when agent pushes branch / artifact is ready)
@@ -341,15 +341,15 @@ Agent → log_decision(category, summary, rationale, trace_id)
     3. Generates embedding + upserts into vector index
     4. Broadcasts via pub/sub
   If step 2 fails: repo write is authoritative; next call retries mirror
-  If step 3 fails: keyword-fallback for fit_check; banner in UI
+  If step 3 fails: keyword-fallback for find_similar; banner in UI
   If step 4 fails: sessions receive next update on reconnect
   Step 1 succeeding is the single success criterion for log_decision
 ```
 
-### 6.4 Fit_check execution
+### 6.4 Find_similar execution
 
 ```
-Agent → fit_check(description, optional trace_id)
+Agent → find_similar(description, optional trace_id)
   Endpoint:
     1. Generate embedding for description
     2. kNN search against vector index
@@ -477,19 +477,19 @@ Territory owner → publish_contract(name, schema)
 ### 7.7 Rate limiting
 
 - Per-composer rate limits on endpoint (configurable; sensible defaults).
-- Per-project global rate limits on expensive operations (fit_check, publish-docs).
+- Per-project global rate limits on expensive operations (find_similar, publish-docs).
 
-### 7.8 Remote-locus write attribution (ADR-023)
+### 7.8 Remote-surface write attribution (ADR-023)
 
-For composers whose locus is `web` (or `terminal` without local repo access), agent writes to repo-resident artifacts route through a per-project endpoint git committer:
+For composers whose surface is `web` (or `terminal` without local repo access), agent writes to repo-resident artifacts route through a per-project endpoint git committer:
 
 - **Identity.** The endpoint holds a project-scoped deploy key (rotatable via `atelier rotate-committer-key`). Commits authored as `<composer.display_name> via Atelier <atelier-bot@<project>>` with `Co-Authored-By: <composer email>` so attribution survives in `git log`.
 - **Synchronicity.** `update` (and `claim`-with-content_stub) blocks until the commit succeeds. On commit failure, the datastore mirror is **not** written and the tool returns a retry-safe error (`retryable=true`, idempotency key carries forward).
 - **Audit.** Every committer write logs `(commit_sha, composer_id, session_id, action, artifact_scope)` to telemetry. Queryable in `/atelier/observability` (§8.2).
 - **Rotation.** Deploy-key rotation is a CLI operation; in-flight contributions are unaffected because the rotation only affects subsequent commits. Old key is revoked at the git provider on rotation success.
-- **Failure boundaries.** Loss of the deploy-key credential blocks remote-locus writes with a clear error; IDE-locus composers are unaffected. Rotation runbook in `../methodology/METHODOLOGY.md`.
+- **Failure boundaries.** Loss of the deploy-key credential blocks remote-surface writes with a clear error; IDE-surface composers are unaffected. Rotation runbook in `../methodology/METHODOLOGY.md`.
 
-This satisfies ADR-005 (repo-first) for remote-locus composers — the commit is the success criterion, not the datastore write.
+This satisfies ADR-005 (repo-first) for remote-surface composers — the commit is the success criterion, not the datastore write.
 
 ---
 
@@ -501,15 +501,15 @@ Every endpoint call, every state transition, every sync run emits a telemetry ev
 - `action` — e.g., "contribution.claim", "lock.acquire", "decision.log", "sync.publish-delivery"
 - `outcome` — "success", "failure", "degraded"
 - `duration_ms`
-- `metadata` — action-specific payload (e.g., for fit_check: query, match_count, top_similarity)
+- `metadata` — action-specific payload (e.g., for find_similar: query, match_count, top_similarity)
 
 ### 8.2 Admin observability route
 
 `/atelier/observability` (admin-gated):
-- **Sessions** — heartbeat health timeline, reaper activity, locus breakdown
+- **Sessions** — heartbeat health timeline, reaper activity, surface breakdown
 - **Contributions** — state-transition audit log, throughput per territory
 - **Locks** — acquisition/release ledger with fencing tokens, conflict rate
-- **Decisions** — fit_check match-rate trend, precision/recall history
+- **Decisions** — find_similar match-rate trend, precision/recall history
 - **Triage** — classifier confidence distribution, human accept/reject rate
 - **Sync** — per-script lag p95, error rate, last successful run
 - **Vector index** — row count, index health, query p95
@@ -518,7 +518,7 @@ Every endpoint call, every state transition, every sync run emits a telemetry ev
 
 Messaging adapter publishes alerts for:
 - Sync lag > NFR thresholds
-- Fit_check precision regression > 5%
+- Find_similar precision regression > 5%
 - Reaper rate spike (possible platform issue)
 - Authentication failure spike (possible attack)
 
@@ -568,7 +568,7 @@ See `../functional/PRD-COMPANION.md` for decisions already made. Open items:
 |---|---|---|---|
 | ARCH-01 | Vector index backend default (pgvector vs. external service) | Medium — affects self-host complexity | pgvector likely default; external-service fallback for scale |
 | ARCH-02 | Identity service default (self-hosted OIDC, external provider, BYO) | Medium — affects team adoption friction | Lean toward BYO with a sensible default |
-| ARCH-03 | Embedding model default + swappability | Medium — fit_check performance hinges on choice | Config-driven; benchmark at least 3 options |
+| ARCH-03 | Embedding model default + swappability | Medium — find_similar performance hinges on choice | Config-driven; benchmark at least 3 options |
 | ARCH-04 | Lock fencing token storage (in locks table vs. separate counter table) | Low — implementation detail | Monotonic counter in a dedicated table; isolation via advisory locks |
 | ARCH-05 | Transcript storage for web-composer sessions (inline vs. external blob) | Medium — impacts repo size | Sidecar files in `research/` with size cap; overflow to external blob |
 | ARCH-06 | Triage classifier implementation (rules vs. small LLM vs. embedding-based) | Medium — affects accuracy and cost | Embedding-based similarity to prior proposals likely cheapest + adequate |

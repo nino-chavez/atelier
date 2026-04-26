@@ -11,7 +11,7 @@
 
 Evidence and framing that backs the scope, positioning, and product-shape decisions in `../functional/PRD.md` and `NORTH-STAR.md`. **Not** a decision record — product decisions live in `../functional/PRD.md` and `../functional/PRD-COMPANION.md`. **Not** a roadmap.
 
-Read this when you want to know *why* Atelier takes the shape it does — why it's OSS not SaaS, why self-hosted not managed, why a template + protocol rather than a product replacement, and why fit_check is the load-bearing bet.
+Read this when you want to know *why* Atelier takes the shape it does — why it's OSS not SaaS, why self-hosted not managed, why a template + protocol rather than a product replacement, and why find_similar is the load-bearing bet.
 
 ---
 
@@ -22,7 +22,7 @@ Modern software is increasingly authored by **mixed teams of humans and AI agent
 The pattern breaks at two expansions:
 
 1. **Multi-composer on one codebase.** N humans, each with their own agent swarm, editing the same repo concurrently. Agents duplicate each other's work. Merge conflicts multiply. Decision rationale fragments across sessions. No shared memory.
-2. **Mixed-locus teams.** Some composers are in IDE + repo (devs). Some are in browser + web agent (analysts, PMs doing research or knowledge work). Some are in design tools (designers). All contributing to the same project; none sharing a canonical coordination surface.
+2. **Mixed-surface teams.** Some composers are in IDE + repo (devs). Some are in browser + web agent (analysts, PMs doing research or knowledge work). Some are in design tools (designers). All contributing to the same project; none sharing a canonical coordination surface.
 
 Neither expansion is solved by any production-grade tool as of Q2 2026. Atelier targets both.
 
@@ -66,19 +66,19 @@ Atelier's sync substrate (`publish-*`, `mirror-*`, `reconcile`, `triage`) overla
 
 ### 3.2 Coordination substrate (multi-composer on same canonical state)
 
-Atelier's blackboard, territory, contract, and fit_check primitives overlap with:
+Atelier's blackboard, territory, contract, and find_similar primitives overlap with:
 
 | Competitor | Status (Q2 2026) | Overlap | How Atelier differs |
 |---|---|---|---|
-| **Anthropic Claude Code Agent Teams** | Experimental, flag-gated | Shared task list, file locks, agent messaging | Anthropic owns the agent client. Agent Teams works only with Claude Code. Atelier is client-agnostic (any MCP-capable agent) and locus-agnostic (IDE + web + terminal). |
-| **Switchman** | Shipping v0.x, full product by April 2026 | File locks, task queues, merge confidence reviews across Claude Code / Cursor / Codex / Windsurf / Aider. MCP-server-based. | Switchman solves concurrent coding on a codebase. Atelier generalizes to non-code artifacts (strategy, research, design) and mixed loci (web agents as first-class composers). Switchman is plausibly a *dependency* for Atelier's file-level lock primitive. |
+| **Anthropic Claude Code Agent Teams** | Experimental, flag-gated | Shared task list, file locks, agent messaging | Anthropic owns the agent client. Agent Teams works only with Claude Code. Atelier is client-agnostic (any MCP-capable agent) and surface-agnostic (IDE + web + terminal). |
+| **Switchman** | Shipping v0.x, full product by April 2026 | File locks, task queues, merge confidence reviews across Claude Code / Cursor / Codex / Windsurf / Aider. MCP-server-based. | Switchman solves concurrent coding on a codebase. Atelier generalizes to non-code artifacts (strategy, research, design) and mixed surfaces (web agents as first-class composers). Switchman is plausibly a *dependency* for Atelier's file-level lock primitive. |
 | **GitHub Squad + /fleet** | Shipping | Multi-agent on one repo, GitHub-native | GitHub-native; single-provider. Atelier is vendor-neutral and includes non-code territories. |
 | **Microsoft Conductor** | Shipping, MIT-licensed | YAML-defined multi-agent workflows, parallel execution, evaluator-optimizer loops | Workflow engine at the agent-execution layer. Atelier coordinates *across* composers each of whom may use Conductor internally. Different abstraction level. |
 | **Agentic Workflows** | Shipping | DAG-based agent orchestration | Same layer as Conductor; different positioning. Complementary, not competitive. |
 | **CrewAI / AutoGen / LangGraph** | Shipping (mature) | Agent-to-agent orchestration within one composer's swarm | Atelier is one layer up — coordination between multiple composers, each of whom may use these frameworks internally. |
 | **OpenClaw Command Center** | Partial | Real-time dashboard for agent framework | Dashboard-only reference. Not a coordination primitive. |
 
-**Verdict on the coordination substrate: genuine category with gaps incumbents haven't closed.** Fit_check (semantic duplicate detection across composers) is novel. Territory + contract model with non-code artifact kinds is novel. Remote-composer (web agent) participation is novel. But Switchman and Agent Teams are closing file-level coordination fast.
+**Verdict on the coordination substrate: genuine category with gaps incumbents haven't closed.** Find_similar (semantic duplicate detection across composers) is novel. Territory + contract model with non-code artifact kinds is novel. Remote-composer (web agent) participation is novel. But Switchman and Agent Teams are closing file-level coordination fast.
 
 ---
 
@@ -119,13 +119,13 @@ Resonance doc's original competitive survey was ~1 year stale (dated early 2025)
 **Findings:**
 
 1. **Agent Teams and Switchman close file-level coordination.** Both ship concurrent-coding primitives (task claim, file locks) that hackathon-hive's current implementation duplicates.
-2. **Non-code coordination is genuinely novel.** No incumbent addresses multi-composer work on non-code artifacts (strategy docs, research, design) via the same substrate. Fit_check on decisions + research is unique.
-3. **Mixed-locus support is genuinely novel.** Incumbents assume all composers are on the codebase. Web-agent composers as first-class are not supported anywhere.
+2. **Non-code coordination is genuinely novel.** No incumbent addresses multi-composer work on non-code artifacts (strategy docs, research, design) via the same substrate. Find_similar on decisions + research is unique.
+3. **Mixed-surface support is genuinely novel.** Incumbents assume all composers are on the codebase. Web-agent composers as first-class are not supported anywhere.
 4. **Production SaaS cost similar: ~$750k–$1.2M year 1.** Against free incumbents (Agent Teams, Switchman OSS), the math does not work.
 
-**Disconfirming test (both rounds converged):** Build `fit_check` standalone with vector index + labeled eval set. 2-week spike. Target ≥75% precision at ≥60% recall. The bet and its fallback path are tracked in [`risks.md`](./risks.md) Bet 1.
+**Disconfirming test (both rounds converged):** Build `find_similar` standalone with vector index + labeled eval set. 2-week spike. Target ≥75% precision at ≥60% recall. The bet and its fallback path are tracked in [`risks.md`](./risks.md) Bet 1.
 
-**Verdict:** Not a standalone SaaS. Publish the schema + agent-endpoint tool surface as a spec ("Atelier Coordination Protocol"). Contribute fit_check and non-code territory contracts to Switchman as PRs/plugins if the test confirms. Don't build SaaS against Switchman/Agent Teams.
+**Verdict:** Not a standalone SaaS. Publish the schema + agent-endpoint tool surface as a spec ("Atelier Coordination Protocol"). Contribute find_similar and non-code territory contracts to Switchman as PRs/plugins if the test confirms. Don't build SaaS against Switchman/Agent Teams.
 
 ---
 
@@ -134,11 +134,29 @@ Resonance doc's original competitive survey was ~1 year stale (dated early 2025)
 `hackathon-hive` is the working coordination implementation that seeds Atelier's protocol. Real engineering risks flagged during red-team review that Atelier must address from v1:
 
 1. **File locks lack fencing tokens.** Current implementation is Redlock-style distributed mutex. Kleppmann's critique applies literally: a GC pause past TTL causes silent overwrite. Data loss risk. **Atelier ships fencing tokens on every lock from v1; retrofitting later is not an option.**
-2. **`fit_check` is specified but not implemented in hackathon-hive MVP.** The single most differentiated primitive is currently vaporware. **Atelier implements fit_check at v1 with the eval harness; it is not deferred.**
+2. **`find_similar` is specified but not implemented in hackathon-hive MVP.** The single most differentiated primitive is currently vaporware. **Atelier implements find_similar at v1 with the eval harness; it is not deferred.**
 3. **"Graceful degradation via decisions.md" is aspirational.** No repo-canonical decision writer exists in hackathon-hive; the log lives only in Postgres. **Atelier writes a per-ADR file under `../architecture/decisions/` first (per ADR-005, ADR-030) and mirrors to the datastore second; a CI check validates the two stay in sync.**
 4. **Single bearer token shared across team; RLS decorative (service role bypasses).** **Atelier uses per-composer signed tokens from v1; service-role bypass is explicitly contained server-side.**
 
 These are not "bugs to fix later." They are design constraints on v1.
+
+---
+
+## 5.5 The coordination pattern is well-validated
+
+Atelier is not inventing a coordination model — it's applying a proven one to mixed human-agent software teams. The same architectural primitives (canonical-state-as-dashboard, named domains with handoff contracts, atomic units of work, locks against silent overwrite, triage of external inputs) appear in every high-stakes multi-actor coordination domain:
+
+| Domain | Canonical-state-as-dashboard | Named domain | Atomic unit | Lock-against-overwrite | Triage of external input |
+|---|---|---|---|---|---|
+| **Emergency room** | EMR + track board | Bay (Trauma, Cards) | Order / intervention | Med reconciliation token | Paramedic radio / clinic records |
+| **Air traffic control** | Strip board / ScreenWatch | Sector | Flight strip | Separation rules | Initial contact handoff |
+| **Restaurant brigade** | The pass | Station (sauté, grill) | Ticket | Ticket sequencing | Front-of-house orders |
+| **Newsroom** | Editorial budget | Beat (politics, sports) | Story slot | Editorial hold | Wire desk |
+| **Atelier** | Prototype + `/atelier` | Territory | Contribution | Fencing token | Comment triage |
+
+The mapping is unusually clean because the underlying problem-shape — multi-actor concurrent authoring on shared canonical state with handoff contracts, audit requirements, and silent-overwrite hazards — is invariant across these domains. Atelier's job is to instantiate the pattern for software teams; the architectural primitives are inherited from a long history of practical coordination in higher-stakes domains.
+
+This also explains why our vocabulary is what it is — `triage` is a direct loan from medicine, `blackboard` from multi-agent AI literature, `lens` from optical metaphor — the terms come from where the underlying patterns were first solved.
 
 ---
 
@@ -155,15 +173,15 @@ Rationale:
 
 **Potential commercial surfaces** (none ship at v1; each depends on a strategic bet tracked in [`risks.md`](./risks.md)):
 
-1. Managed fit_check service — depends on Bet 1 (fit_check precision).
+1. Managed find_similar service — depends on Bet 1 (find_similar precision).
 2. Single-focus Forge app for Jira in the regulated-RTM segment — depends on Bet 2 (regulated-RTM segment exists).
 3. Consulting / adoption support for enterprise teams.
 
 ---
 
-## 7. The fit_check threshold and its strategic role
+## 7. The find_similar threshold and its strategic role
 
-The spec ships fit_check with an eval harness and CI gate enforcing **≥75% precision at ≥60% recall** on a labeled eval set (per ADR-006). The eval set ships with the template. The `atelier eval fit_check` CLI command produces the report.
+The spec ships find_similar with an eval harness and CI gate enforcing **≥75% precision at ≥60% recall** on a labeled eval set (per ADR-006). The eval set ships with the template. The `atelier eval find_similar` CLI command produces the report.
 
 Both red-team rounds converged on this threshold as the load-bearing strategic bet. Whether the threshold is achievable with current embedding models — and what changes about Atelier's commercial story if it isn't — is tracked in [`risks.md`](./risks.md) Bet 1. The spec stands regardless of how the bet resolves; what changes is the commercial path forward, not the feature scope.
 
@@ -182,7 +200,7 @@ Both red-team rounds converged on this threshold as the load-bearing strategic b
 - **claude.ai / ChatGPT** with remote MCP access to the same project context
 
 ### Absorbs (as explicit design)
-- **Hackathon-hive's coordination substrate** — blackboard, task board, decisions, locks — with v1 engineering fixes (fencing tokens, `decisions.md` writer, fit_check implementation)
+- **Hackathon-hive's coordination substrate** — blackboard, task board, decisions, locks — with v1 engineering fixes (fencing tokens, `decisions.md` writer, find_similar implementation)
 - **Big-blueprint's prototype-as-canonical-artifact model** — strategy panels, design panels, current-state panels, traceability registry, demo reel
 - **bc-subscriptions' reference-implementation pattern** — one repo as source-of-truth, dual-track agile, trace IDs as join keys
 

@@ -9,7 +9,7 @@
 
 ## The one-line destination
 
-**A self-hostable OSS project template where mixed teams of humans + agents concurrently author a single canonical artifact (the prototype) from any locus, without drift.**
+**A self-hostable OSS project template where mixed teams of humans + agents concurrently author a single canonical artifact (the prototype) from any surface, without drift.**
 
 Build order and design scope are separate. What follows is the complete design scope. Every capability below is present from v1. No "Phase 2," no "coming soon." Design-for-full is the explicit counter-move to feature-at-a-time drift.
 
@@ -34,9 +34,9 @@ No project is multi-tenant. No composer spans projects implicitly. Invites are e
 ## 2. Composer and session model
 
 **Composer** = a human principal.
-**Session** = composer × project × time × locus.
+**Session** = composer × project × time × surface.
 
-| Locus | Surface (examples of) | Agent client (examples of) |
+| Surface | Surface (examples of) | Agent client (examples of) |
 |---|---|---|
 | `ide` | Editor / terminal | In-editor agent clients |
 | `web` | Browser | Browser-based agent clients with remote protocol support |
@@ -119,11 +119,11 @@ Twelve tools, grouped by concern. All present on day one. Exposed via whatever a
 
 | Category | Tool | Purpose |
 |---|---|---|
-| Session | `register` | Register composer × project × locus |
+| Session | `register` | Register composer × project × surface |
 | Session | `heartbeat` | Keep session alive |
 | Session | `deregister` | End session, release held resources |
-| Context | `get_context` | Constitution + recent decisions + territory state + traceability registry |
-| Context | `fit_check` | Semantic search: is this already done or in flight? |
+| Context | `get_context` | Charter + recent decisions + territory state + traceability registry |
+| Context | `find_similar` | Semantic search: is this already done or in flight? |
 | Contribution | `claim` | Claim an open contribution. Atomic create-and-claim when called with `contribution_id=null` + `kind`, `trace_ids`, `territory_id`, optional `content_stub` (ADR-022) |
 | Contribution | `update` | Transition contribution state |
 | Contribution | `release` | Release a claimed contribution |
@@ -135,35 +135,35 @@ Twelve tools, grouped by concern. All present on day one. Exposed via whatever a
 **Write path for non-code artifacts** (the analyst case, first-class):
 
 - Web agent calls `claim(null, kind="research", trace_ids, territory_id)` to atomic-create-and-claim a `research_artifact` contribution (ADR-022)
-- Agent authors research; content lands in `research/US-X.Y-<slug>.md` via `update`. For remote-locus composers, the endpoint commits on their behalf per ADR-023 / ARCH §7.8
+- Agent authors research; content lands in `research/US-X.Y-<slug>.md` via `update`. For remote-surface composers, the endpoint commits on their behalf per ADR-023 / ARCH §7.8
 - Optionally, the agent-session transcript is captured as a sidecar (`research/US-X.Y-<slug>.transcript.jsonl`) when `transcripts.capture=true` per ADR-024
 - `log_decision` captures the research conclusion (with `trace_ids` array per ADR-021), written to `decisions.md`
 - `release` transitions the contribution to `review`; the lens that surfaces it is determined by `territory.review_role` (ADR-025)
 - Other composers are notified via pub/sub broadcast
 
-Same flow, different artifact kind. The protocol is locus-agnostic.
+Same flow, different artifact kind. The protocol is surface-agnostic.
 
 ---
 
 ## 6. Decision durability
 
-Decisions are written to `decisions.md` in the versioned file store first, mirrored to the coordination datastore for query, indexed in the vector index for fit_check, broadcast via pub/sub. All four happen on every `log_decision` call.
+Decisions are written to `decisions.md` in the versioned file store first, mirrored to the coordination datastore for query, indexed in the vector index for find_similar, broadcast via pub/sub. All four happen on every `log_decision` call.
 
-If the coordination datastore is down, `decisions.md` still gets committed. If pub/sub is down, mirror still runs. If vector index is down, keyword-fallback search for fit_check. Graceful degradation is real — designed in, not aspirational.
+If the coordination datastore is down, `decisions.md` still gets committed. If pub/sub is down, mirror still runs. If vector index is down, keyword-fallback search for find_similar. Graceful degradation is real — designed in, not aspirational.
 
 `decisions.md` structure is deterministic (one append per decision, YAML frontmatter with trace_id + category + session + timestamp). A CI check validates that every datastore decision has a corresponding commit and vice versa.
 
 ---
 
-## 7. Fit_check — the irreducible technical bet
+## 7. Find_similar — the irreducible technical bet
 
 **Not deferred. Ships at v1.**
 
 - Vector-index-backed semantic search over decisions + merged contributions + BRD/PRD sections + research artifacts
 - Embedding model committed up front, swappable via config
-- Eval harness ships with the template — labeled eval set in `atelier/eval/fit_check/*.yaml`
-- `atelier eval fit_check` runs precision/recall against the eval set
-- CI gate: PRs that touch fit_check logic must maintain ≥75% precision at ≥60% recall
+- Eval harness ships with the template — labeled eval set in `atelier/eval/find_similar/*.yaml`
+- `atelier eval find_similar` runs precision/recall against the eval set
+- CI gate: PRs that touch find_similar logic must maintain ≥75% precision at ≥60% recall
 - Runtime: composers can accept/reject matches, feedback loops back to the eval set
 - Triggered automatically on: contribution creation, research artifact upload, BRD section drafting
 - Degrades to keyword search if embeddings unavailable — explicit banner in UI, not silent
@@ -196,7 +196,7 @@ Same contract for all: **publishes are full overwrites with visible banners; pul
 | Delivery tracker | Delivery-field canonical store | REST/API for publish + mirror |
 | Published-doc system | Public BRD/PRD projection | REST/API for publish; webhook for comment triage |
 | Visual design tool | Design feedback surface | API for read; webhook for comment triage |
-| Messaging system | Notifications only (no authoring) | Webhooks for contribution state, decisions, fit_check hits |
+| Messaging system | Notifications only (no authoring) | Webhooks for contribution state, decisions, find_similar hits |
 | IDE agent client | In-editor agent | Protocol client connects to project's agent endpoint |
 | Web agent client | Browser agent | Remote protocol connector connects to same endpoint |
 
@@ -214,8 +214,8 @@ atelier invite <email> --role <r> # create composer invite + scoped token
 atelier territory add <name>      # declare new territory
 atelier sync <target>             # run one sync script
 atelier reconcile                 # drift report
-atelier eval fit_check            # run eval set, report precision/recall
-atelier doctor                    # diagnose health: sessions, locks, drift, fit_check status
+atelier eval find_similar            # run eval set, report precision/recall
+atelier doctor                    # diagnose health: sessions, locks, drift, find_similar status
 ```
 
 All present at v1.
@@ -229,7 +229,7 @@ Every action emits telemetry to a dedicated observability table. An admin-gated 
 - Session heartbeat health (active, idle, stale, reaped)
 - Contribution state transition audit log
 - Lock acquisition + release + fencing token ledger
-- Decision fit_check match rate
+- Decision find_similar match rate
 - Triage classifier accuracy (human accept/reject rate on proposals)
 - Sync lag per external system
 - Vector-index health + query p95
@@ -295,24 +295,29 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 | Term | Meaning |
 |---|---|
 | **Atelier** | The product. The shared studio. |
-| **Project** | One repo + one datastore + one deployed prototype + linked tools. |
-| **Composer** | Human principal with authority over a territory. |
-| **Session** | A composer's active connection to a project from a specific locus. |
+| **Hive** | An Atelier deployment hosting one or more projects (one team's instance — datastore + endpoint + deploys). Per ADR-015. |
+| **Project** | One repo + one datastore + one deployed prototype + linked tools. A hive contains N projects. |
+| **Composer** | The role-bearing participant — a human (or their authorized agent) authoring canonical state in coordination contexts. |
+| **Principal** | The security-identity layer — the signed identity a composer authenticates as. A composer participates as a principal. |
+| **Session** | A composer's active connection to a project from a specific surface. |
+| **Surface** | Where a composer interacts from: `ide`, `web`, `terminal`, `passive`. |
 | **Territory** | Named domain with owner, scope kind, scope pattern, published contracts. |
 | **Contribution** | Atomic unit of work; one schema covers tasks/decisions/proposals/PRs. |
+| **`scope_kind`** | One of: `files`, `doc_region`, `research_artifact`, `design_component`, `slice_config` — the five kinds of artifact a contribution or lock can target (per ADR-003). |
+| **Slice** | A vertical product feature with strategy, design, and current-state views; one unit of dual-track-agile authoring (the `/slices/[id]` route). |
 | **Contract** | Typed interface published by one territory for consumption by others. |
 | **Blackboard** | Coordination state (sessions, contributions, decisions, locks, contracts). |
-| **Constitution** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `.atelier/*`. The canonical decision log at `docs/architecture/decisions/` (per ADR-030) is read by agents as context but is not itself constitutional. |
+| **Charter** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `.atelier/*`. The canonical decision log at `docs/architecture/decisions/` (per ADR-030) is read by agents as context but is not itself part of the charter. |
 | **Prototype** | The web app that is both the canonical artifact and the dashboard. |
 | **Trace ID** | `US-X.Y`, `BRD:Epic-N`, etc. — join key across all surfaces. |
-| **Fit_check** | Semantic search that answers "is this already done or in flight?" |
+| **`find_similar`** | The semantic-search primitive: "is this already done or in flight?" Operates over decisions, contributions, BRD/PRD sections, research artifacts. |
 | **Triage** | Classifier + drafter pipeline that turns external comments into proposal contributions. |
 
 ---
 
-## 16. The fit_check threshold
+## 16. The find_similar threshold
 
-Fit_check ships with an eval harness and CI gate enforcing ≥75% precision at ≥60% recall on a labeled eval set drawn from this repo's own decisions corpus (per ADR-006).
+Find_similar ships with an eval harness and CI gate enforcing ≥75% precision at ≥60% recall on a labeled eval set drawn from this repo's own decisions corpus (per ADR-006).
 
 The threshold is part of the spec. Whether the threshold can actually be hit by current embedding models is a strategic bet tracked separately in [`risks.md`](./risks.md). The spec stands regardless of how the bet resolves.
 

@@ -18,7 +18,7 @@ This is the on-ramp for tier-2 readers. You're past "deploy as-is" (tier 1) but 
 | 12-tool MCP endpoint scaffold (per ADR-013) | M2 |
 | Relational schema with RLS, fencing tokens, pub/sub broadcast (per ADR-004, ADR-016) | M2 |
 | Five role-aware lens shells in `/atelier` (per ADR-017) | M3 |
-| Fit_check eval harness with seed eval set (per ADR-006) | M5 |
+| Find_similar eval harness with seed eval set (per ADR-006) | M5 |
 | Territory + contract model wired to `.atelier/territories.yaml` (per ADR-014) | M2 (declaration), M2/M3 (runtime) |
 | `atelier init` / `atelier deploy` CLI | M7 (polished); raw forms across M2/M3/M6 per BUILD-SEQUENCE §9 |
 
@@ -31,7 +31,7 @@ Each links to the relevant guide in [`extending/`](./extending/) (populated as e
 | Add a sixth role-aware lens | `extending/add-a-lens.md` | M3 |
 | Add a new sync script (e.g., publish to your wiki) | `extending/add-a-sync-script.md` | M1 |
 | Add a delivery-tracker, published-doc, or design-tool adapter | `extending/add-an-adapter.md` | M6 |
-| Add a fit_check eval case | `extending/add-an-eval-case.md` | M5 |
+| Add a find_similar eval case | `extending/add-an-eval-case.md` | M5 |
 | Declare a new territory | `extending/add-a-territory.md` | M2 |
 | Extend the trace-ID format | `extending/add-a-trace-id-format.md` | M1 |
 | Swap the embedding model (D24) | `extending/swap-embedding-model.md` | M5 |
@@ -58,7 +58,7 @@ This flow becomes runnable as the reference impl ships across M1–M7. Pre-M2, o
 
 3. **Customize `.atelier/territories.yaml`** for your team's roles. Use the seed territories as a starting point; rename, split, or merge as needed. Keep `review_role` set per ADR-025.
 
-4. **(Post-M5) Run the test suite** before any code changes (`atelier eval fit_check` + integration tests). If anything fails out-of-the-box, file an upstream bug — don't customize broken code.
+4. **(Post-M5) Run the test suite** before any code changes (`atelier eval find_similar` + integration tests). If anything fails out-of-the-box, file an upstream bug — don't customize broken code.
 
 5. **(Post-M3) Make customizations in clearly-marked locations.** Conventions:
    - Custom adapters in `prototype/src/adapters/<your-org>/`

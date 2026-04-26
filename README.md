@@ -1,6 +1,6 @@
 # Atelier
 
-A self-hostable OSS project template + agent interop protocol + reference prototype where mixed teams of humans and AI agents concurrently author one canonical artifact across IDE, browser, and terminal loci — without drift.
+A self-hostable OSS project template + agent interop protocol + reference prototype where mixed teams of humans and AI agents concurrently author one canonical artifact across IDE, browser, and terminal surfaces — without drift.
 
 ---
 
@@ -21,7 +21,7 @@ Pick your path in the table below.
 | Tier | Action | What you do | Start here |
 |---|---|---|---|
 | **1. Reference Deployment** | **Deploy** | Run Atelier as-is for your team via `atelier init && atelier deploy`. You don't want to think about the implementation. | [`docs/user/`](./docs/user/) (populates at v1) and [`docs/ops/`](./docs/ops/) (populates at M7) |
-| **2. Reference Implementation** | **Extend** | Fork this repo. Modify schema, add lenses, swap fit_check model, write new sync adapters. | [`docs/developer/fork-and-customize.md`](./docs/developer/fork-and-customize.md) |
+| **2. Reference Implementation** | **Extend** | Fork this repo. Modify schema, add lenses, swap find_similar model, write new sync adapters. | [`docs/developer/fork-and-customize.md`](./docs/developer/fork-and-customize.md) |
 | **3. Specification** | **Implement** | Implement the 12-tool protocol on a different stack, OR apply Atelier's methodology to a project that does not use this codebase. | [`docs/methodology/adoption-guide.md`](./docs/methodology/adoption-guide.md) (methodology) or [`docs/architecture/protocol/`](./docs/architecture/protocol/) (protocol) |
 
 ---
@@ -58,7 +58,7 @@ Doc structure follows the claude-docs-toolkit seven-layer audience model with At
 
 Every capability in [`docs/strategic/NORTH-STAR.md`](./docs/strategic/NORTH-STAR.md) ships at v1, including:
 
-- **Fit_check** — semantic search answering "is this already done or in flight?" with an evaluation harness and CI gate enforcing ≥75% precision at ≥60% recall (per ADR-006).
+- **Find_similar** — semantic search answering "is this already done or in flight?" with an evaluation harness and CI gate enforcing ≥75% precision at ≥60% recall (per ADR-006).
 - The 12-tool agent endpoint (per ADR-013).
 - The five role-aware lenses at `/atelier` (per ADR-017).
 - The five SDLC sync substrate scripts (per ADR-008).
@@ -73,17 +73,22 @@ Build sequencing across M0–M7 is in [`docs/strategic/BUILD-SEQUENCE.md`](./doc
 | Term | Meaning |
 |---|---|
 | **Atelier** | The product. The shared studio. |
-| **Project** | One repo + one coordination datastore + one deployed prototype + linked tools. |
-| **Composer** | Human principal with authority over a territory. |
-| **Session** | A composer's active connection to a project from a specific locus. |
+| **Hive** | An Atelier deployment hosting one or more projects (one team's instance — datastore + endpoint + deploys). Per ADR-015. |
+| **Project** | One repo + one coordination datastore + one deployed prototype + linked tools. A hive contains N projects. |
+| **Composer** | The role-bearing participant — a human (or their authorized agent) authoring canonical state in coordination contexts. |
+| **Principal** | The security-identity layer — the signed identity a composer authenticates as (per OAuth/OIDC vocabulary). A composer participates as a principal. |
+| **Session** | A composer's active connection to a project from a specific surface. |
+| **Surface** | Where a composer interacts from: `ide`, `web`, `terminal`, `passive`. |
 | **Territory** | Named domain with owner, scope kind, scope pattern, published contracts. |
 | **Contribution** | Atomic unit of work; one schema covers tasks/decisions/proposals/PRs. |
+| **`scope_kind`** | One of: `files`, `doc_region`, `research_artifact`, `design_component`, `slice_config` — the five kinds of artifact a contribution or lock can target (per ADR-003). |
+| **Slice** | A vertical product feature with strategy, design, and current-state views; one unit of dual-track-agile authoring (the `/slices/[id]` route). |
 | **Contract** | Typed interface published by one territory for consumption by others. |
 | **Blackboard** | Coordination state (sessions, contributions, decisions, locks, contracts). |
-| **Constitution** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `docs/architecture/decisions/`, `.atelier/*`. |
+| **Charter** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `docs/architecture/decisions/`, `.atelier/*`. |
 | **Prototype** | The web app that is both the canonical artifact and the dashboard. |
 | **Trace ID** | `US-X.Y`, `BRD:Epic-N`, etc. — join key across all surfaces. |
-| **Fit_check** | Semantic search that answers "is this already done or in flight?" |
+| **`find_similar`** | The semantic-search primitive: "is this already done or in flight?" Operates over decisions, contributions, BRD/PRD sections, research artifacts. |
 | **Triage** | Classifier + drafter pipeline that turns external comments into proposal contributions. |
 
 ---

@@ -39,7 +39,7 @@ The reference impl runs on **GitHub + Supabase (Postgres + Realtime + Auth + pgv
 
 ## 3. The recursion check
 
-Atelier dogfoods itself. From **M2** onward, every contribution toward building Atelier is tracked *in* Atelier. From **M5** onward, every contribution is fit-checked against the corpus. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.
+Atelier dogfoods itself. From **M2** onward, every contribution toward building Atelier is tracked *in* Atelier. From **M5** onward, every contribution is checked via find_similar against the corpus. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.
 
 **At each milestone, ask:** "Did we use the previous milestone to coordinate building this one?" If the answer is no, dogfooding has drifted and the milestone is suspect.
 
@@ -56,7 +56,7 @@ This is also the strongest disconfirming test available before public release. A
 | **M2** | Schema + 12-tool endpoint stub + fenced locks | Coordination substrate goes live; contributions become trackable | Planned |
 | **M3** | Prototype shell + `/atelier` + 5 lenses | The dashboard you build is the dashboard you use | Planned |
 | **M4** | Multi-composer concurrency (real broadcast) | Concurrent authoring is observable and conflict-safe | Planned |
-| **M5** | fit_check + eval harness + CI gate | Disconfirming test on the commercial wedge fires | Planned |
+| **M5** | find_similar + eval harness + CI gate | Disconfirming test on the commercial wedge fires | Planned |
 | **M6** | Remote-principal composers + triage | Analyst case executes through Atelier itself | Planned |
 | **M7** | Hardening + open-ADR resolution | Reference implementation is publication-ready | Planned |
 
@@ -70,7 +70,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Done (2026-04-24)
 
-**Produces.** Repo conventions, 32 ADRs, `traceability.json` registry, `.atelier/territories.yaml`, `.atelier/config.yaml`, `CLAUDE.md` + `AGENTS.md` agent constitution, complete v1 design corpus organized into seven-layer doc tree (per ADR-032), hand-bootstrapped reference repo (Epic 1 CLI surface intentionally deferred to M7 — see §9).
+**Produces.** Repo conventions, 32 ADRs, `traceability.json` registry, `.atelier/territories.yaml`, `.atelier/config.yaml`, `CLAUDE.md` + `AGENTS.md` agent charter, complete v1 design corpus organized into seven-layer doc tree (per ADR-032), hand-bootstrapped reference repo (Epic 1 CLI surface intentionally deferred to M7 — see §9).
 
 **Operationalizes.** ADR-005, ADR-011, ADR-012, ADR-014, ADR-015, ADR-020 (naming), ADR-030 (per-ADR split), ADR-031 (three-tier consumer model), ADR-032 (extended doc structure).
 
@@ -106,9 +106,9 @@ This is also the strongest disconfirming test available before public release. A
 
 **Status:** Planned
 
-**Produces.** Relational schema with `projects`, `composers`, `sessions`, `contributions`, `decisions`, `locks`, `contracts`, `telemetry` tables (per ARCHITECTURE §5.1). The 12-tool agent endpoint per ADR-013, with fit_check returning `unknown` (real fit_check arrives in M5). Locks with fencing tokens from day one. `atelier datastore init` ships in raw form here (Epic 1 partial; polished at M7).
+**Produces.** Relational schema with `projects`, `composers`, `sessions`, `contributions`, `decisions`, `locks`, `contracts`, `telemetry` tables (per ARCHITECTURE §5.1). The 12-tool agent endpoint per ADR-013, with find_similar returning `unknown` (real find_similar arrives in M5). Locks with fencing tokens from day one. `atelier datastore init` ships in raw form here (Epic 1 partial; polished at M7).
 
-**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-locus committer), ADR-024 (transcript schema field), ADR-026 (own-impl lock+fencing), ADR-027 (Supabase + Vercel reference stack), ADR-028 (Supabase Auth default), ADR-029 (GCP-portability constraint; `BroadcastService` interface lands here).
+**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-surface committer), ADR-024 (transcript schema field), ADR-026 (own-impl lock+fencing), ADR-027 (Supabase + Vercel reference stack), ADR-028 (Supabase Auth default), ADR-029 (GCP-portability constraint; `BroadcastService` interface lands here).
 
 **Advances.** BRD Epic 2 (endpoint), Epic 4 (territory + contribution), Epic 5 (decision durability — write path), Epic 7 (locks + fencing), Epic 8 (territory contracts).
 
@@ -116,7 +116,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Demoable.** Two `claim_scope` calls on the same scope; second rejected with stale-fencing-token error. `log_decision` appends to `../architecture/decisions` and the datastore mirror reflects within one M1 sync cycle.
 
-**Exit criteria.** All 12 tools respond with real (non-stub) values except `fit_check`. Fencing tokens enforced in CI integration tests. The build of M3 onward registers contributions in this datastore.
+**Exit criteria.** All 12 tools respond with real (non-stub) values except `find_similar`. Fencing tokens enforced in CI integration tests. The build of M3 onward registers contributions in this datastore.
 
 ---
 
@@ -156,19 +156,19 @@ This is also the strongest disconfirming test available before public release. A
 
 ---
 
-### M5 — fit_check + eval harness + CI gate
+### M5 — find_similar + eval harness + CI gate
 
 **Status:** Planned
 
-**Produces.** Fit_check scoring service backed by an embedding model (default selected per D24 resolution, which must land before M5 begins — see §7 Q3), eval harness with a labeled seed set drawn from this repo's own decisions corpus, CI gate enforcing ≥75% precision at ≥60% recall per ADR-006, keyword-search fallback with explicit UI degraded banner per US-6.5.
+**Produces.** Find_similar scoring service backed by an embedding model (default selected per D24 resolution, which must land before M5 begins — see §7 Q3), eval harness with a labeled seed set drawn from this repo's own decisions corpus, CI gate enforcing ≥75% precision at ≥60% recall per ADR-006, keyword-search fallback with explicit UI degraded banner per US-6.5.
 
-**Operationalizes.** ADR-006 (fit_check + eval harness + keyword fallback).
+**Operationalizes.** ADR-006 (find_similar + eval harness + keyword fallback).
 
-**Advances.** BRD Epic 6 (fit_check + eval harness).
+**Advances.** BRD Epic 6 (find_similar + eval harness).
 
-**Bootstrap function.** Every PR merging into Atelier from this point is fit-checked against Atelier's own corpus. **This is the disconfirming test the entire commercial wedge depends on.** Failure here does not stop the project (every other capability still ships), but it does scope the commercial story.
+**Bootstrap function.** Every PR merging into Atelier from this point is checked via find_similar against Atelier's own corpus. **This is the disconfirming test the entire commercial wedge depends on.** Failure here does not stop the project (every other capability still ships), but it does scope the commercial story.
 
-**Demoable.** A deliberately-misaligned contribution (e.g., one that violates ADR-007 by introducing SaaS coupling) is rejected at PR time with a fit_check explanation. An aligned contribution passes. Eval-set precision/recall reported on every push.
+**Demoable.** A deliberately-misaligned contribution (e.g., one that violates ADR-007 by introducing SaaS coupling) is rejected at PR time with a find_similar explanation. An aligned contribution passes. Eval-set precision/recall reported on every push.
 
 **Exit criteria.** CI gate is mandatory on `main`. Eval set is committed and versioned. Precision/recall metrics published per-run. The disconfirming test has fired at least once.
 
@@ -186,7 +186,7 @@ This is also the strongest disconfirming test available before public release. A
 
 **Bootstrap function.** The end-to-end analyst case from `BRD-OPEN-QUESTIONS §1` is now executable. M7 itself can be built largely by external agents under triage supervision, which is the strongest stress test of the whole substrate.
 
-**Demoable.** An external Claude Code session claims a `research_artifact`, authors it, runs fit_check, queues it for triage; PM principal approves via `/atelier`; decision is logged; release_scope completes — all observable end-to-end.
+**Demoable.** An external Claude Code session claims a `research_artifact`, authors it, runs find_similar, queues it for triage; PM principal approves via `/atelier`; decision is logged; release_scope completes — all observable end-to-end.
 
 **Exit criteria.** Analyst-week-1 scenario passes. Triage gate cannot be bypassed. Remote composer auth tokens are scoped, revocable, and audited.
 
@@ -213,7 +213,7 @@ This is also the strongest disconfirming test available before public release. A
 ## 6. How this document evolves
 
 - **Editable in place.** Re-ordering within a milestone, refining exit criteria, or adjusting demoable artifacts happens via PR to this file.
-- **Major reorders log an ADR.** Moving a milestone (e.g., bringing fit_check forward to M3) is consequential and warrants an entry in `../architecture/decisions` referencing the prior sequence. The ADR explains *why* the order changed; this doc reflects the *current* order.
+- **Major reorders log an ADR.** Moving a milestone (e.g., bringing find_similar forward to M3) is consequential and warrants an entry in `../architecture/decisions` referencing the prior sequence. The ADR explains *why* the order changed; this doc reflects the *current* order.
 - **Status transitions** (`Planned` → `In progress` → `Done`) are PR-tracked. Mark a milestone Done only when its exit criteria are met.
 - **No phase tags in design docs.** This file holds all sequencing language. `NORTH-STAR.md` / `../functional/PRD.md` / `../functional/BRD.md` / `../architecture/ARCHITECTURE.md` remain phase-free per ADR-011.
 
@@ -223,9 +223,9 @@ This is also the strongest disconfirming test available before public release. A
 
 These are sequence-specific open items distinct from `../functional/BRD-OPEN-QUESTIONS.md`.
 
-1. **Should fit_check arrive earlier than M5?** Pulling it forward to M3 means the eval signal arrives before UI ships and could shape lens design. Cost: M3 grows substantially and may slip M4. Trade-off worth surfacing once M2 lands and M3 estimates harden.
+1. **Should find_similar arrive earlier than M5?** Pulling it forward to M3 means the eval signal arrives before UI ships and could shape lens design. Cost: M3 grows substantially and may slip M4. Trade-off worth surfacing once M2 lands and M3 estimates harden.
 2. **Should M4 (concurrency) precede M3 (UI)?** Demoing concurrency without a UI is harder, but demoing UI without real concurrency makes M3 partly fake. The current order assumes thin UI on top of stubbed concurrency is acceptable for one milestone; revisit if M3 dogfooding feels hollow.
-3. **D24 (embedding model default) must resolve before M5 starts.** M5 ships fit_check; fit_check needs a chosen model. Recommend resolving D24 during M3/M4 (benchmark ≥3 candidates against the seed eval set) so M5 can begin without blocking. Currently the only OPEN ADR-relevant decision (D22, D23 already resolved as ADR-026 and ADR-028).
+3. **D24 (embedding model default) must resolve before M5 starts.** M5 ships find_similar; find_similar needs a chosen model. Recommend resolving D24 during M3/M4 (benchmark ≥3 candidates against the seed eval set) so M5 can begin without blocking. Currently the only OPEN ADR-relevant decision (D22, D23 already resolved as ADR-026 and ADR-028).
 4. **What is the smallest M2 that still unblocks M3?** If the 12-tool endpoint can be split into a "coordination subset" (claim/release/log_decision) shipped first, M3 could begin in parallel. Investigate at M1 exit.
 
 ---

@@ -12,7 +12,7 @@
 |---|---|---|
 | Component diagram (capability-level) | M2 | Mermaid in `.md` |
 | Schema ER diagram | M2 | Mermaid |
-| Sequence diagrams (claim flow, log_decision flow, fit_check flow) | M2–M5 | Mermaid |
+| Sequence diagrams (claim flow, log_decision flow, find_similar flow) | M2–M5 | Mermaid |
 | Triage pipeline diagram | M6 | Mermaid |
 | Two-substrate orthogonality diagram | M2 | Mermaid |
 

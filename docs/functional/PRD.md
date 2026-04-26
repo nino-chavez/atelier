@@ -9,15 +9,15 @@
 
 ## 1. Executive summary
 
-Atelier ships as **three open-source engagement tiers** (per ADR-031): a Specification (methodology + 12-tool open protocol), a Reference Implementation (this codebase, designed for the GitHub + Supabase + Vercel + MCP stack per ADR-027), and a Reference Deployment (`atelier init && atelier deploy` once the reference impl ships). All three let mixed teams of humans and AI agents concurrently author a single canonical artifact (the prototype) across different loci (IDE, browser, terminal).
+Atelier ships as **three open-source engagement tiers** (per ADR-031): a Specification (methodology + 12-tool open protocol), a Reference Implementation (this codebase, designed for the GitHub + Supabase + Vercel + MCP stack per ADR-027), and a Reference Deployment (`atelier init && atelier deploy` once the reference impl ships). All three let mixed teams of humans and AI agents concurrently author a single canonical artifact (the prototype) across different surfaces (IDE, browser, terminal).
 
 The Reference Implementation comprises:
 1. A CLI (`atelier`) that scaffolds and operates projects.
-2. A repo template with opinionated structure (`../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, per-ADR files in `../architecture/decisions/`, traceability registry, prototype app, sync scripts, constitution files).
+2. A repo template with opinionated structure (`../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, per-ADR files in `../architecture/decisions/`, traceability registry, prototype app, sync scripts, charter files).
 3. An agent-facing endpoint implementing an open interop protocol with 12 tools (per ADR-013).
 4. A prototype web app that serves as both canonical artifact and coordination dashboard.
 5. A coordination datastore schema (relational + pub/sub + vector index) for blackboard state.
-6. An evaluation harness for fit_check with a labeled eval set and CI gate.
+6. An evaluation harness for find_similar with a labeled eval set and CI gate.
 7. A sync substrate (per ADR-008) for bidirectional coherence with external tools.
 
 Atelier does not replace Jira, Linear, Confluence, Notion, Figma, Slack, Claude Code, Cursor, claude.ai, ChatGPT, or any other best-in-class tool. It is the spine that connects them around one project.
@@ -29,44 +29,44 @@ Atelier does not replace Jira, Linear, Confluence, Notion, Figma, Slack, Claude 
 See `../strategic/STRATEGY.md` for full competitive analysis. Summary:
 
 - **SDLC sync substrate market** is commoditized — GitHub Spec-Kit, Linear Agents, Atlassian Rovo Dev collectively occupy ~80% with distribution Atelier cannot match.
-- **Coordination substrate market** has genuine gaps — Anthropic Claude Code Agent Teams and Switchman close file-level coordination but do not address non-code territories or mixed-locus teams.
-- **Atelier's wedge** is (a) canonical artifact as prototype, (b) non-code territories as first-class, (c) mixed-locus composer participation via web-agent clients, (d) fit_check as load-bearing duplicate-detection primitive.
+- **Coordination substrate market** has genuine gaps — Anthropic Claude Code Agent Teams and Switchman close file-level coordination but do not address non-code territories or mixed-surface teams.
+- **Atelier's wedge** is (a) canonical artifact as prototype, (b) non-code territories as first-class, (c) mixed-surface composer participation via web-agent clients, (d) find_similar as load-bearing duplicate-detection primitive.
 - **Commercial scope deliberately narrow.** Atelier ships as OSS. Potential commercial surfaces are tracked in [`../strategic/risks.md`](../strategic/risks.md); none ship at v1.
 
 ---
 
 ## 3. Personas
 
-### 3.1 Dev Principal
-- **Locus:** IDE + terminal
+### 3.1 Dev Composer
+- **Surface:** IDE + terminal
 - **Agent client:** Claude Code, Cursor, or equivalent MCP-capable IDE agent
 - **Primary jobs:** implement slices, maintain architecture, review proposals, participate in decisions
-- **Key needs from Atelier:** project context in agent window without tab-hopping; concurrent safety on shared files; awareness of other composers' in-flight work; fit_check on proposals before coding
+- **Key needs from Atelier:** project context in agent window without tab-hopping; concurrent safety on shared files; awareness of other composers' in-flight work; find_similar on proposals before coding
 - **Access:** full repo read/write; full datastore read; datastore writes via session token
 
-### 3.2 Analyst Principal
-- **Locus:** Browser
+### 3.2 Analyst Composer
+- **Surface:** Browser
 - **Agent client:** claude.ai with MCP remote connectors, ChatGPT, or equivalent web agent
 - **Primary jobs:** research market / problem space / personas, author strategic artifacts, review team proposals, ensure research lands durably
-- **Key needs:** durable artifact store for agent-session outputs; trace-linked research; read access to current project state; fit_check on research topics before deep dives
+- **Key needs:** durable artifact store for agent-session outputs; trace-linked research; read access to current project state; find_similar on research topics before deep dives
 - **Access:** repo write via PR proposals only; datastore write scoped to strategy/research territory
 
-### 3.3 PM Principal
-- **Locus:** Browser + delivery-tracker UI
+### 3.3 PM Composer
+- **Surface:** Browser + delivery-tracker UI
 - **Agent client:** Light use, typically web agent for brainstorming
 - **Primary jobs:** set priorities, approve scope, see progress, unblock decisions
 - **Key needs:** cross-surface roadmap view; phase/priority control; delivery-mirror freshness; proposal triage visibility
 - **Access:** repo write via PR proposals for priority/phase changes; datastore write scoped to priority/phase territory; delivery-tracker write
 
-### 3.4 Designer Principal
-- **Locus:** Design tool (Figma) + browser
+### 3.4 Designer Composer
+- **Surface:** Design tool (Figma) + browser
 - **Agent client:** Web agent or Figma-embedded agent
 - **Primary jobs:** author design components, maintain design system, review design feedback, align design with strategy
 - **Key needs:** component-level locks; design-as-contract with dev territory; feedback queue from external design tool; prototype components as canonical output
 - **Access:** repo write via PR; datastore write scoped to design territory
 
 ### 3.5 Stakeholder (read-only composer)
-- **Locus:** Browser
+- **Surface:** Browser
 - **Agent client:** None required
 - **Primary jobs:** review, comment, approve at milestones
 - **Key needs:** read-only view of canonical state; comment flow (triaged to proposals); demo reel access
@@ -79,7 +79,7 @@ See `../strategic/STRATEGY.md` for full competitive analysis. Summary:
 Complete feature set. All features ship at v1 per `../strategic/NORTH-STAR.md` §17. No phasing.
 
 ### 4.1 Project lifecycle (Epic 1)
-- `atelier init <name>` — scaffold repo with full structure, prototype, constitution files, traceability registry seed
+- `atelier init <name>` — scaffold repo with full structure, prototype, charter files, traceability registry seed
 - `atelier datastore init` — provision coordination datastore with schema
 - `atelier deploy` — ship prototype + agent endpoint to serverless runtime + static hosting
 - `atelier invite <email> --role <role>` — issue per-composer token with scoped claims
@@ -104,10 +104,10 @@ Six routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceabil
 - CI check validates repo/datastore sync on every push
 - Graceful degradation: repo write always succeeds even if datastore unreachable
 
-### 4.6 Fit_check (Epic 6)
+### 4.6 Find_similar (Epic 6)
 - Vector-index-backed semantic search over decisions, contributions, BRD/PRD sections, research artifacts
-- Labeled eval set at `atelier/eval/fit_check/*.yaml`
-- `atelier eval fit_check` reports precision/recall
+- Labeled eval set at `atelier/eval/find_similar/*.yaml`
+- `atelier eval find_similar` reports precision/recall
 - CI gate at ≥75% precision, ≥60% recall (per ADR-006)
 - Composer accept/reject feeds back to eval
 - Keyword-search fallback with explicit UI banner
@@ -143,7 +143,7 @@ Six routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceabil
 Complete CLI surface per `../strategic/NORTH-STAR.md` §10.
 
 ### 4.12 Observability (Epic 12)
-Admin-gated `/atelier/observability` sub-route. Telemetry for every action: session heartbeats, contribution transitions, lock ledger, fit_check match rate, triage accuracy, sync lag, vector-index health.
+Admin-gated `/atelier/observability` sub-route. Telemetry for every action: session heartbeats, contribution transitions, lock ledger, find_similar match rate, triage accuracy, sync lag, vector-index health.
 
 ### 4.13 Security (Epic 13)
 Per-composer signed tokens, row-level authorization, append-only decision writes, fencing tokens, session reaper, triage sandbox, server-side credential isolation.
@@ -186,7 +186,7 @@ Atelier requires these capabilities from whatever stack implements it:
 | Relational datastore with RLS | Blackboard state with per-composer authorization | Postgres-compatible engines |
 | Pub/sub broadcast | Real-time push of row changes | Postgres LISTEN/NOTIFY, hosted realtime services |
 | Identity service | Signed tokens with role claims | JWT-capable OIDC providers |
-| Vector index | Semantic search for fit_check | pgvector, dedicated vector DB |
+| Vector index | Semantic search for find_similar | pgvector, dedicated vector DB |
 | Serverless runtime | Stateless HTTP functions | Any FaaS with HTTP ingress |
 | Static/edge hosting | Prototype web app | Any CDN with SSR support |
 | Agent interop protocol | Standardized tool-call surface | MCP (Model Context Protocol) |
@@ -206,7 +206,7 @@ Any stack that provides these, deployable behind a single self-hostable command,
 - Decisions logged per week per project
 
 ### 7.2 Technical health (lagging indicators)
-- Fit_check precision ≥75% at ≥60% recall on eval set (CI-gated; red line)
+- Find_similar precision ≥75% at ≥60% recall on eval set (CI-gated; red line)
 - Sync lag p95 < 60s (publish) / < 24h (mirror)
 - Lock conflict rate < 2% of acquisition attempts
 - Triage accept rate ≥80% (proposals accepted as-is or with minor edits)
@@ -246,7 +246,7 @@ See `BRD-OPEN-QUESTIONS.md` for the full list. Top three at v1 boundary:
 
 1. **Territory model validation on the analyst case.** Walk one analyst-week-1-research scenario end-to-end through schema + endpoint + prototype views. If it doesn't flow cleanly, the model changes before code is written.
 2. **Switchman as dependency vs. own-implementation for file locks.** If Switchman is a stable dependency with fencing tokens, integrate and inherit. If not, build own with fencing from v1.
-3. **Embedding model choice** for fit_check. Defaults and swappability; implications for self-hosted deployments with no external AI API.
+3. **Embedding model choice** for find_similar. Defaults and swappability; implications for self-hosted deployments with no external AI API.
 
 ---
 

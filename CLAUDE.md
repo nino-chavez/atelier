@@ -1,6 +1,6 @@
-# CLAUDE.md — Agent Constitution for the Atelier Repo
+# CLAUDE.md — Agent Charter for the Atelier Repo
 
-You are participating in the **Atelier** project — a self-hostable OSS project template for mixed teams of humans + agents to concurrently author one canonical artifact across IDE, browser, and terminal loci.
+You are participating in the **Atelier** project — a self-hostable OSS project template for mixed teams of humans + agents to concurrently author one canonical artifact across IDE, browser, and terminal surfaces.
 
 This repo is both the spec for Atelier and a reference implementation of its own methodology. What you read here also applies to any repo scaffolded by `atelier init`.
 
@@ -86,7 +86,7 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-003:** `scope_kind` generalized from day one (files, doc_region, research_artifact, design_component, slice_config).
 - **ADR-004:** Fencing tokens mandatory on all locks from v1.
 - **ADR-005:** Decisions write to repo first, datastore second.
-- **ADR-006:** Fit_check ships at v1 with eval harness + CI gate (≥75% precision at ≥60% recall).
+- **ADR-006:** Find_similar ships at v1 with eval harness + CI gate (≥75% precision at ≥60% recall).
 - **ADR-007:** No multi-tenant SaaS; self-hosted OSS only.
 - **ADR-008:** All 5 sync substrate scripts ship together; no phasing.
 - **ADR-009:** Remote-principal actor class (web agents as first-class composers).
@@ -103,7 +103,7 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-020:** Naming: Atelier (rejected: Hivemind OS, Hive, Commons, Loom).
 - **ADR-021:** Multi-trace-ID support on contributions and decisions (`text[]` with GIN index).
 - **ADR-022:** `claim` atomic-creates open contributions when called with `contribution_id=null`.
-- **ADR-023:** Remote-locus commits via per-project endpoint git committer (ARCH §7.8).
+- **ADR-023:** Remote-surface commits via per-project endpoint git committer (ARCH §7.8).
 - **ADR-024:** Agent-session transcripts as repo-sidecar files, opt-in via `.atelier/config.yaml`.
 - **ADR-025:** Review routing keyed by `territory.review_role`.
 - **ADR-026:** Atelier owns the lock + fencing implementation; Switchman not adopted (no fencing-token API).

@@ -28,7 +28,7 @@ user/
 ├── guides/
 │   ├── claim-contribution.md
 │   ├── log-decision.md
-│   ├── run-fit-check.md
+│   ├── run-find-similar.md
 │   ├── recover-from-stuck-lock.md
 │   └── add-a-composer.md
 ├── reference/
@@ -40,7 +40,7 @@ user/
     ├── why-fencing-tokens.md
     ├── why-repo-canonical.md
     ├── why-no-saas.md
-    ├── why-fit-check.md
+    ├── why-find-similar.md
     └── why-three-tiers.md
 ```
 

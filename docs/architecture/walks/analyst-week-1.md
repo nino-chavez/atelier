@@ -22,7 +22,7 @@ An analyst composer begins week-1 competitive research touching `US-1.3` (and po
 
 1. Connect a web-based agent client and register a session
 2. Read current strategy context for `US-1.3`
-3. Run fit_check to see whether prior research on this topic exists
+3. Run find_similar to see whether prior research on this topic exists
 4. Bring an open `research_artifact` contribution into existence and claim it
 5. Author research content via their agent (no local IDE)
 6. Log one or more decisions about findings (some cross-cutting)
@@ -41,8 +41,8 @@ Pre-conditions assumed in place:
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `register(project_id, locus="web", composer_token, agent_client="claude.ai")` |
-| **Schema** | INSERT `sessions` (project_id, composer_id, locus="web", agent_client, status="active", heartbeat_at=now). Returns `session_token`. |
+| **Tool** | `register(project_id, surface="web", composer_token, agent_client="claude.ai")` |
+| **Schema** | INSERT `sessions` (project_id, composer_id, surface="web", agent_client, status="active", heartbeat_at=now). Returns `session_token`. |
 | **Prototype** | `/atelier` analyst lens shows the session under "active participants." PM lens lists it under composer presence. |
 | **Status** | Clean. No gap. |
 
@@ -51,17 +51,17 @@ Pre-conditions assumed in place:
 | Layer | Detail |
 |---|---|
 | **Tool** | `get_context(trace_id="US-1.3")` |
-| **Schema** | Reads constitution files, recent `decisions` filtered by trace_id and adjacency, `territories` rows the analyst owns or consumes from, and the traceability registry. |
+| **Schema** | Reads charter files, recent `decisions` filtered by trace_id and adjacency, `territories` rows the analyst owns or consumes from, and the traceability registry. |
 | **Prototype** | `/strategy` (the analyst can view the same context in the prototype web app). `/atelier` analyst lens shows recent decisions filtered to relevant trace IDs. |
 | **Status** | Clean. No gap. |
 
-### Step 3 — Run fit_check for prior work
+### Step 3 — Run find_similar for prior work
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `fit_check(description="competitive research on prototype deployment for US-1.3", trace_id="US-1.3")` per `../ARCHITECTURE.md §6.4` |
+| **Tool** | `find_similar(description="competitive research on prototype deployment for US-1.3", trace_id="US-1.3")` per `../ARCHITECTURE.md §6.4` |
 | **Schema** | Reads vector index over `decisions`, merged `contributions`, BRD/PRD sections, research artifacts. |
-| **Prototype** | Could surface in `/atelier` analyst lens as a "before you start" panel; today the design says fit_check is endpoint-only. |
+| **Prototype** | Could surface in `/atelier` analyst lens as a "before you start" panel; today the design says find_similar is endpoint-only. |
 | **Status** | Clean. Minor: NORTH-STAR §5 lists the tool without parameters; ARCH §6.4 provides the signature. Acceptable doc-layer split, no design change. |
 
 ### Step 4 — Create + claim a `research_artifact` contribution
@@ -80,7 +80,7 @@ Pre-conditions assumed in place:
 | **Tool** | `update(contribution_id, state="in_progress", content_ref="research/US-1.3-deploy-research.md", payload=<research markdown>)` |
 | **Schema** | UPDATE `contributions` SET state, content_ref, fencing_token. The repo gets a new file `research/US-1.3-deploy-research.md`. |
 | **Prototype** | `/atelier` analyst lens shows in_progress contribution; `/strategy` (or research index) surfaces the new artifact once committed. |
-| **Status** | **GAP #2 — Remote-locus repo write path is implied but not specified.** A web-locus composer has no filesystem; the endpoint must commit on their behalf. Identity, signing, failure handling, sync timing all unspecified. See §4. |
+| **Status** | **GAP #2 — Remote-surface repo write path is implied but not specified.** A web-surface composer has no filesystem; the endpoint must commit on their behalf. Identity, signing, failure handling, sync timing all unspecified. See §4. |
 | **Status (transcript)** | **GAP #3 — Transcript storage.** Schema has `content_ref` (singular). No place to store the agent-session transcript (the conversation that produced the artifact), which BRD-OPEN-QUESTIONS §1 Q3 explicitly raises. See §4. |
 
 ### Step 6 — Log decisions about findings
@@ -113,7 +113,7 @@ Pre-conditions assumed in place:
 1. Overload `claim`: when called with `contribution_id=null` plus `kind`, `trace_id`, `territory_id`, claim creates-and-claims atomically. Keeps tool count at 12.
 2. Overload `update`: same idea via `update`. Less semantically clean than (1).
 3. Add `create_contribution` (13 tools). Requires reversing or amending ADR-013.
-4. Repo-commit-only creation: composer's agent commits a stub `contributions/open/<id>.md`; sync substrate ingests; row appears; then claim works. Adds a round-trip for web-locus composers.
+4. Repo-commit-only creation: composer's agent commits a stub `contributions/open/<id>.md`; sync substrate ingests; row appears; then claim works. Adds a round-trip for web-surface composers.
 
 **Recommendation.** Option 1 — overload `claim`. Specify in `../../strategic/NORTH-STAR.md §5` and `../ARCHITECTURE.md §6.2` that `claim(null, kind, trace_id|trace_ids, territory_id, optional content_stub)` performs an atomic create-and-claim. Atomic-create path passes through the same datastore-first-then-mirror flow as updates. Keeps 12-tool ADR-013 intact.
 
@@ -121,22 +121,22 @@ Pre-conditions assumed in place:
 
 ---
 
-### Gap #2 — Remote-locus repo commit path
+### Gap #2 — Remote-surface repo commit path
 
-**Symptom.** ARCH §6.2 says agents "write to artifact (file, doc region, etc.) passing fencing_token." For an IDE-locus composer this is `git commit`. For a web-locus analyst, the endpoint must commit on their behalf, but ARCH §7 doesn't specify identity, signing, failure handling, or sync timing.
+**Symptom.** ARCH §6.2 says agents "write to artifact (file, doc region, etc.) passing fencing_token." For an IDE-surface composer this is `git commit`. For a web-surface analyst, the endpoint must commit on their behalf, but ARCH §7 doesn't specify identity, signing, failure handling, or sync timing.
 
 **Options.**
 1. Endpoint maintains a per-project synthetic git committer credential. Commits attribute as `composer-name <composer-id@project>` with `Co-Authored-By: <composer real identity>`. Push is synchronous with `update` call; failure rolls back the datastore change.
 2. Async queue: endpoint writes to datastore immediately, queues the commit, syncs eventually. Simpler error path, but datastore and repo can diverge for a window — violates ADR-005's spirit (decisions write to repo first).
 3. Browser pushes directly using the analyst's GitHub credentials. Requires the analyst to have a GitHub identity — collides with the goal of analysts who don't touch the repo.
 
-**Recommendation.** Option 1 — synchronous commit by per-project endpoint committer. Add `../ARCHITECTURE.md §7.8 — Remote-locus write attribution` specifying:
+**Recommendation.** Option 1 — synchronous commit by per-project endpoint committer. Add `../ARCHITECTURE.md §7.8 — Remote-surface write attribution` specifying:
 - Endpoint holds a project-scoped deploy key (rotatable).
 - Commits authored as `<composer.display_name> via Atelier <atelier-bot@project>` with `Co-Authored-By: <composer email>`.
 - Update tool blocks until commit succeeds; on failure, datastore is not updated and tool returns retry-safe error.
 - Audit log captures commit SHA + composer-id pair.
 
-**Land as.** New ADR ("remote-locus commits use per-project endpoint committer with composer co-authorship") + new ARCH §7.8 + a row in the security architecture table.
+**Land as.** New ADR ("remote-surface commits use per-project endpoint committer with composer co-authorship") + new ARCH §7.8 + a row in the security architecture table.
 
 ---
 
@@ -147,7 +147,7 @@ Pre-conditions assumed in place:
 **Options.**
 1. Sidecar file in repo: `research/US-1.3-deploy-research.transcript.jsonl`. Add `contributions.transcript_ref` (text, nullable). Gitignored by default; opt-in via `.atelier/config.yaml: capture_transcripts: true` to avoid large/PII commits.
 2. External blob store: `transcript_ref` points to S3-equivalent URL. Adds infra dependency.
-3. Don't capture: rely on agent client's own session history. Loses the cross-locus story.
+3. Don't capture: rely on agent client's own session history. Loses the cross-surface story.
 
 **Recommendation.** Option 1 — sidecar in repo, gitignored by default, opt-in via config. Schema gains `contributions.transcript_ref text` (nullable). Default `capture_transcripts=false` in `.atelier/config.yaml`. Document size/PII implications in METHODOLOGY.
 
@@ -202,7 +202,7 @@ After landing the five fixes above, BRD-OPEN-QUESTIONS §1 sub-questions resolve
 
 1. Land Gap #4 first (multi-trace-ID): smallest, lowest-risk, cascades into how Gap #1's `claim` overload accepts trace ids.
 2. Land Gap #1 (claim atomic-create): unblocks the rest of the analyst path.
-3. Land Gap #2 (remote-locus commit) and Gap #3 (transcripts) together: both touch the write path through the endpoint.
+3. Land Gap #2 (remote-surface commit) and Gap #3 (transcripts) together: both touch the write path through the endpoint.
 4. Land Gap #5 (review-lens routing): smallest, last.
 
 Each lands as a new ADR in `../decisions` plus the named doc edits. After all five land, mark `../../functional/BRD-OPEN-QUESTIONS.md §1` as **RESOLVED** with a back-reference to this walk.

@@ -20,7 +20,7 @@ Per [`../../functional/PRD.md §6`](../../functional/PRD.md), any compliant Atel
 | Relational datastore with RLS | Blackboard state with per-composer authorization | Supabase Postgres | Cloud SQL, Aurora, RDS, self-hosted Postgres |
 | Pub/sub broadcast | Real-time push of row changes | Supabase Realtime | NOTIFY/LISTEN, Redis pub/sub, NATS, Kafka |
 | Identity service | Signed tokens with role claims | Supabase Auth | Auth0, Clerk, Identity Platform, Keycloak, your own OIDC |
-| Vector index | Semantic search for fit_check | pgvector | Pinecone, Weaviate, Qdrant, FAISS, your own |
+| Vector index | Semantic search for find_similar | pgvector | Pinecone, Weaviate, Qdrant, FAISS, your own |
 | Serverless runtime | Stateless HTTP functions | Vercel Functions | Cloud Run, Lambda, Azure Functions, Fly.io |
 | Static/edge hosting | Prototype web app | Vercel | Cloudflare Pages, Netlify, GCS+CDN, your own |
 | Agent interop protocol | Standardized tool-call surface | MCP (Streamable HTTP) | gRPC, JSON-RPC, REST with OpenAPI, your own |
@@ -36,7 +36,7 @@ The 12 tools must implement the semantics in [`../../functional/BRD.md Epic 2`](
 | Category | Tools | Must support |
 |---|---|---|
 | Session | `register`, `heartbeat`, `deregister` | Per-composer signed tokens; TTL with reaper |
-| Context | `get_context` | Trace-ID-scoped state including constitution + decisions + territory + contribution summary |
+| Context | `get_context` | Trace-ID-scoped state including charter + decisions + territory + contribution summary |
 | Contribution | `claim`, `update`, `release` | Atomic create-and-claim path (per ADR-022); state machine per US-4.3 |
 | Lock | `acquire_lock`, `release_lock` | Monotonic fencing tokens (per ADR-004); stale-token writes rejected server-side |
 | Decision | `log_decision` | Repo-first writes (per ADR-005); append-only at datastore level |
@@ -48,10 +48,10 @@ If your implementation skips any of these, it is not protocol-compliant. Specifi
 
 A compliant implementation should pass:
 
-1. **The conformance test suite.** Lands at M5 (alongside fit_check eval harness). Tests every tool against expected semantics.
+1. **The conformance test suite.** Lands at M5 (alongside find_similar eval harness). Tests every tool against expected semantics.
 2. **The fencing-token soak test.** Concurrent `acquire_lock` calls on the same scope; only one wins; loser's writes are rejected even after token expiry.
 3. **The decision-durability test.** `log_decision` succeeds when the datastore is offline; mirror catches up on reconnect.
-4. **The eval-set portability test.** The seed fit_check eval set produces equivalent precision/recall against your embedding model + vector index.
+4. **The eval-set portability test.** The seed find_similar eval set produces equivalent precision/recall against your embedding model + vector index.
 
 ## Implementation reports we want to hear about
 

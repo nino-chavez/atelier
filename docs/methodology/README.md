@@ -4,7 +4,7 @@
 
 **Primary tier served:** Tier 3 — Specification (methodology adopters)
 
-The methodology is the transferable layer of Atelier. A team can adopt the way-of-working — territories, contributions, decisions-as-code, fit_check discipline, dual-track agile with the prototype as canonical artifact — without using this repo's reference implementation.
+The methodology is the transferable layer of Atelier. A team can adopt the way-of-working — territories, contributions, decisions-as-code, find_similar discipline, dual-track agile with the prototype as canonical artifact — without using this repo's reference implementation.
 
 ## Contents
 

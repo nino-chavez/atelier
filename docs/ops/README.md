@@ -17,7 +17,7 @@
 | `migration/vercel-to-gcp.md` | Migration runbook (per ADR-029) | M2 (initial) / M7 (polished) |
 | `observability.md` | Observability setup, dashboards, alerts (per Epic 12) | M7 |
 | `incident-response/stuck-locks.md` | Recover from a stuck lock | M7 |
-| `incident-response/fit-check-degraded.md` | Recover when vector index is unavailable (per US-6.5 keyword fallback) | M7 |
+| `incident-response/find-similar-degraded.md` | Recover when vector index is unavailable (per US-6.5 keyword fallback) | M7 |
 | `incident-response/session-reaper.md` | Tune the session reaper, recover from over/under-reaping | M7 |
 | `token-rotation.md` | Rotate composer tokens (per US-13.6) | M7 |
 

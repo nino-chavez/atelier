@@ -42,7 +42,7 @@ These are encouraged variations. Choose what fits your team.
 - The prototype web app (you may have your own canonical artifact surface, like a wiki or design tool) — lands at M3
 - The Vercel/Supabase deploy (run the protocol on whatever stack) — reference impl lands across M1–M7
 - The CLI (`atelier init`, `atelier deploy`, etc. — if your stack is different, your tooling will be too) — CLI polished at M7
-- The fit_check service (you may not need semantic duplicate detection at v1) — lands at M5
+- The find_similar service (you may not need semantic duplicate detection at v1) — lands at M5
 
 If you keep the methodology + trace-ID discipline + decisions-as-code + publish-pull asymmetry, you've adopted Atelier's way-of-working. The rest is implementation choice.
 

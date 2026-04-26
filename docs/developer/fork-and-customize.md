@@ -8,15 +8,19 @@ This is the on-ramp for tier-2 readers. You're past "deploy as-is" (tier 1) but 
 
 ---
 
-## What forking gets you
+## What forking will get you (once tier-2 ships)
 
-- The 12-tool MCP endpoint scaffold (per ADR-013)
-- The relational schema with RLS, fencing tokens, and pub/sub broadcast (per ADR-004, ADR-016)
-- The five role-aware lens shells in `/atelier` (per ADR-017)
-- The 5 sync scripts (per ADR-008)
-- The fit_check eval harness with seed eval set (per ADR-006)
-- The territory + contract model wired to `.atelier/territories.yaml` (per ADR-014)
-- `atelier init` / `atelier deploy` CLI (post-M7)
+**Status (2026-04-25): pre-implementation.** The reference implementation lands across M1–M7 of [`../strategic/BUILD-SEQUENCE.md`](../strategic/BUILD-SEQUENCE.md). Forking right now gives you the canonical design corpus only; the runtime artifacts arrive at the milestones below.
+
+| Capability | Lands at |
+|---|---|
+| 5 sync scripts (per ADR-008) | M1 |
+| 12-tool MCP endpoint scaffold (per ADR-013) | M2 |
+| Relational schema with RLS, fencing tokens, pub/sub broadcast (per ADR-004, ADR-016) | M2 |
+| Five role-aware lens shells in `/atelier` (per ADR-017) | M3 |
+| Fit_check eval harness with seed eval set (per ADR-006) | M5 |
+| Territory + contract model wired to `.atelier/territories.yaml` (per ADR-014) | M2 (declaration), M2/M3 (runtime) |
+| `atelier init` / `atelier deploy` CLI | M7 (polished); raw forms across M2/M3/M6 per BUILD-SEQUENCE §9 |
 
 ## Common customizations
 
@@ -44,23 +48,27 @@ These are load-bearing per the canonical [`../architecture/decisions/`](../archi
 - **12-tool surface** (ADR-013). Add or remove tools and you fork the protocol — that's a tier-3 move, not tier-2.
 - **Repo-canonical for discovery fields** (CLAUDE.md). Move design content into your datastore and you lose every methodology benefit.
 
-## How to fork cleanly
+## How to fork cleanly (when tier-2 ships)
+
+This flow becomes runnable as the reference impl ships across M1–M7. Pre-M2, only steps 1, 2, 3, 6, 7 apply.
 
 1. **Fork on GitHub** (or your versioned file store). Don't clone-and-rename — preserve the fork link so you can pull upstream changes.
 
 2. **Update `.atelier/config.yaml`** with your project-id, datastore credentials, identity provider, deploy targets.
 
-3. **Customize `.atelier/territories.yaml`** for your team's roles. The default 11 territories are a starting point; rename, split, or merge as needed. Keep `review_role` set per ADR-025.
+3. **Customize `.atelier/territories.yaml`** for your team's roles. Use the seed territories as a starting point; rename, split, or merge as needed. Keep `review_role` set per ADR-025.
 
-4. **Run the test suite** before any code changes (`atelier eval fit_check` + integration tests). If anything fails out-of-the-box, file an upstream bug — don't customize broken code.
+4. **(Post-M5) Run the test suite** before any code changes (`atelier eval fit_check` + integration tests). If anything fails out-of-the-box, file an upstream bug — don't customize broken code.
 
-5. **Make customizations in clearly-marked locations.** Conventions:
+5. **(Post-M3) Make customizations in clearly-marked locations.** Conventions:
    - Custom adapters in `prototype/src/adapters/<your-org>/`
    - Custom lenses in `prototype/src/app/atelier/lenses/<your-org>/`
    - Custom sync scripts in `scripts/sync/<your-org>/`
    - Custom MCP tool extensions: don't extend the core 12; add a separate extension endpoint (preserves protocol fidelity)
 
 6. **Track upstream.** Pull `main` from this repo periodically. Methodology improvements upstream into your customizations.
+
+7. **Log new ADRs for your fork-specific decisions** under your fork's `docs/architecture/decisions/` (per ADR-030). This keeps your customization history append-only and traceable.
 
 ## When to upstream a customization
 

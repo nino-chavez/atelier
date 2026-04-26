@@ -48,7 +48,7 @@ The architecture must remain vendor-neutral. Any stack that provides the require
 2. **Publish-pull asymmetry.** Publishes (repo → external) are deterministic and idempotent. Pulls (external → repo) are probabilistic and human-gated.
 3. **Blackboard over hierarchy.** Composers coordinate through shared state, not through a lead or orchestrator. No single point of failure among composers.
 4. **Authority by locus + scope.** Trust is assigned per field, per artifact, not per actor. Principals' harnesses are trusted because the principal is in the loop; pipelines are trusted because contracts are narrow; triage is never trusted to merge.
-5. **Graceful degradation.** Every capability has a documented fallback when a dependency is unavailable. `decisions.md` survives datastore outage. Keyword search survives vector-index outage. Repo PRs survive endpoint outage.
+5. **Graceful degradation.** Every capability has a documented fallback when a dependency is unavailable. The per-ADR decision log under `decisions/` survives datastore outage. Keyword search survives vector-index outage. Repo PRs survive endpoint outage.
 6. **Fencing tokens mandatory.** Every lock carries a monotonic token. Every write to locked artifact validates the token server-side. No silent data loss from GC pauses.
 7. **Design-for-full, not feature-at-a-time.** Every capability in `../strategic/NORTH-STAR.md` is present at v1. Phasing is a delivery concern, not a design concern.
 8. **Vendor-neutral.** No technology in the capability map is load-bearing. Implementations are swappable behind the capability interface.
@@ -83,8 +83,8 @@ The system requires these capabilities from whatever stack implements it:
 │                                                                           │
 │  ┌───────────────────────────────────────────────────────────────────┐   │
 │  │  VERSIONED FILE STORE (canonical state)                          │   │
-│  │  ├── NORTH-STAR.md, PRD.md, BRD.md, ARCHITECTURE.md              │   │
-│  │  ├── decisions.md (append-only)                                   │   │
+│  │  ├── docs/strategic/, docs/functional/, docs/architecture/       │   │
+│  │  ├── docs/architecture/decisions/ (per-ADR files, append-only)   │   │
 │  │  ├── CLAUDE.md, AGENTS.md, .atelier/*.yaml                       │   │
 │  │  ├── traceability.json                                            │   │
 │  │  ├── research/<trace-id>-<slug>.md                               │   │
@@ -336,7 +336,7 @@ Review: routed by territory.review_role (ADR-025). Approver merges PR or accepts
 ```
 Agent → log_decision(category, summary, rationale, trace_id)
   Endpoint:
-    1. Appends formatted entry to decisions.md in repo (commit)
+    1. Creates new file at decisions/ADR-NNN-<slug>.md in repo (commit) per ADR-030
     2. Inserts row in decisions table with repo_commit_sha
     3. Generates embedding + upserts into vector index
     4. Broadcasts via pub/sub
@@ -471,7 +471,7 @@ Territory owner → publish_contract(name, schema)
 ### 7.6 Append-only decisions
 
 - Datastore policy: only INSERT on decisions table.
-- CI check on repo: `decisions.md` edits must be appends (no prior-content modification).
+- CI check on repo: changes under `decisions/` must be new files only (no edits to existing ADR files; reversals are new files with `reverses:` frontmatter).
 - Reversal is a new decision with `reverses: <prior-id>` in frontmatter.
 
 ### 7.7 Rate limiting
@@ -573,4 +573,4 @@ See `../functional/PRD-COMPANION.md` for decisions already made. Open items:
 | ARCH-05 | Transcript storage for web-composer sessions (inline vs. external blob) | Medium — impacts repo size | Sidecar files in `research/` with size cap; overflow to external blob |
 | ARCH-06 | Triage classifier implementation (rules vs. small LLM vs. embedding-based) | Medium — affects accuracy and cost | Embedding-based similarity to prior proposals likely cheapest + adequate |
 | ARCH-07 | Breaking-change heuristics for contracts | Low — encoded in library code | Removed fields, narrowed types, renamed fields = breaking; conservative defaults |
-| ARCH-08 | Switchman as dependency for file-level locks vs. own-implementation | Medium — affects v1 scope | If Switchman has fencing tokens + is stable, integrate; else own-impl |
+| ARCH-08 | Switchman as dependency for file-level locks vs. own-implementation | RESOLVED (2026-04-25) | Own-implementation. Switchman lacks fencing-token API. See ADR-026. |

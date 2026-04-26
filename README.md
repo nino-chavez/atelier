@@ -6,13 +6,13 @@ A self-hostable OSS project template + agent interop protocol + reference protot
 
 ## What this repo is
 
-Atelier ships as **three things in one repo**:
+Atelier exists as **three engagement tiers**, all first-class at v1, all open source (per ADR-031):
 
-1. **A methodology** (transferable to any project, any stack).
-2. **An open protocol** (12-tool agent-facing surface; MCP is the v1 reference transport).
-3. **A reference implementation** (the codebase you're looking at — Vercel + Supabase + MCP, per ADR-027).
+1. **Specification** — the methodology and the 12-tool open protocol. Transferable to any project, any stack.
+2. **Reference Implementation** — this codebase. Designed for the GitHub + Supabase + Vercel + MCP stack (per ADR-027). **Status: M0 design complete; implementation begins at M1 per [`docs/strategic/BUILD-SEQUENCE.md`](./docs/strategic/BUILD-SEQUENCE.md).**
+3. **Reference Deployment** — what you get from `atelier init && atelier deploy` once the reference implementation ships (M3 for prototype + endpoint; full CLI polish at M7).
 
-These are documented as three tiers below. Pick the tier that matches what you want to do.
+Pick your path in the table below.
 
 ---
 
@@ -23,8 +23,6 @@ These are documented as three tiers below. Pick the tier that matches what you w
 | **1. Reference Deployment** | **Deploy** | Run Atelier as-is for your team via `atelier init && atelier deploy`. You don't want to think about the implementation. | [`docs/user/`](./docs/user/) (populates at v1) and [`docs/ops/`](./docs/ops/) (populates at M7) |
 | **2. Reference Implementation** | **Extend** | Fork this repo. Modify schema, add lenses, swap fit_check model, write new sync adapters. | [`docs/developer/fork-and-customize.md`](./docs/developer/fork-and-customize.md) |
 | **3. Specification** | **Implement** | Implement the 12-tool protocol on a different stack, OR apply Atelier's methodology to a project that does not use this codebase. | [`docs/methodology/adoption-guide.md`](./docs/methodology/adoption-guide.md) (methodology) or [`docs/architecture/protocol/`](./docs/architecture/protocol/) (protocol) |
-
-All three tiers are open source. All three tiers are first-class at v1 per ADR-031.
 
 ---
 
@@ -50,9 +48,9 @@ Atelier is the **spine that connects existing best-in-class tools around one pro
 | **Developer** | How do I contribute or fork? | [`docs/developer/`](./docs/developer/) |
 | **Ops** | How do I self-host and operate it? (M7) | [`docs/ops/`](./docs/ops/) |
 | **Testing** | How is quality assured? (M5) | [`docs/testing/`](./docs/testing/) |
-| **User** | How do I use it as an end-user? (v1) | [`docs/user/`](./docs/user/) |
+| **User** | How do I use it as an end-user? (populates at v1) | [`docs/user/`](./docs/user/) |
 
-Doc structure follows [claude-docs-toolkit](https://github.com/) seven-layer model with Atelier-specific extensions for `methodology/`, `architecture/protocol/`, `architecture/schema/` (per ADR-032). Empty layer READMEs cite the BUILD-SEQUENCE milestone where they fill in.
+Doc structure follows the claude-docs-toolkit seven-layer audience model with Atelier-specific extensions for `methodology/`, `architecture/protocol/`, `architecture/schema/` (per ADR-032). Empty layer READMEs cite the milestone where they fill in.
 
 ---
 
@@ -60,7 +58,7 @@ Doc structure follows [claude-docs-toolkit](https://github.com/) seven-layer mod
 
 **Fit_check precision.** Semantic search that answers "is this already done or in flight?" at ≥75% precision with ≥60% recall. Ships at v1 with an evaluation harness and CI gate (per ADR-006).
 
-If the bar holds, Atelier has a defensible commercial wedge (optional managed fit_check service). If it misses, Atelier still ships as a credible OSS template + protocol spec + reference implementation. Either way, every feature described in `docs/strategic/NORTH-STAR.md` ships together.
+If the bar holds, Atelier has a defensible commercial wedge (optional managed fit_check service). If it misses, the Specification and Reference Implementation tiers still ship as planned — fit_check performance determines the commercial story, not the feature scope. Every feature described in [`docs/strategic/NORTH-STAR.md`](./docs/strategic/NORTH-STAR.md) ships together.
 
 ---
 

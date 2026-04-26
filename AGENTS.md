@@ -32,11 +32,13 @@ See `.atelier/territories.yaml` for the canonical declaration. Key rules:
 
 ## Agent-specific rules
 
-1. **Read before writing.** Always pull `get_context` (or read the constitution files directly in solo mode) before making changes.
-2. **Run `fit_check` before creating contributions.** The cost of checking is much lower than the cost of duplication.
-3. **Claim before editing.** Any edit to a shared artifact requires a claimed contribution and an acquired lock.
-4. **Use fencing tokens on every write.** Writes without current fencing token will be rejected server-side (ADR-004).
-5. **Log decisions when making architectural/strategic/convention choices.** Keyword: "because". If the choice carries a 'because', it's a decision and belongs as a new file under `docs/architecture/decisions/ADR-NNN-<slug>.md` (per ADR-030).
+These rules describe the **target operating state** (post-M2 when the 12-tool endpoint exists). Pre-M2, the equivalent is reading the constitution files directly and following the rules manually; see `.atelier/checkpoints/SESSION.md` for the pre-M2 fallback.
+
+1. **Read before writing.** Always pull `get_context` (post-M2) or read the constitution files directly (pre-M2) before making changes.
+2. **Run `fit_check` before creating contributions** (post-M5 when fit_check ships). The cost of checking is much lower than the cost of duplication.
+3. **Claim before editing** (post-M2 when claim/lock primitives exist). Any edit to a shared artifact requires a claimed contribution and an acquired lock.
+4. **Use fencing tokens on every write** (post-M2 when locks exist). Writes without current fencing token will be rejected server-side (ADR-004).
+5. **Log decisions when making architectural/strategic/convention choices.** Keyword: "because". If the choice carries a 'because', it's a decision and belongs as a new file under `docs/architecture/decisions/ADR-NNN-<slug>.md` (per ADR-030). This rule applies pre-M2 (write the file directly) and post-M2 (call `log_decision`).
 6. **Append-only for decisions.** Never edit prior decisions. Reversals are new entries with `reverses:` frontmatter.
 7. **Respect scope boundaries.** If you're asked to build something that falls in an excluded category (per `docs/functional/PRD.md` §5), push back rather than implement.
 8. **No emoji in commits, docs, or code** unless the user explicitly requests.
@@ -49,9 +51,9 @@ See `.atelier/territories.yaml` for the canonical declaration. Key rules:
 register → work → heartbeat every 30s → deregister on completion
 ```
 
-If heartbeat lapses past TTL (90s), the session is reaped: held locks release, claimed contributions return to `open`, fencing tokens invalidate.
+If heartbeat lapses past TTL (90s), the session is reaped: held locks release, claimed contributions return to `open`, fencing tokens invalidate. (Lifecycle is post-M2; pre-M2 there are no sessions or locks to reap.)
 
-Always deregister cleanly when possible. Reaped sessions are visible in `/atelier/observability` as a reaper-rate metric.
+Always deregister cleanly when possible. Reaped sessions will be visible in `/atelier/observability` (post-M7) as a reaper-rate metric.
 
 ---
 

@@ -49,7 +49,7 @@ If your implementation skips any of these, it is not protocol-compliant. Specifi
 A compliant implementation should pass:
 
 1. **The conformance test suite.** Lands at M5 (alongside fit_check eval harness). Tests every tool against expected semantics.
-2. **The fencing-token soak test.** Concurrent `claim_scope` calls; only one wins; loser's writes are rejected even after token expiry.
+2. **The fencing-token soak test.** Concurrent `acquire_lock` calls on the same scope; only one wins; loser's writes are rejected even after token expiry.
 3. **The decision-durability test.** `log_decision` succeeds when the datastore is offline; mirror catches up on reconnect.
 4. **The eval-set portability test.** The seed fit_check eval set produces equivalent precision/recall against your embedding model + vector index.
 

@@ -9,16 +9,16 @@
 
 ## 1. Executive summary
 
-Atelier is a **self-hostable OSS project template + agent interop protocol + reference prototype** that lets mixed teams of humans and AI agents concurrently author a single canonical artifact (the prototype) across different loci (IDE, browser, terminal).
+Atelier ships as **three open-source engagement tiers** (per ADR-031): a Specification (methodology + 12-tool open protocol), a Reference Implementation (this codebase, designed for the GitHub + Supabase + Vercel + MCP stack per ADR-027), and a Reference Deployment (`atelier init && atelier deploy` once the reference impl ships). All three let mixed teams of humans and AI agents concurrently author a single canonical artifact (the prototype) across different loci (IDE, browser, terminal).
 
-The product ships as:
+The Reference Implementation comprises:
 1. A CLI (`atelier`) that scaffolds and operates projects.
-2. A repo template with opinionated structure (`../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, `../architecture/decisions`, traceability registry, prototype app, sync scripts, constitution files).
-3. An agent-facing endpoint implementing an open interop protocol with 12 tools.
-4. A Next-style prototype web app that serves as both canonical artifact and coordination dashboard.
+2. A repo template with opinionated structure (`../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, per-ADR files in `../architecture/decisions/`, traceability registry, prototype app, sync scripts, constitution files).
+3. An agent-facing endpoint implementing an open interop protocol with 12 tools (per ADR-013).
+4. A prototype web app that serves as both canonical artifact and coordination dashboard.
 5. A coordination datastore schema (relational + pub/sub + vector index) for blackboard state.
 6. An evaluation harness for fit_check with a labeled eval set and CI gate.
-7. A sync substrate (5 scripts) for bidirectional coherence with external tools.
+7. A sync substrate (per ADR-008) for bidirectional coherence with external tools.
 
 Atelier does not replace Jira, Linear, Confluence, Notion, Figma, Slack, Claude Code, Cursor, claude.ai, ChatGPT, or any other best-in-class tool. It is the spine that connects them around one project.
 
@@ -90,7 +90,7 @@ Complete feature set. All features ship at v1 per `../strategic/NORTH-STAR.md` �
 Twelve tools across five categories: Session, Context, Contribution, Lock, Decision, Contract. See `../strategic/NORTH-STAR.md` §5.
 
 ### 4.3 Canonical artifact — the prototype (Epic 3)
-Five routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`. Role-aware lenses at `/atelier`. Live state via pub/sub broadcast from coordination datastore.
+Six routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`. Role-aware lenses at `/atelier` (per ADR-017). Live state via pub/sub broadcast from coordination datastore.
 
 ### 4.4 Territory + contribution model (Epic 4)
 - Territory declaration in `.atelier/territories.yaml`
@@ -99,8 +99,8 @@ Five routes: `/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceabi
 - `scope_kind` generalized: files, doc_region, research_artifact, design_component, slice_config
 
 ### 4.5 Decision durability (Epic 5)
-- `log_decision` writes to `decisions.md` in repo first, datastore mirror second
-- Append-only at datastore level
+- `log_decision` writes a new per-ADR file under `../architecture/decisions/` in repo first (per ADR-005, ADR-030), datastore mirror second
+- Append-only at directory level (new file per ADR; existing files never edited)
 - CI check validates repo/datastore sync on every push
 - Graceful degradation: repo write always succeeds even if datastore unreachable
 

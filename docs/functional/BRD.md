@@ -10,7 +10,7 @@
 
 ## 1. Purpose & scope
 
-This document specifies the complete v1 capability set for Atelier as described in `PRD.md`. Expanded into 16 epics comprising ~95 user stories, each tagged with a trace ID. All stories are v1-scope; Atelier explicitly rejects phased rollout per `../architecture/decisions` ADR-013.
+This document specifies the complete v1 capability set for Atelier as described in `PRD.md`. Expanded into epics with user stories, each tagged with a trace ID. All stories are v1-scope; Atelier explicitly rejects phased rollout per ADR-011 (destination-first design). See `../architecture/decisions/` for the canonical decision log.
 
 ---
 
@@ -88,8 +88,8 @@ Goal: `atelier init` produces a fully formed project in one command.
 As a dev principal, I want `atelier init <name>` to create a complete repo so that I have canonical structure and prototype from the first commit.
 
 Acceptance:
-- Given a clean directory, when I run `atelier init foo`, then the directory contains `../strategic/NORTH-STAR.md`, `PRD.md`, `BRD.md`, `../architecture/ARCHITECTURE.md`, `../architecture/decisions`, `../methodology/METHODOLOGY.md`, `README.md`, `.atelier/config.yaml`, `.atelier/territories.yaml`, `prototype/`, `scripts/`, `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `traceability.json`.
-- Given the scaffolded project, when I run the prototype locally, then all five routes render with seed content.
+- Given a clean directory, when I run `atelier init foo`, then the directory contains the seven-layer `docs/` tree (per ADR-032) including `docs/strategic/NORTH-STAR.md`, `docs/functional/PRD.md`, `docs/functional/BRD.md`, `docs/architecture/ARCHITECTURE.md`, `docs/architecture/decisions/` (with seed ADRs), `docs/methodology/METHODOLOGY.md`, plus `README.md`, `.atelier/config.yaml`, `.atelier/territories.yaml`, `prototype/`, `scripts/`, `CLAUDE.md`, `AGENTS.md`, `traceability.json`.
+- Given the scaffolded project, when I run the prototype locally, then all six routes render with seed content.
 
 **US-1.2 — Provision coordination datastore**
 As a dev principal, I want `atelier datastore init` to provision the datastore so that coordination state has somewhere to live.
@@ -209,7 +209,7 @@ Acceptance:
 As any composer (via agent), I want `log_decision` so that architectural/strategic choices are preserved.
 
 Acceptance:
-- Given a decision (category, summary, rationale, trace_id), when log_decision is called, then the decision is appended to `decisions.md` in the repo, mirrored to the datastore, indexed in the vector index, and broadcast via pub/sub — all within the same call.
+- Given a decision (category, summary, rationale, trace_id), when log_decision is called, then a new ADR file is created at `../architecture/decisions/ADR-NNN-<slug>.md` (per ADR-005, ADR-030), mirrored to the datastore, indexed in the vector index, and broadcast via pub/sub — all within the same call.
 - Given the datastore is unavailable, when log_decision is called, then the repo write still succeeds; the mirror is retried on the next healthy call.
 
 **US-2.12 — Publish + get contracts**
@@ -223,7 +223,7 @@ Acceptance:
 
 ### Epic 3 — Canonical artifact (prototype web app)
 
-Goal: Five routes, role-aware lenses, live state. The prototype is both product and dashboard.
+Goal: Six routes, role-aware lenses, live state. The prototype is both product and dashboard.
 
 **US-3.1 — Project home route**
 As any composer, I want `/` to show the project at a glance so that I can orient myself in 10 seconds.
@@ -324,33 +324,33 @@ Acceptance:
 As any composer (via agent), I want `log_decision` to write repo-first then mirror so that decisions survive datastore outage.
 
 Acceptance:
-- Given a decision payload, when logged, then `decisions.md` receives a new appended entry with YAML frontmatter (trace_id, category, session, timestamp, author) and a body with summary + rationale; the datastore mirror is updated; the vector index is refreshed; pub/sub broadcasts.
+- Given a decision payload, when logged, then a new file is created at `../architecture/decisions/ADR-NNN-<slug>.md` (per ADR-005, ADR-030) with YAML frontmatter (id, trace_ids, category, session, composer, timestamp, optional reverses) and a body containing summary, rationale, and consequences; the directory README index is updated; the datastore mirror is updated; the vector index is refreshed; pub/sub broadcasts.
 
-**US-5.2 — decisions.md structure**
-As a dev principal, I want decisions.md to have a deterministic format so that parsing and CI checks are reliable.
+**US-5.2 — Per-ADR file structure**
+As a dev principal, I want every ADR file to follow a deterministic format so that parsing, CI checks, and the index regeneration are reliable.
 
 Acceptance:
-- Given decisions.md, then each entry starts with `---` frontmatter (YAML), followed by `---`, then body text, then a horizontal rule separator.
-- Given deterministic ordering, then entries are appended chronologically and never reordered.
+- Given an ADR file, then it starts with `---` frontmatter (YAML), followed by `---`, then `# Title`, then `**Summary.**`, `**Rationale.**`, `**Consequences.**`, optional `**Re-evaluation triggers.**` sections.
+- Given monotonic ADR numbering, then `NNN` increments without gaps and never duplicates.
 
 **US-5.3 — Repo-datastore sync CI check**
-As a dev principal, I want a CI check that validates every datastore decision has a corresponding repo commit and vice versa so that drift is caught before merge.
+As a dev principal, I want a CI check that validates every datastore decision has a corresponding repo file and vice versa so that drift is caught before merge.
 
 Acceptance:
-- Given a PR that touches decisions.md, when CI runs, then a script compares datastore decision IDs to repo decision IDs and fails the check on mismatch.
+- Given a PR that touches `../architecture/decisions/`, when CI runs, then a script compares datastore decision IDs to repo file IDs (parsed from frontmatter) and fails the check on mismatch.
 
 **US-5.4 — Decision append-only**
 As any composer, I want decisions to be append-only so that history is auditable.
 
 Acceptance:
 - Given a datastore UPDATE attempt on decisions, when executed, then the database rejects it (RLS / triggers).
-- Given a git edit that modifies a prior decision, when committed, then CI flags the edit as a reversal-required pattern.
+- Given a git edit that modifies a prior ADR file, when committed, then CI flags the edit as a reversal-required pattern. New ADRs are new files; existing files are never edited.
 
 **US-5.5 — Decision reversal**
 As any composer, I want to reverse a prior decision via a new decision referencing the old so that reversals are explicit.
 
 Acceptance:
-- Given a decision with id D<N>, when I log a reversal, then the new decision has `reverses: D<N>` in frontmatter and the old decision's display includes the reversal link.
+- Given an ADR with id ADR-NNN, when I log a reversal, then the new ADR file has `reverses: ADR-NNN` in frontmatter and the directory README index marks the old ADR as superseded with a link to the reversal.
 
 ---
 

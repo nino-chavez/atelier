@@ -73,7 +73,7 @@ Authority is assigned per field, per artifact, not per actor. The principle: aut
 - **Delivery fields** (status, sprint, points, assignee) → **delivery-tracker-authoritative**. Mirrored into the registry for reporting; never back into canonical BRD.md or PRD.md.
 - **Design** → **repo-authoritative** (prototype components). Design-tool projections receive comments that flow through triage.
 - **Comments** (anywhere — published-doc system, delivery tracker, design tool) → **source-authoritative, triaged to proposals**. Never merged directly into canonical state.
-- **Decisions** → **repo-authoritative** (`decisions.md` is the canonical log; datastore mirror is a read-model).
+- **Decisions** → **repo-authoritative** (per-ADR files under `../architecture/decisions/` form the canonical log per ADR-005, ADR-030; datastore mirror is a read-model).
 - **Coordination state** (sessions, contribution state, locks, fencing tokens) → **datastore-authoritative** (ephemeral, not committed to repo).
 
 ---
@@ -102,7 +102,7 @@ Keeps multiple composers and their agents from clobbering each other in real tim
 Components (all ship at v1):
 - Contribution board (claim/release across composers)
 - File / doc-region / artifact locks with fencing tokens
-- Append-only decision log (`decisions.md` + datastore mirror)
+- Append-only decision log (per-ADR files under `../architecture/decisions/` + datastore mirror)
 - Session heartbeats and stale reaper
 - Fit_check (semantic duplicate detection with eval harness)
 - Territory / department contracts
@@ -222,9 +222,9 @@ The pre-M2 path involves human reading. The post-M2 path is a single tool call. 
 
 ### Provenance of this organization
 
-- **claude-docs-toolkit** (`/Users/nino/Workspace/dev/tools/claude-docs-toolkit`, since archived) — seven-layer audience model, "continuous documentation" drift discipline, ADRs in their own subdirectory, Diátaxis for user docs (deferred to v1.x when end-user docs ship).
-- **big-blueprint** (`/Users/nino/Workspace/dev/wip/big-blueprint`) — root-level `CLAUDE.md` + `prototype/` + `research/` + `docs/` template; no parallel session-handoff doc (because state lives in the artifacts).
-- **hackathon-hive** (`/Users/nino/Workspace/dev/tools/hackathon-hive`) — session continuity as a protocol primitive (`hive_checkpoint` / `hive_get_context`), not a markdown surface. This is the model Atelier inherits at M2 via the 12-tool endpoint.
+- **claude-docs-toolkit** — seven-layer audience model, "continuous documentation" drift discipline, ADRs in their own subdirectory, Diátaxis for user docs (deferred to v1.x when end-user docs ship).
+- **big-blueprint** — root-level `CLAUDE.md` + `prototype/` + `research/` + `docs/` template; no parallel session-handoff doc (because state lives in the artifacts).
+- **hackathon-hive** — session continuity as a protocol primitive (`hive_checkpoint` / `hive_get_context`), not a markdown surface. This is the model Atelier will inherit at M2 via the 12-tool endpoint.
 
 ---
 
@@ -236,7 +236,7 @@ Single join key across all surfaces. Format:
 - `BRD:Epic-<N>` — a BRD epic (e.g., `BRD:Epic-6`)
 - `D<N>` — a PRD-COMPANION decision (e.g., `D12`)
 - `NF-<N>` — a non-functional requirement
-- `ADR-<N>` — an architecture decision record (in `decisions.md`)
+- `ADR-<N>` — an architecture decision record (one file per ADR under `../architecture/decisions/` per ADR-030)
 
 Every BRD story, epic, decision, research artifact, slice prototype, design component, and Jira issue carries a trace ID. The traceability registry (`traceability.json`) indexes them bidirectionally.
 
@@ -249,7 +249,7 @@ Agents reading context via `get_context` receive trace-ID-scoped state. Agents w
 ### Discovery track — solo composer
 1. Principal + IDE harness drafts or edits repo directly.
 2. Commits include trace IDs.
-3. `log_decision` writes to `decisions.md` on architectural choices.
+3. `log_decision` writes a new per-ADR file under `../architecture/decisions/` on architectural choices (per ADR-030).
 4. Publish-docs and publish-delivery fire on commit.
 
 ### Discovery track — multi-composer
@@ -262,7 +262,7 @@ Agents reading context via `get_context` receive trace-ID-scoped state. Agents w
 1. Analyst's web agent authenticates to the agent endpoint with their session token.
 2. Analyst claims a `research_artifact` contribution via their web agent.
 3. Agent authors research; content is written to `research/<trace-id>-<slug>.md` via `update`.
-4. `log_decision` captures conclusions (written to `decisions.md`).
+4. `log_decision` captures conclusions (written as a new per-ADR file under `../architecture/decisions/`).
 5. `release` transitions the contribution to `review`.
 6. Other composers see the research in their `/atelier` lens.
 

@@ -25,7 +25,7 @@
 
 **Recommendation.** Walk the scenario end-to-end through the schema + endpoint + prototype views **before any code is written**. If a step requires a concept not yet in the design, add it to the design — don't code around it.
 
-**Status.** **RESOLVED** (2026-04-24). Walk completed in `walks/analyst-week-1.md`. Five gaps surfaced and landed:
+**Status.** **RESOLVED** (2026-04-24). Walk completed in `../architecture/walks/analyst-week-1.md`. Five gaps surfaced and landed:
 
 | Gap | ADR | Sub-question resolved |
 |---|---|---|
@@ -192,7 +192,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 - Is decision history preserved across the transition?
 - Do local-only fencing tokens remain valid?
 
-**Recommendation.** Migration script. Full decision-log transfer. Fencing counter reset at transition with a note in `decisions.md`.
+**Recommendation.** Migration script. Full decision-log transfer (all per-ADR files preserved with provenance). Fencing counter reset at transition with a new ADR documenting the cutover.
 
 **Status.** OPEN. Design v1 scope.
 
@@ -215,16 +215,14 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ## 13 · Decision-log growth and searchability
 
-**Scenario.** A long-running project accumulates thousands of decisions. `decisions.md` becomes large and hard to navigate.
+**Scenario.** A long-running project accumulates thousands of decisions. The decision log must remain navigable.
 
-**Open questions:**
-- Is `decisions.md` a single file or partitioned (e.g., per-quarter or per-epic)?
-- How does fit_check handle a large decision log — all in one vector index, or sharded?
-- Is there a "decisions view" in the prototype that makes old decisions discoverable?
+**Open questions (closed by ADR-030):**
+- Is the decision log a single file or partitioned? → **Per-ADR file from v1**, one file per ADR under `../architecture/decisions/`. Each file is independently navigable, diffable, and `git blame`-able.
+- How does fit_check handle a large decision log? → Vector index ingests one embedding per ADR file. Sharding becomes a query-time concern only at very large scales (>10K ADRs); not a v1 problem.
+- Is there a "decisions view" in the prototype? → Yes: `/atelier/decisions` route per Epic 12 plans, surfacing the directory's index README plus per-ADR detail.
 
-**Recommendation.** Single file at v1 with a documented 10K-entry ceiling. Partitioning is v1.x with `decisions/YYYY-MM.md` files and a rollup index. `/atelier/decisions` route with filters and search. fit_check handles scale via vector-index sharding at query time.
-
-**Status.** DEFERRED partitioning to v1.x. Design single-file at v1 with ceiling documented.
+**Status.** **RESOLVED** (2026-04-25) by ADR-030 (per-ADR file split). Per-file model from v1 means there is no "single-file growth" problem to defer; the problem is structurally avoided.
 
 ---
 

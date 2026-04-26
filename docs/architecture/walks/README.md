@@ -14,7 +14,7 @@ The analyst walk (2026-04-24) surfaced 5 gaps that landed as ADR-021 through ADR
 |---|---|---|---|
 | [`analyst-week-1.md`](./analyst-week-1.md) | Analyst principal (browser locus) | 2026-04-24 | Surfaced ADR-021/022/023/024/025 |
 
-## Future walks (per HANDOFF Option A history)
+## Future walks (planned)
 
 - `dev-week-1.md` — Dev principal claiming `files` contribution, racing a remote-locus committer
 - `designer-week-1.md` — Designer principal authoring a `design_component`, surfacing Figma feedback via triage

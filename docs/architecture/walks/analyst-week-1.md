@@ -1,16 +1,16 @@
 # Walk: Analyst week-1 research scenario
 
-**Companion to:** `BRD-OPEN-QUESTIONS.md §1`
-**Status:** Walk complete; gaps identified; design changes proposed
+**Companion to:** `../../functional/BRD-OPEN-QUESTIONS.md §1`
+**Status:** RESOLVED (2026-04-25). Walk complete; all 5 gaps landed as ADR-021, ADR-022, ADR-023, ADR-024, ADR-025. See [`../decisions/`](../decisions/).
 **Owner:** Nino Chavez
-**Last updated:** 2026-04-24
-**Related:** `NORTH-STAR.md §4–§5`, `ARCHITECTURE.md §5–§6`, `.atelier/territories.yaml`
+**Last updated:** 2026-04-25
+**Related:** `../../strategic/NORTH-STAR.md §4–§5`, `../ARCHITECTURE.md §5–§6`, `../../../.atelier/territories.yaml`
 
 ---
 
 ## 1. Purpose
 
-Per `BRD-OPEN-QUESTIONS.md §1`, the territory model must be validated against a concrete analyst-week-1 scenario before code is written. This document walks that scenario step by step, mapping each step to (a) the endpoint tool invoked, (b) the schema rows touched, (c) the prototype view that surfaces the result. Where any step requires a concept not yet in the design, the gap is named and a fix is proposed.
+Per `../../functional/BRD-OPEN-QUESTIONS.md §1`, the territory model must be validated against a concrete analyst-week-1 scenario before code is written. This document walks that scenario step by step, mapping each step to (a) the endpoint tool invoked, (b) the schema rows touched, (c) the prototype view that surfaces the result. Where any step requires a concept not yet in the design, the gap is named and a fix is proposed.
 
 This is the prerequisite for M2 in `../../strategic/BUILD-SEQUENCE.md` — design gaps must close before the schema solidifies.
 
@@ -31,7 +31,7 @@ An analyst composer begins week-1 competitive research touching `US-1.3` (and po
 Pre-conditions assumed in place:
 - `projects` row for atelier exists.
 - `composers` row for this analyst exists with `default_role=analyst`, valid token.
-- `territories.yaml` defines `strategy-research` with `scope_kind=research_artifact`, `scope_pattern=research/**/*` (confirmed in `.atelier/territories.yaml`).
+- `territories.yaml` defines `strategy-research` with `scope_kind=research_artifact`, `scope_pattern=research/**/*` (confirmed in `../../../.atelier/territories.yaml`).
 
 ---
 
@@ -59,7 +59,7 @@ Pre-conditions assumed in place:
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `fit_check(description="competitive research on prototype deployment for US-1.3", trace_id="US-1.3")` per `ARCHITECTURE.md §6.4` |
+| **Tool** | `fit_check(description="competitive research on prototype deployment for US-1.3", trace_id="US-1.3")` per `../ARCHITECTURE.md §6.4` |
 | **Schema** | Reads vector index over `decisions`, merged `contributions`, BRD/PRD sections, research artifacts. |
 | **Prototype** | Could surface in `/atelier` analyst lens as a "before you start" panel; today the design says fit_check is endpoint-only. |
 | **Status** | Clean. Minor: NORTH-STAR §5 lists the tool without parameters; ARCH §6.4 provides the signature. Acceptable doc-layer split, no design change. |
@@ -115,7 +115,7 @@ Pre-conditions assumed in place:
 3. Add `create_contribution` (13 tools). Requires reversing or amending ADR-013.
 4. Repo-commit-only creation: composer's agent commits a stub `contributions/open/<id>.md`; sync substrate ingests; row appears; then claim works. Adds a round-trip for web-locus composers.
 
-**Recommendation.** Option 1 — overload `claim`. Specify in `NORTH-STAR.md §5` and `ARCHITECTURE.md §6.2` that `claim(null, kind, trace_id|trace_ids, territory_id, optional content_stub)` performs an atomic create-and-claim. Atomic-create path passes through the same datastore-first-then-mirror flow as updates. Keeps 12-tool ADR-013 intact.
+**Recommendation.** Option 1 — overload `claim`. Specify in `../../strategic/NORTH-STAR.md §5` and `../ARCHITECTURE.md §6.2` that `claim(null, kind, trace_id|trace_ids, territory_id, optional content_stub)` performs an atomic create-and-claim. Atomic-create path passes through the same datastore-first-then-mirror flow as updates. Keeps 12-tool ADR-013 intact.
 
 **Land as.** New ADR ("claim atomic-creates open contributions") + edits to NORTH-STAR §5 and ARCHITECTURE §6.2.
 
@@ -130,7 +130,7 @@ Pre-conditions assumed in place:
 2. Async queue: endpoint writes to datastore immediately, queues the commit, syncs eventually. Simpler error path, but datastore and repo can diverge for a window — violates ADR-005's spirit (decisions write to repo first).
 3. Browser pushes directly using the analyst's GitHub credentials. Requires the analyst to have a GitHub identity — collides with the goal of analysts who don't touch the repo.
 
-**Recommendation.** Option 1 — synchronous commit by per-project endpoint committer. Add `ARCHITECTURE.md §7.8 — Remote-locus write attribution` specifying:
+**Recommendation.** Option 1 — synchronous commit by per-project endpoint committer. Add `../ARCHITECTURE.md §7.8 — Remote-locus write attribution` specifying:
 - Endpoint holds a project-scoped deploy key (rotatable).
 - Commits authored as `<composer.display_name> via Atelier <atelier-bot@project>` with `Co-Authored-By: <composer email>`.
 - Update tool blocks until commit succeeds; on failure, datastore is not updated and tool returns retry-safe error.
@@ -181,7 +181,7 @@ Pre-conditions assumed in place:
 
 **Recommendation.** Option 1 — `territories.review_role` field. Smallest change; reuses existing territory-as-config pattern; keeps lens query logic simple. Default mapping documented in METHODOLOGY.
 
-**Land as.** ADR ("review routing keyed by territory.review_role") + `.atelier/territories.yaml` schema doc update + lens config note in NORTH-STAR §4.
+**Land as.** ADR ("review routing keyed by territory.review_role") + `../../../.atelier/territories.yaml` schema doc update + lens config note in NORTH-STAR §4.
 
 ---
 
@@ -191,7 +191,7 @@ After landing the five fixes above, BRD-OPEN-QUESTIONS §1 sub-questions resolve
 
 | § | Sub-question | Resolution |
 |---|---|---|
-| §1 Q1 | Does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly support the flow? | **Yes**, confirmed against `.atelier/territories.yaml`. Schema needs no rework. |
+| §1 Q1 | Does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly support the flow? | **Yes**, confirmed against `../../../.atelier/territories.yaml`. Schema needs no rework. |
 | §1 Q2 | Multi-trace research: one contribution or two? | **One contribution with `trace_ids text[]`** (Gap #4 fix). |
 | §1 Q3 | Transcript storage? | **Sidecar in repo**, opt-in via config (Gap #3 fix). |
 | §1 Q4 | Who sees the released research? | **Per `territories.review_role`**, default `pm` for `strategy-research` (Gap #5 fix). |
@@ -205,4 +205,4 @@ After landing the five fixes above, BRD-OPEN-QUESTIONS §1 sub-questions resolve
 3. Land Gap #2 (remote-locus commit) and Gap #3 (transcripts) together: both touch the write path through the endpoint.
 4. Land Gap #5 (review-lens routing): smallest, last.
 
-Each lands as a new ADR in `../decisions` plus the named doc edits. After all five land, mark `BRD-OPEN-QUESTIONS.md §1` as **RESOLVED** with a back-reference to this walk.
+Each lands as a new ADR in `../decisions` plus the named doc edits. After all five land, mark `../../functional/BRD-OPEN-QUESTIONS.md §1` as **RESOLVED** with a back-reference to this walk.

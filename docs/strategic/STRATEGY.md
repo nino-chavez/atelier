@@ -135,7 +135,7 @@ Resonance doc's original competitive survey was ~1 year stale (dated early 2025)
 
 1. **File locks lack fencing tokens.** Current implementation is Redlock-style distributed mutex. Kleppmann's critique applies literally: a GC pause past TTL causes silent overwrite. Data loss risk. **Atelier ships fencing tokens on every lock from v1; retrofitting later is not an option.**
 2. **`fit_check` is specified but not implemented in hackathon-hive MVP.** The single most differentiated primitive is currently vaporware. **Atelier implements fit_check at v1 with the eval harness; it is not deferred.**
-3. **"Graceful degradation via decisions.md" is aspirational.** No `decisions.md` writer exists in hackathon-hive; the log lives only in Postgres. **Atelier writes to `decisions.md` first and mirrors to the datastore second; a CI check validates the two stay in sync.**
+3. **"Graceful degradation via decisions.md" is aspirational.** No repo-canonical decision writer exists in hackathon-hive; the log lives only in Postgres. **Atelier writes a per-ADR file under `../architecture/decisions/` first (per ADR-005, ADR-030) and mirrors to the datastore second; a CI check validates the two stay in sync.**
 4. **Single bearer token shared across team; RLS decorative (service role bypasses).** **Atelier uses per-composer signed tokens from v1; service-role bypass is explicitly contained server-side.**
 
 These are not "bugs to fix later." They are design constraints on v1.
@@ -144,7 +144,7 @@ These are not "bugs to fix later." They are design constraints on v1.
 
 ## 6. Product scope — the verdict
 
-**Atelier is a self-hosted OSS project template + agent interop protocol + reference prototype. Not a SaaS. Not a platform. Not a replacement for any incumbent tool.**
+**Atelier ships as three open-source engagement tiers (per ADR-031): a Specification (methodology + 12-tool protocol), a Reference Implementation (this codebase, designed for the GitHub + Supabase + Vercel + MCP stack per ADR-027), and a Reference Deployment (`atelier init && atelier deploy`). Not a SaaS. Not a platform. Not a replacement for any incumbent tool.**
 
 Rationale:
 
@@ -169,9 +169,9 @@ None of these ship at v1. All are evaluated only after the disconfirming test re
 
 Both red-team rounds converged on this single test. The eval set ships with the template. The CI gate enforces the threshold. The `atelier eval fit_check` CLI command produces the report.
 
-**If the threshold holds:** Atelier has a defensible commercial wedge. The managed fit_check service becomes a credible offering. The methodology + protocol + reference implementation strategy is complete.
+**If the threshold holds:** Atelier has a defensible commercial wedge. The managed fit_check service becomes a credible offering on top of the three OSS tiers (per ADR-031).
 
-**If the threshold misses:** Atelier still ships as an OSS template + protocol spec + reference implementation. Coordination and sync still work; duplicate-detection becomes a weak suggestion rather than a strong match. The commercial wedge closes; the educational/methodological value remains.
+**If the threshold misses:** the three open-source tiers (Specification / Reference Implementation / Reference Deployment) still ship as planned. Coordination and sync still work; duplicate-detection becomes a weak suggestion rather than a strong match. The commercial wedge closes; the educational/methodological value remains.
 
 **Either way, every feature in `NORTH-STAR.md` ships.** Fit_check's performance determines the *commercial* story. It does not gate any product feature.
 

@@ -513,7 +513,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-24). See ADR-021.
 
-**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #4). `contributions.trace_id` and `decisions.trace_id` were singular; cross-cutting work (research touching US-1.3 and US-1.5, decisions affecting two epics) had no clean representation.
+**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #4). `contributions.trace_id` and `decisions.trace_id` were singular; cross-cutting work (research touching US-1.3 and US-1.5, decisions affecting two epics) had no clean representation.
 
 **Alternatives considered:**
 1. Convert both columns to `text[]` with GIN index (adopted).
@@ -535,7 +535,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-24). See ADR-022.
 
-**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #1). Ad-hoc analyst research had no pre-existing `open` contribution to claim, but the 12-tool surface (D13/ADR-013) has no `create_contribution`.
+**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #1). Ad-hoc analyst research had no pre-existing `open` contribution to claim, but the 12-tool surface (D13/ADR-013) has no `create_contribution`.
 
 **Alternatives considered:**
 1. Overload `claim` with `contribution_id=null` for atomic create-and-claim (adopted).
@@ -558,7 +558,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-24). See ADR-023.
 
-**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #2). ARCH §6.2 implied agents write to artifacts, but a web-locus analyst has no local filesystem — the endpoint must commit on their behalf, with identity, signing, failure handling, and sync timing unspecified.
+**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #2). ARCH §6.2 implied agents write to artifacts, but a web-locus analyst has no local filesystem — the endpoint must commit on their behalf, with identity, signing, failure handling, and sync timing unspecified.
 
 **Alternatives considered:**
 1. Per-project endpoint git committer with composer co-authorship; synchronous commit; failure rolls back datastore (adopted).
@@ -580,7 +580,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-24). See ADR-024.
 
-**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #3 / Q3). Transcripts have provenance, eval-feedback, and audit value but carry size and PII risk.
+**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #3 / Q3). Transcripts have provenance, eval-feedback, and audit value but carry size and PII risk.
 
 **Alternatives considered:**
 1. Sidecar in repo, opt-in via config (adopted).
@@ -603,7 +603,7 @@ See D1. This is the implementation consequence: one web app, five routes, `/atel
 
 **Status:** DECIDED (2026-04-24). See ADR-025.
 
-**Context.** Surfaced by the analyst-week-1 walk (`walks/analyst-week-1.md` Gap #5 / Q4). `../strategic/NORTH-STAR.md` §4 lens definitions partially covered review surfaces but did not specify which lens picks up which `kind × state` combination.
+**Context.** Surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md` Gap #5 / Q4). `../strategic/NORTH-STAR.md` §4 lens definitions partially covered review surfaces but did not specify which lens picks up which `kind × state` combination.
 
 **Alternatives considered:**
 1. Per-territory `review_role` field (adopted).

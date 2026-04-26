@@ -16,4 +16,4 @@
 | Triage pipeline diagram | M6 | Mermaid |
 | Two-substrate orthogonality diagram | M2 | Mermaid |
 
-Diagrams are committed as text-source (Mermaid) for repo-canonical authorship. SVG renders are CI-generated, not committed.
+Diagrams are committed as text-source (Mermaid) for repo-canonical authorship. SVG renders will be CI-generated (post-M2 when CI exists), not committed.

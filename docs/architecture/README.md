@@ -12,7 +12,7 @@
 | [`decisions/`](./decisions/) | Per-ADR files. Append-only canonical decision log (per ADR-005, ADR-030). |
 | [`protocol/`](./protocol/) | The 12-tool open specification (per ADR-013). Tier-3 entry for protocol implementers. |
 | [`schema/`](./schema/) | Territory contracts, datastore schema, config schema, scope_kind enum. Reference material. |
-| [`walks/`](./walks/) | Scenario validations of the architecture (analyst-week-1, dev-week-1, etc.). |
+| [`walks/`](./walks/) | Scenario validations of the architecture. Currently: analyst-week-1; others added as needed. |
 | [`diagrams/`](./diagrams/) | Component diagrams, sequence diagrams, data-flow diagrams. Populated as diagrams arrive. |
 
 ## Related layers

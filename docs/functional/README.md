@@ -10,7 +10,7 @@
 |---|---|
 | [`PRD.md`](PRD.md) | Product requirements. What the product must do. Vendor-neutral capabilities. |
 | [`PRD-COMPANION.md`](PRD-COMPANION.md) | Decisions log with rationale. What was chosen, why, alternatives rejected. |
-| [`BRD.md`](BRD.md) | Business requirements. 16 epics, ~95 user stories with trace IDs (`US-X.Y`). |
+| [`BRD.md`](BRD.md) | Business requirements. Epics with user stories, each tagged with a trace ID (`US-X.Y`). See `traceability.json` for current counts. |
 | [`BRD-OPEN-QUESTIONS.md`](BRD-OPEN-QUESTIONS.md) | Open items surfaced during analysis. Each has a status (OPEN / RESOLVED / DEFERRED). |
 
 ## Related layers

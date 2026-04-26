@@ -82,13 +82,13 @@ contributions {
 }
 ```
 
-A task is a contribution in `open`. A decision is a `kind:decision` contribution that writes to `decisions.md` on merge. A triaged external comment is a `kind:proposal` contribution. One state machine governs all.
+A task is a contribution in `open`. A decision is a `kind:decision` contribution that writes a new ADR file under `docs/architecture/decisions/` on merge (per ADR-030). A triaged external comment is a `kind:proposal` contribution. One state machine governs all.
 
 ---
 
 ## 4. Canonical artifact — the prototype as both product and dashboard
 
-The prototype web app has five routes, all present from v1:
+The prototype web app has six routes, all present from v1:
 
 | Route | Purpose |
 |---|---|
@@ -302,7 +302,7 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 | **Contribution** | Atomic unit of work; one schema covers tasks/decisions/proposals/PRs. |
 | **Contract** | Typed interface published by one territory for consumption by others. |
 | **Blackboard** | Coordination state (sessions, contributions, decisions, locks, contracts). |
-| **Constitution** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `decisions.md`, `.atelier/*`. |
+| **Constitution** | Repo-resident files governing agent behavior: `CLAUDE.md`, `AGENTS.md`, `.atelier/*`. The canonical decision log at `docs/architecture/decisions/` (per ADR-030) is read by agents as context but is not itself constitutional. |
 | **Prototype** | The web app that is both the canonical artifact and the dashboard. |
 | **Trace ID** | `US-X.Y`, `BRD:Epic-N`, etc. — join key across all surfaces. |
 | **Fit_check** | Semantic search that answers "is this already done or in flight?" |
@@ -312,7 +312,7 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 
 ## 16. The bet, designed-in
 
-Fit_check precision is the load-bearing technical bet. The whole system works whether or not it hits ≥75% precision. If it does, Atelier has a defensible moat. If it doesn't, Atelier ships as a credible OSS template + protocol spec + reference implementation.
+Fit_check precision is the load-bearing technical bet. The whole system works whether or not it hits ≥75% precision. If it does, Atelier has a defensible commercial wedge (managed fit_check). If it doesn't, the Specification and Reference Implementation tiers (per ADR-031) still ship as planned.
 
 **Either way, everything above ships.** Fit_check's performance determines the *commercial* story. It does not gate *any* feature.
 

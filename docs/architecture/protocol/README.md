@@ -18,7 +18,7 @@ The Atelier protocol is the 12-tool agent-facing surface defined in ADR-013. It 
 
 - For the schema the protocol relies on: [`../schema/`](../schema/)
 - For the architecture that hosts the protocol: [`../ARCHITECTURE.md`](../ARCHITECTURE.md)
-- For why the protocol has 12 tools and not 18: [`../decisions/ADR-013-twelve-tool-endpoint.md`](../decisions/) (per ADR-030)
+- For why the protocol has 12 tools and not 18: [`../decisions/ADR-013-12-tool-agent-endpoint-surface.md`](../decisions/ADR-013-12-tool-agent-endpoint-surface.md) (per ADR-030)
 
 ## Status
 

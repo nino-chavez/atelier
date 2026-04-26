@@ -254,7 +254,7 @@ Single join key across all surfaces. Format:
 
 - `US-<epic>.<story>` — a BRD story (e.g., `US-3.2`)
 - `BRD:Epic-<N>` — a BRD epic (e.g., `BRD:Epic-6`)
-- `D<N>` — a PRD-COMPANION decision (e.g., `D12`)
+- `D<N>` — a PRD-COMPANION decision in the OPEN/PROPOSED staging area (e.g., `D24`); once decided, decisions land as ADRs and the D# remains as a redirect pointer
 - `NF-<N>` — a non-functional requirement
 - `ADR-<N>` — an architecture decision record (one file per ADR under `../architecture/decisions/` per ADR-030)
 

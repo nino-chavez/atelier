@@ -1,6 +1,6 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-04-25T14:30:00Z",
+  "generated_at": "2026-04-26T00:00:00Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
@@ -146,271 +146,362 @@
       "id": "D1",
       "label": "Prototype is canonical artifact AND coordination dashboard",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d1--prototype-is-the-canonical-artifact-and-coordination-dashboard",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-001",
+      "status": "DECIDED"
     },
     {
       "id": "D2",
       "label": "Contribution is the atomic unit",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d2--contribution-is-the-atomic-unit",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-002",
+      "status": "DECIDED"
     },
     {
       "id": "D3",
       "label": "scope_kind generalized from day one",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d3--scope_kind-generalized-from-day-one",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-003",
+      "status": "DECIDED"
     },
     {
       "id": "D4",
       "label": "Fencing tokens mandatory on all locks from v1",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d4--fencing-tokens-on-all-locks-from-v1",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-004",
+      "status": "DECIDED"
     },
     {
       "id": "D5",
       "label": "Decisions write to decisions.md first, datastore second",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d5--decisions-write-to-decisionsmd-first-datastore-second",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-005",
+      "status": "DECIDED"
     },
     {
       "id": "D6",
-      "label": "fit_check ships at v1 with eval harness + CI gate",
+      "label": "find_similar ships at v1 with eval harness + CI gate (originally fit_check)",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d6--fit_check-ships-at-v1-with-eval-harness--ci-gate",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-006",
+      "status": "DECIDED"
     },
     {
       "id": "D7",
       "label": "No multi-tenant SaaS; self-hosted OSS only",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d7--no-multi-tenant-saas-self-hosted-oss-only",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-007",
+      "status": "DECIDED"
     },
     {
       "id": "D8",
       "label": "All 5 sync substrate scripts ship together",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d8--all-5-sync-substrate-scripts-ship-together",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-008",
+      "status": "DECIDED"
     },
     {
       "id": "D9",
       "label": "Remote-principal actor class",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d9--remote-principal-actor-class",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-009",
+      "status": "DECIDED"
     },
     {
       "id": "D10",
       "label": "Explicit exclusions enforce scope boundaries",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d10--explicit-exclusions-whats-out-of-scope",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-010",
+      "status": "DECIDED"
     },
     {
       "id": "D11",
       "label": "Destination-first design; no feature deferral",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d11--destination-first-design-no-deferral",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-011",
+      "status": "DECIDED"
     },
     {
       "id": "D12",
       "label": "Capability-level architecture; no vendor lock-in",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d12--capability-level-architecture-no-vendor-lock-in",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-012",
+      "status": "DECIDED"
     },
     {
       "id": "D13",
       "label": "12-tool agent endpoint surface",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d13--12-tool-agent-endpoint-surface",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-013",
+      "status": "DECIDED"
     },
     {
       "id": "D14",
       "label": "Territory + contract model extended to non-code",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d14--territory--contract-model-extended-to-non-code",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-014-territory-contract-model-extended-to-non-code.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-014",
+      "status": "DECIDED"
     },
     {
       "id": "D15",
       "label": "One hive, many projects (plural projects schema from v1)",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d15--one-hive-many-projects-plural-schema-from-v1",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-015-one-hive-many-projects.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-015",
+      "status": "DECIDED"
     },
     {
       "id": "D16",
       "label": "Two orthogonal substrates: SDLC sync + coordination",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d16--two-orthogonal-substrates-sdlc-sync--coordination",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-016",
+      "status": "DECIDED"
     },
     {
       "id": "D17",
       "label": "/atelier coordination route inside the prototype",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d17--atelier-coordination-route-inside-the-prototype",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-001",
+      "status": "DECIDED",
+      "note": "consequence-of-D1"
     },
     {
       "id": "D18",
       "label": "Five role-aware lenses",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d18--five-role-aware-lenses",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-017-five-role-aware-lenses-at-atelier.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-017",
+      "status": "DECIDED"
     },
     {
       "id": "D19",
       "label": "MCP as likely agent interop protocol",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d19--mcp-as-likely-agent-interop-protocol",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-013",
+      "status": "DECIDED",
+      "note": "no-separate-adr"
     },
     {
       "id": "D20",
       "label": "Triage never auto-merges",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d20--triage-never-auto-merges",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-018",
+      "status": "DECIDED"
     },
     {
       "id": "D21",
       "label": "Figma is feedback surface, not design source",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d21--figma-as-feedback-surface-not-design-source",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-019",
+      "status": "DECIDED"
     },
     {
       "id": "D22",
       "label": "Switchman as dependency for file-level locks",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d22--switchman-as-dependency-for-file-level-locks",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-026",
+      "status": "DECIDED"
     },
     {
       "id": "D23",
       "label": "Identity service default",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d23--identity-service-default",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-028",
+      "status": "DECIDED"
     },
     {
       "id": "D24",
-      "label": "Embedding model default for fit_check",
+      "label": "Embedding model default for find_similar",
       "kind": "decision",
       "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d24--embedding-model-default-for-fit_check",
-      "prototypePages": []
+      "docUrl": "#d24--embedding-model-default-for-find_similar",
+      "prototypePages": [],
+      "status": "OPEN"
     },
     {
       "id": "D25",
       "label": "Naming: Atelier",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d25--naming-atelier",
-      "prototypePages": []
+      "docPath": "docs/architecture/decisions/ADR-020-naming-atelier.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-020",
+      "status": "DECIDED"
     },
     {
       "id": "D26",
       "label": "Multi-trace-ID support on contributions and decisions",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d26--multi-trace-id-support-on-contributions-and-decisions",
+      "docPath": "docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-021",
-      "source": "walks/analyst-week-1.md"
+      "source": "walks/analyst-week-1.md",
+      "status": "DECIDED"
     },
     {
       "id": "D27",
       "label": "claim atomic-creates open contributions",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d27--claim-atomic-creates-open-contributions",
+      "docPath": "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-022",
-      "source": "walks/analyst-week-1.md"
+      "source": "walks/analyst-week-1.md",
+      "status": "DECIDED"
     },
     {
       "id": "D28",
-      "label": "Remote-locus commits via per-project endpoint git committer",
+      "label": "Remote-surface commits via per-project endpoint git committer (originally locus)",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d28--remote-locus-commits-via-per-project-endpoint-git-committer",
+      "docPath": "docs/architecture/decisions/ADR-023-remote-surface-commits-via-per-project-endpoint-committer.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-023",
-      "source": "walks/analyst-week-1.md"
+      "source": "walks/analyst-week-1.md",
+      "status": "DECIDED"
     },
     {
       "id": "D29",
       "label": "Transcripts as repo-sidecar files, opt-in by config",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d29--transcripts-as-repo-sidecar-files-opt-in-by-config",
+      "docPath": "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-024",
-      "source": "walks/analyst-week-1.md"
+      "source": "walks/analyst-week-1.md",
+      "status": "DECIDED"
     },
     {
       "id": "D30",
       "label": "Review routing keyed by territory.review_role",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d30--review-routing-keyed-by-territoryreview_role",
+      "docPath": "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-025",
-      "source": "walks/analyst-week-1.md"
+      "source": "walks/analyst-week-1.md",
+      "status": "DECIDED"
     },
     {
       "id": "D31",
       "label": "Reference implementation stack: GitHub + Supabase + Vercel + MCP",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d31--reference-implementation-stack-github--supabase--vercel--mcp",
+      "docPath": "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-027",
-      "source": "stack-pick-2026-04-25"
+      "source": "stack-pick-2026-04-25",
+      "status": "DECIDED"
     },
     {
       "id": "D32",
       "label": "Reference impl preserves GCP-portability",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d32--reference-impl-preserves-gcp-portability",
+      "docPath": "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md",
+      "docUrl": "",
       "prototypePages": [],
       "adr": "ADR-029",
-      "source": "portability-constraint-2026-04-25"
+      "source": "portability-constraint-2026-04-25",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D33",
+      "label": "Per-ADR file split — DECISIONS.md becomes a directory",
+      "kind": "decision",
+      "status": "DECIDED",
+      "docPath": "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md",
+      "docUrl": "",
+      "adr": "ADR-030",
+      "source": "doc-org-cleanup-2026-04-25",
+      "prototypePages": []
+    },
+    {
+      "id": "D34",
+      "label": "Three-tier consumer model — Specification / Reference Implementation / Reference Deployment",
+      "kind": "decision",
+      "status": "DECIDED",
+      "docPath": "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md",
+      "docUrl": "",
+      "adr": "ADR-031",
+      "source": "doc-org-cleanup-2026-04-25",
+      "prototypePages": []
+    },
+    {
+      "id": "D35",
+      "label": "Adopt extended documentation structure (toolkit-derived, Atelier-extended)",
+      "kind": "decision",
+      "status": "DECIDED",
+      "docPath": "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md",
+      "docUrl": "",
+      "adr": "ADR-032",
+      "source": "doc-org-cleanup-2026-04-25",
+      "prototypePages": []
     }
   ]
 }

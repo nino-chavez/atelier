@@ -394,6 +394,72 @@ If `content_stub` is null, no artifact is created; the contribution row carries 
 
 **Lock acquisition is separate.** Claim does not acquire any lock. The agent must follow up with `acquire_lock(contribution_id, artifact_scope)` per the lifecycle above. If `acquire_lock` fails (e.g., the scope is already locked by another contribution), the contribution remains claimed but cannot be authored against. The agent's choices: wait, narrow the scope, or `release(contribution_id)` to give it back to `state=open`. There is no auto-release on lock failure -- an analyst may legitimately hold a contribution while waiting for a busy artifact.
 
+#### 6.2.2 Update operation semantics
+
+`update` is the tool that advances a contribution from `claimed` through `in_progress` to `review`, and is the write-path for artifact content. Latent details from ARCH 6.2's high-level lifecycle:
+
+**Signature.**
+
+```
+update(
+  contribution_id:   uuid,                                   // required
+  state:             "claimed" | "in_progress" | "review" | "blocked" | null,   // optional; null means no state change
+  content_ref:       string | null,                          // optional; sets the artifact path on first call
+  payload:           string | null,                          // optional; the artifact body
+  payload_format:    "full" | "patch",                       // optional; defaults to "full"
+  fencing_token:     bigint,                                 // required when payload is provided
+  blocked_by:        uuid | null,                            // optional; required when state="blocked"
+  commit_message:    string | null                           // optional; remote-surface only; defaults to convention below
+) -> UpdateResponse
+```
+
+**Payload semantics.**
+
+- `payload_format="full"` (default): `payload` is the complete new body of the artifact. The endpoint replaces the file contents wholesale. Simple to reason about; preferred for research artifacts and short documents.
+- `payload_format="patch"`: `payload` is a unified diff against the current artifact body. The endpoint applies the patch atomically. Preferred for incremental code edits where preserving line-precise context matters.
+
+`payload` may be null when only `state` is changing (e.g., `claimed` to `in_progress` to signal start without content yet).
+
+**Fencing token requirement.** Any call providing `payload` must include a valid `fencing_token` from a prior `acquire_lock` against the artifact's scope. The endpoint validates the token server-side per ARCH section 7.4. State-only updates (no `payload`) do not require a fencing token.
+
+**Branch strategy for remote-surface composers.** The per-project endpoint committer (per ADR-023, ARCH section 7.8) commits each `update` call as a discrete commit on a per-contribution branch:
+
+- Branch name: `<contribution_kind>/<first-trace-id>-<contribution_id_short>` (e.g., `research/US-1.3-a3f2e1b9`).
+- Branch is created on the first `update` that produces a commit.
+- The branch is merged to `main` when the contribution transitions to `merged` (via the review path; see section 6.2.3).
+- IDE-surface composers commit to whatever branch their local git is on; the endpoint observes the branch via the contribution row's `repo_branch` field (added at M2 with the contributions table).
+
+**Commit message convention.** When `commit_message` is null, the endpoint synthesizes:
+
+```
+<contribution_kind>: <first 60 chars of payload first line>
+
+Trace IDs: <comma-separated>
+Contribution: <contribution_id>
+```
+
+Example: `research: Competitive landscape for prototype deployment\n\nTrace IDs: US-1.3\nContribution: a3f2e1b9-...`
+
+When `commit_message` is provided, the endpoint uses it verbatim (still appending the trace-IDs and contribution-id lines for searchability).
+
+**Multi-update behavior.** Each `update` call that includes a `payload` produces one commit. Multi-call iteration produces a natural git history on the contribution branch. On merge to `main`, the merging admin chooses squash vs. merge-commit per repo convention (no enforcement at the protocol layer). State-only updates do not commit.
+
+**Concurrency.** Only the contribution's `author_session_id` may call `update`. If the session is reaped and the contribution returns to `state=open`, a new session may claim and gain authority. The fencing token from the prior session is invalidated by the lock release on session death (per ARCH section 7.4) -- new payload writes must follow new acquire_lock.
+
+#### 6.2.3 Review and merge transition
+
+When `update(state="review")` succeeds, the contribution is routed to a reviewer per `territories.review_role` (ADR-025). What happens after review depends on the contribution's nature:
+
+- **For repo-resident artifacts (most contributions):** the contribution branch carries an open PR (created by the endpoint committer at the moment of the `state=review` transition). The reviewer approves and merges the PR via the versioned-file-store UI or CLI. The merge webhook fires; the endpoint observes the merge via commit on `main` and transitions the contribution to `state=merged`.
+- **For research artifacts (no PR pattern):** the reviewer calls `update(contribution_id, state="merged")` directly via the endpoint; no PR is involved because the artifact already lives on the branch and no code review applies.
+- **For decisions:** decisions log via `log_decision` (see section 6.3), not via update. They have no `review` state.
+
+**Authoritative merge confirmation.** A contribution is `state=merged` if and only if either (a) the corresponding PR is merged on `main`, observed via webhook, or (b) for non-PR artifacts, an authorized reviewer called `update(state="merged")`. The datastore state alone does not constitute merge -- the repo is canonical per ADR-005.
+
+**Reviewer not available.** If `territories.review_role` for the contribution's territory has no active composer, the contribution stays in `state=review` indefinitely. The `/atelier` admin lens surfaces "review-stuck" contributions via section 8.2 observability. There is no auto-promotion of stuck reviews; coordination is the team's responsibility.
+
+**Cross-territory contributions.** Per ADR-021, contributions may carry multiple `trace_ids`. If those trace IDs span multiple territories, the contribution's primary territory (the one passed to `claim`) drives review routing. Cross-territory consumers may comment but only the primary territory's `review_role` may merge.
+
 ### 6.3 Decision log write (the four-step atomic operation)
 
 ```
@@ -765,6 +831,41 @@ For composers whose surface is `web` (or `terminal` without local repo access), 
 - **Failure boundaries.** Loss of the deploy-key credential blocks remote-surface writes with a clear error; IDE-surface composers are unaffected. Rotation runbook in `../methodology/METHODOLOGY.md`.
 
 This satisfies ADR-005 (repo-first) for remote-surface composers — the commit is the success criterion, not the datastore write.
+
+#### 7.8.1 Transcript capture details
+
+ADR-024 establishes that agent-session transcripts are repo-sidecar files, opt-in via `.atelier/config.yaml: transcripts.capture: true`. Operational details:
+
+**When the sidecar is written.** Transcripts accumulate over a session. The endpoint persists the transcript on each of: `update(state="review")` (the natural "I'm done" signal), `release(contribution_id)`, `deregister(session_token)`, and any explicit `flush_transcript` call. Between persistence events the transcript is buffered in datastore-backed session state so a session crash does not lose more than the most recent buffered turns.
+
+**Sidecar path.** `<content_ref>.transcript<sidecar_suffix>` where `<sidecar_suffix>` defaults to `.jsonl`. Example: `research/US-1.3-deploy-research.md.transcript.jsonl`. The endpoint commits the sidecar through the same per-project committer that handles content (per section 7.8) so attribution is consistent.
+
+**Per-line schema (jsonl).**
+
+```
+{
+  ts: "2026-04-27T18:32:00Z",
+  role: "user" | "assistant" | "tool",
+  agent_client: "claude.ai",
+  content: "<text>",                           // user/assistant turns
+  tool_call: { name, args } | null,            // present on tool role lines
+  tool_result: { name, outcome, content } | null,
+  trace_ids_at_time: ["US-1.3"],               // contribution's trace_ids when this turn occurred
+  redacted: false                              // true if a redaction pass touched this line
+}
+```
+
+**PII review.** When `transcripts.capture: true`, the project must also configure `transcripts.pii_review` in `.atelier/config.yaml`:
+
+- `pii_review: "none"` -- raw transcripts committed; team accepts the risk.
+- `pii_review: "auto"` -- a redaction pass runs before commit using a configured pattern set (emails, phone numbers, named-entity heuristics). Lines touched by redaction carry `redacted: true`.
+- `pii_review: "manual"` -- the endpoint stages transcripts to a queue; an admin must approve via the `/atelier` PII queue before the sidecar is committed. Until approved, the sidecar lives only in datastore session state.
+
+The default when `transcripts.capture: true` is set without specifying `pii_review` is `manual` (most conservative).
+
+**Size cap and overflow.** A configurable per-session cap (`transcripts.max_session_bytes`, default 5 MiB) bounds sidecar size. On overflow, the endpoint rotates: the existing sidecar is renamed `<base>.transcript.<n>.jsonl` and a fresh sidecar is started. Multi-file transcripts are walked in numeric order.
+
+**Reading transcripts.** Transcripts are not exposed via the 12-tool surface. Reading them is a repo operation -- composers (or auditors) read the sidecar files directly via git. The prototype `/atelier/observability` route surfaces transcript existence and metadata but not content (to avoid duplicating PII exposure in the UI).
 
 ### 7.9 Web-surface auth flow
 

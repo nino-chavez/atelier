@@ -74,15 +74,15 @@ Pre-conditions assumed in place:
 | **Prototype** | /atelier analyst lens shows the new contribution under "claimed by me." Returned similar_warnings (from the implicit find_similar gate, see section 6.2.1) surface as a "potentially duplicate work" panel. |
 | **Status** | **RESOLVED** -- ADR-022 closed Gap #1 at high level on 2026-04-24. ARCH section 6.2.1 (added 2026-04-27) closes the latent operational details: response shape with `similar_warnings`, validation order with specific BAD_REQUEST conditions, race handling (no implicit dedup), content_stub semantics, idempotency_key for retry safety, separation from lock acquisition. |
 
-### Step 5 — Author research content via the agent
+### Step 5 -- Author research content via the agent
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `update(contribution_id, state="in_progress", content_ref="research/US-1.3-deploy-research.md", payload=<research markdown>)` |
-| **Schema** | UPDATE `contributions` SET state, content_ref, fencing_token. The repo gets a new file `research/US-1.3-deploy-research.md`. |
-| **Prototype** | `/atelier` analyst lens shows in_progress contribution; `/strategy` (or research index) surfaces the new artifact once committed. |
-| **Status** | **GAP #2 — Remote-surface repo write path is implied but not specified.** A web-surface composer has no filesystem; the endpoint must commit on their behalf. Identity, signing, failure handling, sync timing all unspecified. See §4. |
-| **Status (transcript)** | **GAP #3 — Transcript storage.** Schema has `content_ref` (singular). No place to store the agent-session transcript (the conversation that produced the artifact), which BRD-OPEN-QUESTIONS §1 Q3 explicitly raises. See §4. |
+| **Tool** | `update(contribution_id, state="in_progress", content_ref="research/US-1.3-deploy-research.md", payload=<markdown>, payload_format="full", fencing_token=<from prior acquire_lock>)` per ARCH section 6.2.2 |
+| **Schema** | UPDATE contributions SET state, content_ref. Per-project endpoint committer creates branch `research/US-1.3-<short-id>` and commits the payload with the synthesized commit message convention. Multi-update iteration produces natural git history on that branch (section 6.2.2). Transcript sidecar (if `transcripts.capture: true`) accumulates in session state and persists on `state=review` / `release` / `deregister` per section 7.8.1. |
+| **Prototype** | /atelier analyst lens shows in_progress contribution + commit count + transcript-pending indicator. /strategy (or research index) surfaces the new artifact once the branch is merged at section 6.2.3 review path. |
+| **Status** | **RESOLVED** -- ADR-023 + ARCH section 7.8 closed Gap #2 on 2026-04-24. ARCH section 6.2.2 (added 2026-04-27) closes the latent operational details: payload formats (full vs patch), fencing requirement, branch strategy with naming convention, commit message convention, multi-update behavior, concurrency rules. Section 6.2.3 closes the merge-confirmation gap. |
+| **Status (transcript)** | **RESOLVED** -- ADR-024 closed Gap #3 on 2026-04-24. ARCH section 7.8.1 (added 2026-04-27) closes the latent details: when sidecar is written (state=review / release / deregister / explicit flush), per-line jsonl schema, PII review modes (none / auto / manual; default manual when capture is on), size cap with rotation, reading transcripts via git not via the tool surface. |
 
 ### Step 6 — Log decisions about findings
 

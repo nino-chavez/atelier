@@ -51,10 +51,10 @@ Pre-conditions assumed in place:
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `get_context(trace_id="US-1.3")` |
-| **Schema** | Reads charter files, recent `decisions` filtered by trace_id and adjacency, `territories` rows the analyst owns or consumes from, and the traceability registry. |
-| **Prototype** | `/strategy` (the analyst can view the same context in the prototype web app). `/atelier` analyst lens shows recent decisions filtered to relevant trace IDs. |
-| **Status** | Clean. No gap. |
+| **Tool** | `get_context(trace_id="US-1.3", lens="analyst")` per `../ARCHITECTURE.md §6.7` |
+| **Schema** | Project-scoped via session token. Reads charter file paths (excerpts opt-in), `decisions` in three adjacency bands (direct trace match, epic siblings, contribution-linked) per `§6.7.1`, `territories` partitioned into owned + consumed for the composer's role, contribution summary with `active` weighted per `lens`, `traceability_slice` for the trace + epic siblings. |
+| **Prototype** | `/strategy` (the analyst can view the same context in the prototype web app). `/atelier` analyst lens shows recent decisions filtered to relevant trace IDs and contribution summary using the same per-band ranking. |
+| **Status** | Clean (post-2026-04-27). Earlier "Clean. No gap." was unexamined — eight gaps were latent (signature, return shape, adjacency definition, token budget, last-N policy, auth scoping, freshness, cross-project scope). All folded into ARCH §6.7. |
 
 ### Step 3 — Run find_similar for prior work
 

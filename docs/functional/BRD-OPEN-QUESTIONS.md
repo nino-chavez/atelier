@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-27 (M1 scoping pass; entries 16–18 added; §4/§10/§11/§14/§17 resolved as spec gaps folded into canonical homes)
+**Last updated:** 2026-04-27 (M1 scoping pass; entries 16–18 added; §4/§6/§10/§11/§12/§14/§17 resolved as spec gaps folded into canonical homes; only data-dependent residue remains in §6 and §12)
 
 ---
 
@@ -119,7 +119,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Migrations are additive-preferred (no destructive changes). Conflicts reported, not auto-resolved. Datastore schema supports N and N−1 simultaneously for a grace window. Projects upgrade independently within a guild.
 
-**Status.** OPEN.
+**Status.** **RESOLVED at design level** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §9.7` (template version upgrades): additive-preferred + idempotent migrations, no auto-rollback, conflicts reported not auto-resolved, schema N/N−1 co-existence, no-lockstep upgrades, decision-log preservation. **Data-dependent residue:** the actual grace-window length (default starting point: "until all projects in the guild have upgraded, capped at one minor-version cycle") is tuned post-M7 from operational experience.
 
 ---
 
@@ -209,7 +209,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Default threshold 0.80 (tuned against seed eval set). Per-project configurable. UI shows matches ≥0.80 prominently and matches 0.65–0.80 as collapsible "weak suggestions."
 
-**Status.** OPEN. Benchmark required.
+**Status.** **RESOLVED at design level** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §6.4.1` (threshold semantics + two-band response): per-project configurable thresholds, primary/weak-suggestion bands, `thresholds_used` echoed in response, top-k per band, UI rule documented. Config keys already present in `../../.atelier/config.yaml`. **Data-dependent residue:** the actual default-threshold *value* (`0.80` at present) is tuned against the labeled seed eval set when M5 ships, against `ADR-006` precision/recall gates.
 
 ---
 

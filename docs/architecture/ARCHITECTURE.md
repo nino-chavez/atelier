@@ -354,13 +354,37 @@ Agent → find_similar(description, optional trace_id)
     1. Generate embedding for description
     2. kNN search against vector index
        (scoped to project_id, optionally to trace_id subtree)
-    3. Filter matches above similarity threshold
+    3. Partition matches into bands per §6.4.1
     4. Enrich with source metadata (decision/contribution/BRD section/research)
-    5. Return top-k with scores
+    5. Return top-k of each band with scores
   If vector index unavailable:
     Fall back to keyword search; response carries degraded=true
     UI renders explicit banner
 ```
+
+#### 6.4.1 Threshold semantics and two-band response
+
+Thresholds are read from `.atelier/config.yaml` at query time; both are per-project configurable:
+
+- `default_threshold` (default `0.80`) — matches at or above this score are **primary matches**, surfaced prominently in the agent response and in any UI.
+- `weak_suggestion_threshold` (default `0.65`) — matches in the half-open interval `[weak_suggestion_threshold, default_threshold)` are **weak suggestions**, returned alongside primary matches but flagged so callers can render them collapsed/secondary. Matches below `weak_suggestion_threshold` are dropped.
+
+**Response shape:**
+
+```
+{
+  primary_matches: [ { source, score, content_ref, ... }, ... ],     // score ≥ default_threshold
+  weak_suggestions: [ { source, score, content_ref, ... }, ... ],    // weak ≤ score < default
+  degraded: false,                                                   // true if vector index unavailable
+  thresholds_used: { default: 0.80, weak: 0.65 }                     // echoed for caller awareness
+}
+```
+
+**top-k.** Each band returns up to `find_similar.top_k_per_band` matches (default `5`, configurable). A query that produces 50 matches above default is returned as the top 5 primary; the remaining 45 are not surfaced (callers wanting more issue a follow-up call with a tighter `trace_id` scope or descriptive query).
+
+**Default-threshold tuning.** The chosen default value (`0.80` at present) is a starting point. The actually-correct value is data-dependent and is tuned against the labeled seed eval set when M5 ships, against the precision/recall gates in `ADR-006`. See `BRD-OPEN-QUESTIONS §12`.
+
+**UI rule.** Prototype web app and any client UI render `primary_matches` prominently and `weak_suggestions` in a collapsible "weak matches (N)" section by default. Agents may render both inline; the band assignment is the contract, the visual treatment is the consumer's choice.
 
 ### 6.5 Sync substrate flows
 
@@ -450,6 +474,111 @@ A contract change is **breaking** if any of the following hold (conservative def
 **Publisher override.** A territory owner may classify an otherwise-breaking change as additive by passing `override_classification="additive"` plus a required `override_justification` string. The override is recorded on the `contracts` row and surfaced in `/atelier/observability` for audit. Overrides are reversible by any consumer territory by escalating to a proposal contribution.
 
 **Versioning.** Semver-style. Additive changes bump minor (`1.4 → 1.5`); breaking changes bump major (`1.5 → 2.0`). `contracts.version` is an integer pair stored as `major*1000+minor` to preserve sort order; the human-facing string is rendered on read. Consumers pin to a major version; minor upgrades are automatic.
+
+### 6.7 Get_context execution
+
+`get_context` is the post-M2 replacement for `.atelier/checkpoints/SESSION.md` (per `../methodology/METHODOLOGY.md §6.1`). It answers, in one call: what is the current state, where did the last session leave off, what decisions affect my work, what is open in my territory.
+
+**Project scope.** The session token already carries `project_id`. `get_context` is implicitly project-scoped — there is no `project_id` parameter. A composer in multiple projects (per ADR-015) holds multiple sessions, one per project, and queries each independently.
+
+**Signature.**
+
+```
+get_context(
+  trace_id?:        string | string[],   // optional; scopes recent_decisions, contributions, traceability
+  since_session_id?: string,             // optional; return only what changed since that session
+  lens?:            string,              // optional; analyst | dev | pm | designer | stakeholder
+  kind_filter?:     string[],            // optional; filter contributions by kind (implementation | research | ...)
+  charter_excerpts?: boolean             // optional, default false; include excerpts vs paths only
+) → ContextResponse
+```
+
+`lens` does not filter access — every project member sees every project-scoped row. It tunes per-section depth defaults. For example, `lens="dev"` weights more contribution detail and fewer charter excerpts; `lens="analyst"` weights more research-kind contributions and recent decisions. Defaults documented in `.atelier/config.yaml: get_context.lens_defaults`.
+
+**Return shape (ContextResponse).**
+
+```
+{
+  charter: {
+    paths: ["CLAUDE.md", "AGENTS.md", "docs/methodology/METHODOLOGY.md", ".atelier/territories.yaml", ".atelier/config.yaml"],
+    excerpts: { "<path>": "<first N lines>" } | null   // populated only if charter_excerpts=true
+  },
+  recent_decisions: {
+    direct: [ { id, summary, trace_ids, timestamp, repo_path }, ... ],         // trace_id matches exactly
+    epic_siblings: [ ... ],                                                     // shares an epic prefix with the queried trace
+    contribution_linked: [ ... ],                                               // touches a contribution that carries the trace
+    truncated: { direct: false, epic_siblings: false, contribution_linked: false }
+  },
+  territories: {
+    owned: [ { name, scope_kind, scope_pattern, contracts_published }, ... ],   // composer's role owns
+    consumed: [ { name, contracts_consumed }, ... ]                              // composer's role reads contracts from
+  },
+  contributions_summary: {
+    by_state: { open: N, claimed: N, in_progress: N, review: N, blocked: N },
+    active: [ { id, kind, state, trace_ids, territory, content_ref }, ... ],   // top contributions weighted per lens
+    truncated: false
+  },
+  traceability_slice: {
+    entries: [ { trace_id, label, kind, doc_path, doc_url, prototype_pages }, ... ],   // entries touched by trace_id + epic siblings
+    counts: { brd_epics, brd_stories, decisions, adrs }                                  // project-wide counts for orientation
+  },
+  stale_as_of: "2026-04-27T18:32:00Z",
+  cache_validity_ms: { charter: 3600000, recent_decisions: 60000, contributions_summary: 5000 }
+}
+```
+
+#### 6.7.1 Adjacency definition for `recent_decisions`
+
+A decision is **adjacent** to a queried `trace_id` if any of the following hold (returned in three ranked bands):
+
+1. **Direct.** The decision's `decisions.trace_ids` array contains the queried trace_id.
+2. **Epic-sibling.** The decision's `trace_ids` contain a story from the same epic (e.g., querying `US-1.3` matches a decision tagged `US-1.5` because both belong to `BRD:Epic-1`). Epic prefix is parsed from the `US-<epic>.<story>` format.
+3. **Contribution-linked.** The decision touches a contribution (via `contribution_id` linkage on the decision row, or shared `trace_ids`) that itself carries the queried trace_id.
+
+Each band returns up to `get_context.recent_decisions.per_band_limit` matches (default `10`), ordered by `created_at DESC`. Truncation is reported per-band so callers know to issue a follow-up with a tighter scope if they need more.
+
+If no `trace_id` is provided, `recent_decisions` returns the project-wide last `per_band_limit` decisions in the `direct` band; `epic_siblings` and `contribution_linked` are empty.
+
+#### 6.7.2 Token-budget strategy
+
+A complete context for a mid-sized project (a hundred stories, dozens of ADRs, hundreds of contributions) blows past any LLM context window. Strategy:
+
+- **Default to summaries, not bodies.** Charter returns paths only unless `charter_excerpts=true`; decisions return `summary` not full body; contributions return `content_ref` not content.
+- **Per-section caps from `.atelier/config.yaml: get_context.section_limits`.** Defaults: `recent_decisions.per_band_limit: 10`, `contributions_summary.active_limit: 20`, `traceability_slice.entries_limit: 50`. All overridable per-project.
+- **Truncation flagged in response.** Each section that hit its cap emits `truncated: true` (or per-band truncation flags) so the caller knows there's more.
+- **Caller pattern for more depth.** Issue a second call with a tighter `trace_id` or `kind_filter`, or use the appropriate dedicated tool — `find_similar` for semantic match, direct `claim`/`update` for contribution detail.
+
+The contract: `get_context` should fit comfortably within ~8K tokens for the default response. Excerpts and full traceability slices may push higher; that's a caller-opt-in cost.
+
+#### 6.7.3 Authorization
+
+`get_context` enforces project membership via the session token. No additional role gating beyond what `ARCH §5.3` defines for the underlying tables — every project member sees every project-scoped row. The `lens` parameter shapes depth, not access.
+
+`territories.owned` and `territories.consumed` are computed from `composers.default_role` joined against `territories.owner_role` / `territories.contracts_consumed`. A composer with secondary roles (per `.atelier/config.yaml`) sees the union.
+
+#### 6.7.4 Freshness and caching
+
+The response carries `stale_as_of` (server timestamp at query time) and `cache_validity_ms` per section so callers can implement client-side caching with appropriate cadence:
+
+- **charter:** `3_600_000` ms (1 hour). Charter files change via PR, infrequently; an hour-stale snapshot is acceptable.
+- **recent_decisions:** `60_000` ms (1 minute). Decisions append; new ones matter quickly but the rate is low.
+- **territories:** `300_000` ms (5 minutes). Territory changes are PR-merged + datastore-reloaded; minute-scale staleness is fine.
+- **contributions_summary:** `5_000` ms (5 seconds). Contributions churn during active work; near-real-time matters.
+- **traceability_slice:** `300_000` ms (5 minutes). The registry rebuilds on commits; minute-scale is fine.
+
+Clients that need stricter freshness for `contributions_summary` should subscribe to the broadcast substrate (lit up at M4) instead of polling `get_context`.
+
+#### 6.7.5 `since_session_id` continuity mode
+
+When `since_session_id` is provided, the response is a delta — each section returns only entries created or modified after `sessions.created_at` of the referenced session:
+
+- `recent_decisions.*` — only decisions with `created_at > since_session.created_at`
+- `contributions_summary.active` — only contributions with `updated_at > since_session.created_at`
+- `charter.excerpts` — empty unless any charter file's `git log` shows a commit after `since_session.created_at`
+- `territories` — full (territories change rarely; deltas aren't useful)
+- `traceability_slice` — full (registry is small and the diff isn't worth computing)
+
+This is the explicit "what changed since I was last here" mode — the protocol primitive that finally retires `.atelier/checkpoints/SESSION.md`.
 
 ---
 
@@ -627,6 +756,18 @@ A composer's connection to the coordination datastore can drop (network partitio
 **Web-surface composers are offline-incapable** by definition: they have no local repo and no client-side datastore. Loss of connectivity blocks all operations until the connection returns.
 
 **On reconnect.** The session re-registers (fresh `session_token`); held locks were already released by the reaper after `session_ttl_seconds`; any contributions claimed by the dead session were released to `state=open`. Conflicts between offline-edited files and the current canonical state surface as merge conflicts at push time, not as silent overwrites. Decisions logged to repo while offline are mirrored to the datastore on the next `log_decision` call (idempotent on `repo_commit_sha`).
+
+### 9.7 Template version upgrades
+
+A team running Atelier template `vN.M` can adopt `vN.(M+1)` (or `v(N+1).0`) via `atelier upgrade` without re-scaffolding. Design intent (operational runbook lands at M7 alongside the polished `atelier upgrade` CLI):
+
+- **Additive-preferred migrations.** Schema changes prefer additive shapes (new columns nullable, new tables, new indexes). Destructive changes (column drops, type narrowings, table removals) require a major version bump and a co-shipped reversal ADR explaining the alternatives weighed.
+- **Idempotent.** Re-running `atelier upgrade` after a successful upgrade is a no-op. Each migration carries a unique ID and is recorded in a `schema_migrations` table on apply.
+- **Not auto-reversible.** No automatic rollback script is generated. Reverting a migration is an explicit destructive operation gated behind `atelier upgrade --revert <migration-id>` plus an ADR in the consuming project documenting the revert decision.
+- **Conflicts reported, not auto-resolved.** When `atelier upgrade` finds authored content that contradicts new defaults (e.g., a territory using a renamed `scope_kind` value, a config key that moved), the upgrade halts with a report listing each conflict and the recommended manual resolution. The team resolves and re-runs.
+- **Schema N / N−1 co-existence.** During an upgrade window, the agent endpoint accepts requests valid against either schema version. The grace-window length is data-dependent and tuned post-M7 (see `BRD-OPEN-QUESTIONS §6`). The default starting point is "until all projects in the guild have upgraded, capped at one minor-version cycle."
+- **Independent per-project upgrades within a guild.** Projects do not have to upgrade in lockstep. Each project's `template_version` in `.atelier/config.yaml` is independent. A guild may legitimately host projects on `v1.0` and `v1.1` simultaneously during the grace window.
+- **Decision-log preservation.** No ADR file is rewritten by an upgrade. New canonical conventions introduced by the new template version are documented as fresh ADRs (committed by the upgrade tool with the team's review) rather than retroactive edits.
 
 ---
 

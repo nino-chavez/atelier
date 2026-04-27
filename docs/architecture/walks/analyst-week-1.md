@@ -208,4 +208,22 @@ After landing the five fixes above, BRD-OPEN-QUESTIONS §1 sub-questions resolve
 3. Land Gap #2 (remote-surface commit) and Gap #3 (transcripts) together: both touch the write path through the endpoint.
 4. Land Gap #5 (review-lens routing): smallest, last.
 
+---
+
+## 7. Re-examination 2026-04-27
+
+The 2026-04-24 walk closed five named gaps via ADRs 021-025. Re-examination on 2026-04-27 surfaced that each step still had latent operational details under the surface ADR resolutions. Each step's "Status: Clean. No gap." (or equivalent) was recorded without examining what the implementation would actually need. Folded as follows:
+
+| Walk step | Latent gaps re-surfaced | Folded into |
+|---|---|---|
+| Step 1 (register session) | Token delivery to web MCP clients was hand-waved by ADR-009 ("browser-safe token delivery") | ARCH 7.9 (web-surface auth flow), walk Step 1 pre-condition tightened |
+| Step 2 (get_context) | Signature, return shape, adjacency definition, token budget, last-N policy, auth scoping, freshness, cross-project scope -- all assumed | ARCH 6.7 + 6.7.1 + 6.7.2 + 6.7.3 + 6.7.4 + 6.7.5 |
+| Step 3 (find_similar) | Description format, corpus composition with embed cadence, removal semantics, "trace_id subtree" term implying nonexistent hierarchy, model swappability mechanics, cross-project isolation as explicit non-feature | ARCH 6.4.2 + 6.4.3, ARCH 5.4 trimmed to data shape |
+| Step 4 (atomic create+claim) | ClaimResponse shape, validation order, race handling without dedup, content_stub semantics, idempotency, find_similar gate behavior, lock-acquisition separation | ARCH 6.2.1 |
+| Step 5 (author content) | update signature with payload_format, fencing requirement, branch strategy, commit message convention, multi-update behavior; transcript persistence triggers, jsonl schema, PII review modes, size cap with rotation | ARCH 6.2.2, 6.2.3, 7.8.1 |
+| Step 6 (log_decision) | Trace_ids signature update, slug derivation, ADR-NNN allocation, reversal flag mechanics, idempotency, push-retry semantics, embedding-pipeline reconciliation, broadcast message shape | ARCH 6.3 rewritten + 6.3.1 |
+| Step 7 (transition to review) | Tool-naming error in walk (used release for review transition; release is actually the abandon path); review patterns by artifact type, authoritative merge confirmation, reviewer-not-available behavior | ARCH 6.2.3 (review/merge), 6.2.4 (release-as-abandon); walk Step 7 corrected |
+
+The pattern: every step's surface-level ADR resolution closed the load-bearing question but left implementation-grade details unstated. The 2026-04-27 sweep folded all of those into ARCH so M2 implementation has a complete spec to work from.
+
 Each lands as a new ADR in `../decisions` plus the named doc edits. After all five land, mark `../../functional/BRD-OPEN-QUESTIONS.md §1` as **RESOLVED** with a back-reference to this walk.

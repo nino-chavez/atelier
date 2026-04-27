@@ -84,14 +84,14 @@ Pre-conditions assumed in place:
 | **Status** | **RESOLVED** -- ADR-023 + ARCH section 7.8 closed Gap #2 on 2026-04-24. ARCH section 6.2.2 (added 2026-04-27) closes the latent operational details: payload formats (full vs patch), fencing requirement, branch strategy with naming convention, commit message convention, multi-update behavior, concurrency rules. Section 6.2.3 closes the merge-confirmation gap. |
 | **Status (transcript)** | **RESOLVED** -- ADR-024 closed Gap #3 on 2026-04-24. ARCH section 7.8.1 (added 2026-04-27) closes the latent details: when sidecar is written (state=review / release / deregister / explicit flush), per-line jsonl schema, PII review modes (none / auto / manual; default manual when capture is on), size cap with rotation, reading transcripts via git not via the tool surface. |
 
-### Step 6 — Log decisions about findings
+### Step 6 -- Log decisions about findings
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `log_decision(category="research", trace_id="US-1.3", summary, rationale)` per ARCH §6.3 |
-| **Schema** | Four-step atomic write: append to `decisions.md`, mirror to `decisions` table, vector-index, broadcast. |
-| **Prototype** | `/atelier` decisions panel updates; `/traceability` reflects new link. |
-| **Status** | **GAP #4 — Multi-trace-ID support.** `decisions.trace_id` (and `contributions.trace_id`) is singular. BRD-OPEN-QUESTIONS §1 Q2 asks: research touches US-1.3 and reveals implications for US-1.5 — one decision with both, or two? The schema forces splintering. See §4. |
+| **Tool** | `log_decision(category="research", trace_ids=["US-1.3", "US-1.5"], summary, rationale, reverses=null, idempotency_key=<uuid>)` per ARCH section 6.3 + 6.3.1 |
+| **Schema** | Four-step atomic operation: (1) commit + push the new ADR-NNN-slug.md per ADR-030 with NNN from the per-project monotonic adr_sequence counter; (2) insert decisions row with repo_commit_sha; (3) embedding pipeline picks up the commit via webhook (out-of-transaction per section 6.4.2); (4) post-M4 broadcasts decision.created with the message shape from section 6.3.1. |
+| **Prototype** | /atelier decisions panel updates on broadcast (post-M4). /traceability reflects the new ADR id and trace links on next traceability sync run (M1). |
+| **Status** | **RESOLVED** -- ADR-021 closed Gap #4 on 2026-04-24 (multi-trace_ids text[]). ARCH section 6.3 + 6.3.1 (rewritten 2026-04-27) closes the latent operational details: full signature with reverses + idempotency_key, slug derivation rule, ADR-NNN allocation via atomic per-project counter (gaps acceptable), reversal mechanics that preserve append-only on original files, push-retry semantics with exponential backoff and admin recovery, reconciliation of "Step 3 embedding" with section 6.4.2's webhook-driven pipeline, broadcast message shape. |
 
 ### Step 7 — Release the contribution for review
 

@@ -463,17 +463,86 @@ When `update(state="review")` succeeds, the contribution is routed to a reviewer
 ### 6.3 Decision log write (the four-step atomic operation)
 
 ```
-Agent → log_decision(category, summary, rationale, trace_id)
+Agent → log_decision(category, summary, rationale, trace_ids, reverses?, idempotency_key?)
   Endpoint:
-    1. Creates new file at decisions/ADR-NNN-<slug>.md in repo (commit) per ADR-030
+    1. Creates new file at decisions/ADR-NNN-<slug>.md in repo (commit + push) per ADR-030
     2. Inserts row in decisions table with repo_commit_sha
-    3. Generates embedding + upserts into vector index
-    4. Broadcasts via pub/sub
-  If step 2 fails: repo write is authoritative; next call retries mirror
-  If step 3 fails: keyword-fallback for find_similar; banner in UI
-  If step 4 fails: sessions receive next update on reconnect
-  Step 1 succeeding is the single success criterion for log_decision
+    3. Embedding pipeline picks up the new ADR via the commit webhook (per section 6.4.2);
+       NOT inline in this transaction
+    4. Broadcasts decision.created via pub/sub (post-M4 broadcast substrate)
+
+  If step 1 push fails after local commit: see retry semantics in section 6.3.1
+  If step 2 fails: repo write is authoritative; next call retries mirror keyed by repo_commit_sha
+  If step 3 lags or fails: find_similar falls back to keyword search per section 6.4; banner in UI
+  If step 4 fails (post-M4): sessions receive next update on reconnect
+  Step 1 succeeding (commit + push) is the single success criterion for log_decision
 ```
+
+#### 6.3.1 Operational specifics
+
+**Signature (full).**
+
+```
+log_decision(
+  category:        "architecture" | "product" | "design" | "research" | "convention",
+  summary:         string,                                   // becomes the ADR title
+  rationale:       string,                                   // becomes the body's Rationale section
+  trace_ids:       string[],                                 // per ADR-021; non-empty
+  reverses:        string | null,                            // optional; an existing ADR id like "ADR-014"
+  idempotency_key: string | null                             // optional but recommended; same semantics as claim per section 6.2.1
+) -> LogDecisionResponse
+
+LogDecisionResponse {
+  decision_id:     uuid,
+  adr_id:          string,                                   // e.g., "ADR-034"
+  repo_path:       string,                                   // e.g., "docs/architecture/decisions/ADR-034-xxx.md"
+  repo_commit_sha: string,
+  created:         boolean                                   // false if idempotency_key matched a prior call
+}
+```
+
+**Slug derivation.** `slug = lowercase(summary).replace(/[^a-z0-9]+/g, "-").trim("-").slice(0, 60)`. The endpoint applies this transform; agents do not pass a slug. If the slug collides with an existing file (extremely rare), the endpoint appends `-2`, `-3`, etc.
+
+**ADR-NNN allocation.** The endpoint allocates `NNN` via a per-project monotonic counter held in a dedicated `adr_sequence` table (atomic increment under transaction). Two concurrent `log_decision` calls receive distinct NNN values. The counter never decrements; if a commit fails after allocation, that NNN is "spent" -- the next decision uses NNN+1. Gaps in the ADR sequence are acceptable (matches the per-ADR file-split spirit of ADR-030).
+
+**Reversal flag.** When `reverses` is provided, the endpoint:
+- Validates that the named ADR exists in `decisions` and was not itself reversed.
+- Adds `reverses: ADR-NNN` to the new ADR's frontmatter.
+- Updates the decisions index README via the same commit (the index marks the reversed ADR as superseded, with a link to the reversal).
+
+The append-only convention is preserved: the original ADR file is not modified. Only the index reflects the reversal relationship.
+
+**Idempotency.** Same dedup mechanism as `claim` (per section 6.2.1): per-session `(session_id, idempotency_key)` keyed; 1-hour validity. A retry with the same key returns the original response without re-creating the ADR. Critical for remote-surface composers since `log_decision` performs a network commit + push.
+
+**Step 1 retry semantics on push failure.** If the local commit succeeds but `git push` fails (network blip, remote rejection, etc.):
+- The endpoint retains the commit on the local working repo (per ADR-023's per-project committer holds a working clone).
+- The committer retries push with exponential backoff (3 attempts, 5s/15s/45s).
+- On final retry failure: the entire `log_decision` returns a retryable error with a stable `idempotency_key` echoed to the caller. The caller may retry; the local commit is preserved across retries via the idempotency table.
+- The local commit is never auto-discarded -- recovering from a stuck push state is an admin operation via `atelier doctor` (M7).
+
+**Step 3 reconciliation with section 6.4.2.** The ARCH section 6.3 four-step text historically described "Step 3: generates embedding + upserts into vector index" as inline. With section 6.4.2 (added 2026-04-27) embedding becomes webhook-driven on commit to main -- it is the same operation but happens out-of-transaction with respect to log_decision. Step 1's commit triggers the same webhook the embed pipeline already listens to; no separate trigger from log_decision is needed. The four-step description retains "Step 3" as a phase name for clarity but the implementation is asynchronous to log_decision.
+
+**Step 4 broadcast message shape (post-M4).**
+
+```
+{
+  channel: "decision.created",
+  payload: {
+    decision_id: uuid,
+    adr_id: "ADR-NNN",
+    project_id: uuid,
+    trace_ids: string[],
+    category: string,
+    summary: string,                            // for client-side preview without re-fetching
+    repo_path: string,
+    repo_commit_sha: string,
+    reverses: string | null,
+    created_at: timestamp
+  }
+}
+```
+
+Subscribers: `/atelier` lenses (refresh decisions panel), agent sessions whose territories consume the affected trace_ids (via territory contracts), the M5 find_similar pipeline (re-rank cache invalidation).
 
 ### 6.4 Find_similar execution
 

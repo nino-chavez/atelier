@@ -29,7 +29,8 @@ datastore:
   schema_version: "1.0"
 
 # Identity service. Default Supabase Auth (per ADR-028); override via
-# any OIDC-compliant provider.
+# any OIDC-compliant provider. Also issues the OAuth 2.1 bearer tokens
+# that the MCP endpoint accepts on every request (see ARCHITECTURE.md §7.9).
 identity:
   provider: supabase-auth
   oidc_issuer: "${ATELIER_OIDC_ISSUER}"

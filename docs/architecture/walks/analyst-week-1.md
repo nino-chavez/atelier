@@ -32,6 +32,7 @@ Pre-conditions assumed in place:
 - `projects` row for atelier exists.
 - `composers` row for this analyst exists with `default_role=analyst`, valid token.
 - `territories.yaml` defines `strategy-research` with `scope_kind=research_artifact`, `scope_pattern=research/**/*` (confirmed in `../../../.atelier/territories.yaml`).
+- The analyst has configured the Atelier endpoint URL (`ATELIER_ENDPOINT_URL`) in their web MCP client (e.g., claude.ai Connectors) and completed bearer-token setup per `../ARCHITECTURE.md §7.9` — either dynamic OAuth against the configured identity provider, or pasting a static API token issued via `atelier invite`. Token presentation: `Authorization: Bearer <jwt>` on every MCP request.
 
 ---
 

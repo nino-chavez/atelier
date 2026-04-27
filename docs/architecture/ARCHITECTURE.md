@@ -422,15 +422,34 @@ Trigger: webhook from published-doc or delivery tracker or design tool
 ```
 Territory owner → publish_contract(name, schema)
   Endpoint:
-    1. Classify as breaking or additive (heuristics: removed fields, narrowed types)
+    1. Classify as breaking or additive per §6.6.1
     2. If additive:
-       Insert contract version N+1, broadcast to consumers
+       Insert contract version N+1 (minor bump), broadcast to consumers
     3. If breaking:
        Create a proposal contribution requiring cross-territory approval
        After approval window with no objections (or explicit approval):
-         Insert contract version N+1, broadcast
+         Insert contract version N+1 (major bump), broadcast
        Otherwise: proposal expires, contract unchanged
 ```
+
+#### 6.6.1 Breaking-change classifier
+
+A contract change is **breaking** if any of the following hold (conservative defaults):
+
+| Change | Class | Reason |
+|---|---|---|
+| Field removed | breaking | Consumers reading the field receive `undefined` |
+| Field renamed | breaking | Equivalent to remove + add |
+| Field type narrowed (e.g., `string` → `enum`, widened range → narrower range) | breaking | Existing producers may emit values the new type rejects |
+| Field type widened (e.g., `enum` → `string`, narrower → broader) | additive | Existing consumers still parse all prior values |
+| Required field added | breaking | Existing producers don't emit it |
+| Optional field added | additive | Strict-validator consumers may break, but the contract permits omission |
+| Default value changed | breaking | Consumers depending on a specific default observe behavior change |
+| Field reordered (positional contracts only) | breaking | N/A for JSON-shaped contracts; relevant for tabular or array-positional shapes |
+
+**Publisher override.** A territory owner may classify an otherwise-breaking change as additive by passing `override_classification="additive"` plus a required `override_justification` string. The override is recorded on the `contracts` row and surfaced in `/atelier/observability` for audit. Overrides are reversible by any consumer territory by escalating to a proposal contribution.
+
+**Versioning.** Semver-style. Additive changes bump minor (`1.4 → 1.5`); breaking changes bump major (`1.5 → 2.0`). `contracts.version` is an integer pair stored as `major*1000+minor` to preserve sort order; the human-facing string is rendered on read. Consumers pin to a major version; minor upgrades are automatic.
 
 ---
 
@@ -490,6 +509,26 @@ For composers whose surface is `web` (or `terminal` without local repo access), 
 - **Failure boundaries.** Loss of the deploy-key credential blocks remote-surface writes with a clear error; IDE-surface composers are unaffected. Rotation runbook in `../methodology/METHODOLOGY.md`.
 
 This satisfies ADR-005 (repo-first) for remote-surface composers — the commit is the success criterion, not the datastore write.
+
+### 7.9 Web-surface auth flow
+
+The agent endpoint is an MCP server speaking Streamable HTTP (per ADR-013 + `.atelier/config.yaml: agent_protocol`). It is OAuth-2.1-protected per the MCP authorization specification. The authorization server is the configured identity provider — Supabase Auth by default per ADR-028, BYO OIDC otherwise.
+
+**Discovery.** The endpoint exposes `/.well-known/oauth-authorization-server` (RFC 8414) pointing at the configured identity provider's issuer. MCP clients that support OAuth-protected servers discover the AS automatically and initiate the flow.
+
+**Token presentation.** Every MCP HTTP request carries `Authorization: Bearer <jwt>`. The endpoint validates signature and standard claims (`iss`, `aud`, `exp`) against the identity provider's JWKS. The JWT `sub` claim resolves to `composers.id` via a join on `composers.identity_subject` (added at M2 with the `composers` table).
+
+**Two paths, one scheme.** Atelier accepts bearer tokens regardless of how the client obtained them:
+- **Dynamic OAuth.** Clients that support OAuth-protected MCP servers (e.g., claude.ai Connectors, ChatGPT Connectors) complete the auth-code flow; refresh handled by the client.
+- **Static API token.** Clients without OAuth support paste a long-lived bearer token issued by the identity provider as a personal API token. Same JWT validation path; only the issuance and rotation cadence differ.
+
+The choice is a client capability, not an Atelier-side branch. No client allow-list — any MCP-over-HTTP client that can present a valid bearer token works.
+
+**Token issuance.** `atelier invite <email> --role <r>` triggers an identity-provider invitation. The invite response surfaces both a clickable OAuth setup link (for dynamic-OAuth clients) and a paste-able static API token (for fallback clients). Rotation: dynamic via OAuth refresh; static via `atelier invite ... --rotate`.
+
+**Failure boundaries.** Invalid or expired tokens are rejected with 401 and a `WWW-Authenticate: Bearer` header signalling the AS for reauth. Misconfigured AS metadata blocks all web-surface access with a clear error in `/atelier/observability`; IDE-surface composers using locally-configured tokens are unaffected if their tokens are still valid.
+
+This subsection operationalizes ADR-009's "browser-safe token delivery" against the MCP spec; no separate ADR is warranted because the choice is fully determined by ADR-013 (MCP) + ADR-028 (Supabase Auth) + the MCP authorization spec.
 
 ---
 
@@ -556,7 +595,38 @@ Per guild:
 - Local agent endpoint on localhost
 - Local prototype dev server
 
-Upgrade path: `atelier datastore init` promotes local to production datastore with migration.
+Upgrade path: `atelier datastore init` promotes local to production datastore with migration (see §9.5).
+
+### 9.5 Local → guild promotion
+
+A solo composer who started with `atelier init --local-only` can promote to a guild-shared deployment without losing history. Design intent (the runbook lands at M7 alongside `atelier upgrade`):
+
+- **Migration is additive-preferred.** No destructive schema changes during promotion. Conflicts between local state and new guild defaults are reported, never auto-resolved.
+- **Decision-log transfer is full.** Every per-ADR file under `docs/architecture/decisions/` is preserved verbatim with its original commit history. `decisions.repo_commit_sha` rewrites to the new repo's SHAs only if the repo itself is being moved; otherwise unchanged.
+- **Fencing counter resets.** The new guild datastore starts a fresh per-project monotonic counter at 1. The transition itself is recorded as a new ADR (`ADR-NNN-promote-<project>-to-guild.md`) with `promoted_from_local: true` in frontmatter so future audits can correlate pre/post fencing tokens.
+- **In-flight contributions migrate as-is.** State, trace_ids, content_ref preserved. Locks are dropped (no in-flight locks during the promotion window); composers re-acquire after promotion completes.
+- **Transcripts (per ADR-024) migrate only if `transcripts.capture: true` was set locally.** Otherwise the local-only sessions had no transcript sidecar to transfer.
+
+Projects within a guild upgrade independently — no lockstep requirement (see also `BRD-OPEN-QUESTIONS §6` for upgrade path semantics generally).
+
+### 9.6 Offline / disconnected behavior
+
+A composer's connection to the coordination datastore can drop (network partition, datastore outage, intentional offline work). The capability matrix:
+
+| Capability | Offline | Online-required |
+|---|---|---|
+| Read canonical state (charter files, BRD/PRD, ADRs, traceability registry) | yes — files are on disk for IDE-surface composers | n/a |
+| Edit files in the repo | yes | n/a |
+| Commit + push to versioned file store | yes (commit); push deferred until reconnect | n/a |
+| `claim` / `update` / `release` contributions | no — requires datastore | yes |
+| `acquire_lock` / `release_lock` | no — fencing tokens require server-side allocation | yes |
+| `log_decision` (full four-step) | partial — repo write succeeds offline (per ADR-005); datastore mirror, embedding, broadcast deferred until reconnect | yes for full path |
+| `find_similar` | no — vector index is server-side; falls back to keyword search if degraded online, but no offline fallback | yes |
+| `get_context` | partial — IDE-surface composers can read charter + decisions from disk; recent-contribution snapshot requires datastore | yes for full snapshot |
+
+**Web-surface composers are offline-incapable** by definition: they have no local repo and no client-side datastore. Loss of connectivity blocks all operations until the connection returns.
+
+**On reconnect.** The session re-registers (fresh `session_token`); held locks were already released by the reaper after `session_ttl_seconds`; any contributions claimed by the dead session were released to `state=open`. Conflicts between offline-edited files and the current canonical state surface as merge conflicts at push time, not as silent overwrites. Decisions logged to repo while offline are mirrored to the datastore on the next `log_decision` call (idempotent on `repo_commit_sha`).
 
 ---
 

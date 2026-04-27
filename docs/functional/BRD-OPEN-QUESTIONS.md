@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-27 (M1 scoping pass; entries 16–18 added)
+**Last updated:** 2026-04-27 (M1 scoping pass; entries 16–18 added; §4/§10/§11/§14/§17 resolved as spec gaps folded into canonical homes)
 
 ---
 
@@ -85,7 +85,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Conservative defaults (any field removal, narrowing, or rename = breaking). Publisher override with justification required. Semver-style versioning with major-version bump on breaking. Document heuristics so consumers understand what triggers a proposal.
 
-**Status.** OPEN.
+**Status.** **RESOLVED** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §6.6.1` (breaking-change classifier table) + the §6.6 flow narrative. This was a spec gap, not a decision — recommendation became spec.
 
 ---
 
@@ -179,7 +179,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Document the capability matrix. Offline: read canonical state + edit files + commit. Online-required: claim contributions, acquire locks, log decisions, find_similar. On reconnect: session re-registers; conflicts reported, not auto-resolved.
 
-**Status.** OPEN. Document for v1.
+**Status.** **RESOLVED** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §9.6` (offline / disconnected behavior) with the full capability matrix and reconnect semantics. Web-surface composers explicitly noted as offline-incapable.
 
 ---
 
@@ -194,7 +194,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Migration script. Full decision-log transfer (all per-ADR files preserved with provenance). Fencing counter reset at transition with a new ADR documenting the cutover.
 
-**Status.** OPEN. Design v1 scope.
+**Status.** **RESOLVED at design level** (2026-04-27). Design intent folded into `../architecture/ARCHITECTURE.md §9.5` (local → guild promotion): additive-preferred migration, full decision-log transfer, fencing reset with a transition ADR, in-flight contributions migrate as-is, locks dropped + re-acquired. Operational runbook lands at M7 alongside `atelier upgrade`.
 
 ---
 
@@ -237,7 +237,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Territory changes are repo-committed PRs. Any composer can propose; admin (or defined approver role) must merge. Change takes effect on merge + datastore reload.
 
-**Status.** OPEN.
+**Status.** **RESOLVED** (2026-04-27). Governance rule landed in `../../.atelier/territories.yaml` header comment: any composer proposes via PR; admin (or delegated role per `config.yaml`) merges; effect on merge + next datastore reload via the M1 territories-mirror sync script. Active contributions/locks on renamed or narrowed scopes are not auto-released; merging admin coordinates with affected composers.
 
 ---
 
@@ -283,7 +283,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Document the contract as a table in `scripts/sync/README.md` listing each doc class, the parser, the projector, and the explicit normalization set. The round-trip test fails on any byte difference outside the listed normalizations. Adding a new doc class to the round-trip set requires a PR that updates the contract first.
 
-**Status.** OPEN. Land the contract before implementing the round-trip test.
+**Status.** **RESOLVED** (2026-04-27). Filed as a question in error during the M1 scoping pass; this was a spec gap, not a decision. Contract now landed in `../../scripts/README.md` ("Round-trip integrity contract") with the doc-class table, forbidden-normalization list, test shape, and PR rules for adding new doc classes.
 
 ---
 

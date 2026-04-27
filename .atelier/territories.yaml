@@ -7,6 +7,18 @@
 #
 # Referenced by: contributions (via territory_id), locks (via artifact_scope),
 # contracts (via territory_id), role-aware lenses (via owner_role + review_role).
+#
+# Governance (per BRD-OPEN-QUESTIONS §14):
+#   - Any composer may propose a territory change via PR to this file.
+#   - Merge requires approval from a composer holding the `admin` role
+#     (or, if explicitly delegated in `.atelier/config.yaml`, an alternate
+#     approver role). The approver may be the `architect` for territories
+#     under their ownership.
+#   - The change takes effect on PR merge plus the next datastore reload of
+#     this file (the M1 territories-mirror sync script picks it up).
+#   - Active contributions or locks on artifact scopes that exit a renamed
+#     or narrowed territory are not auto-released; the merging admin is
+#     responsible for coordinating with affected composers before merge.
 
 territories:
 

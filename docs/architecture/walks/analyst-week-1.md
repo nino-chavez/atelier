@@ -93,14 +93,16 @@ Pre-conditions assumed in place:
 | **Prototype** | /atelier decisions panel updates on broadcast (post-M4). /traceability reflects the new ADR id and trace links on next traceability sync run (M1). |
 | **Status** | **RESOLVED** -- ADR-021 closed Gap #4 on 2026-04-24 (multi-trace_ids text[]). ARCH section 6.3 + 6.3.1 (rewritten 2026-04-27) closes the latent operational details: full signature with reverses + idempotency_key, slug derivation rule, ADR-NNN allocation via atomic per-project counter (gaps acceptable), reversal mechanics that preserve append-only on original files, push-retry semantics with exponential backoff and admin recovery, reconciliation of "Step 3 embedding" with section 6.4.2's webhook-driven pipeline, broadcast message shape. |
 
-### Step 7 — Release the contribution for review
+### Step 7 -- Transition the contribution to review
+
+(Original walk text said "release the contribution for review" with `release(contribution_id)`. That was a tool-naming error: `release` is the abandon-claim path per ARCH section 6.2.4, not the review transition. The actual review transition is `update(state="review")` per section 6.2.3.)
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `release(contribution_id)` |
-| **Schema** | UPDATE `contributions` SET state="review", author_session_id=NULL. Pub/sub broadcast. |
-| **Prototype** | The contribution should appear in *some* lens for review. NORTH-STAR §4 says "Analyst lens: proposals needing review" but doesn't specify which lens picks up `kind=research, state=review`. |
-| **Status** | **GAP #5 — Lens routing for `state=review` is under-specified per kind.** BRD-OPEN-QUESTIONS §1 Q4 asks who sees the released research. See §4. |
+| **Tool** | `update(contribution_id, state="review")` per ARCH section 6.2.3 |
+| **Schema** | UPDATE contributions SET state="review", author_session_id retained for attribution. For repo-resident artifacts, the per-project endpoint committer opens a PR from the contribution branch. For research artifacts (no PR pattern), the row simply waits for a reviewer-initiated merge. |
+| **Prototype** | Routed to the lens for `territories.review_role` per ADR-025. For the analyst's strategy-research territory, that defaults to the PM lens. The contribution appears in the PM's "needs review" panel along with summary metadata and a link to the artifact. |
+| **Status** | **RESOLVED** -- ADR-025 closed Gap #5 on 2026-04-24 (review_role on territory). ARCH section 6.2.3 (added 2026-04-27) closes the latent operational details: three review patterns by artifact type, authoritative merge confirmation (PR-merge webhook for repo-resident, reviewer-update for research), reviewer-not-available behavior (no auto-promotion; observability surfaces stuck reviews), cross-territory contributions (primary territory drives routing, others may comment). |
 
 ---
 

@@ -460,6 +460,43 @@ When `update(state="review")` succeeds, the contribution is routed to a reviewer
 
 **Cross-territory contributions.** Per ADR-021, contributions may carry multiple `trace_ids`. If those trace IDs span multiple territories, the contribution's primary territory (the one passed to `claim`) drives review routing. Cross-territory consumers may comment but only the primary territory's `review_role` may merge.
 
+#### 6.2.4 Release (the abandon-claim tool)
+
+`release` is one of the 12 tools per ADR-013. Distinct from `release_lock` (which releases an artifact lock per section 7.4) and from `update(state="review")` (which advances toward merge per section 6.2.3). `release` returns a claimed contribution to `state=open` -- the abandon path.
+
+**When release applies.** A composer who has claimed a contribution and decided not to author it (scope changed, found a better-fit composer, scope is too large for one session, etc.) calls `release` to give it back. The contribution becomes available for re-claim by any composer.
+
+**Signature.**
+
+```
+release(
+  contribution_id: uuid,
+  reason: string | null     // optional; recorded in telemetry for audit
+) -> ReleaseResponse
+
+ReleaseResponse {
+  contribution_id: uuid,
+  state: "open",            // always open on success
+  prior_author_session_id: uuid    // historical attribution preserved in telemetry
+}
+```
+
+**Validation.**
+
+- The calling session must be the contribution's current `author_session_id`. Other sessions cannot release someone else's claim.
+- The contribution must be in `state=claimed` or `state=in_progress`. Releasing from `state=review` or `state=merged` returns `BAD_REQUEST` (use the review-routing path or, for merged contributions, file a reversal as a new contribution).
+
+**Side effects.**
+
+- `contributions.state -> open`, `contributions.author_session_id -> null`.
+- Any locks held by the session against this contribution's artifact_scope are released (same effect as calling `release_lock` for each).
+- Telemetry event `contribution.released` recorded with `prior_author_session_id` and `reason` so the abandoned-work pattern is observable in `/atelier/observability` (section 8.2).
+- Broadcast `contribution.state_changed` (post-M4) so subscribers (e.g., other composers' `/atelier` lenses) see the contribution become available.
+
+**Distinction from session reaping.** The reaper (per section 6.1) automatically releases contributions held by dead sessions. Explicit `release` is the live-session equivalent: "I'm alive but choosing to give this back." Both produce the same end state (state=open, author_session_id=null) and emit the same broadcast; only the telemetry differs (manual vs reaped).
+
+**Atomic-created contributions.** A contribution created via the atomic claim path (section 6.2.1) and never authored against can be released the same way. The contribution row remains in the database with state=open; future composers see it as available work. There is no auto-deletion of unauthored contributions -- they persist until explicitly authored or until the project is archived.
+
 ### 6.3 Decision log write (the four-step atomic operation)
 
 ```

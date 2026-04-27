@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-24 (pre-build)
+**Last updated:** 2026-04-27 (M1 scoping pass; entries 16–18 added)
 
 ---
 
@@ -252,5 +252,54 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 **Recommendation.** Environments are separate projects within one guild. Each has its own repo branch, datastore schema namespace, deploy target. Cross-environment references via trace IDs if needed. Documented pattern, not a schema construct.
 
 **Status.** DOCUMENTED convention (no schema change).
+
+---
+
+## 16 · Adapter sequencing within M1
+
+**Scenario.** Per ADR-008, all 5 sync substrate scripts ship at M1. Per BRD US-10.3 / US-10.4 / US-10.5, all five external adapters (Jira, Linear, Confluence, Notion, Figma) are v1 deliverables. The adapter interface (per US-10.2) is itself a v1 deliverable.
+
+**Open questions:**
+- Does M1 require all five concrete adapters live, or does M1 ship the interface plus one reference adapter (with the remaining four batched into a follow-up M1.5 epic)?
+- Strict ADR-011 reading says no deferral. Adapters are I/O leaves, not capability changes — does that distinction warrant a documented carve-out?
+- If only one adapter ships at M1, which one? GitHub Issues is already configured as `git_provider`; lowest external setup cost; usable end-to-end without procuring Jira/Linear/Confluence/Notion/Figma credentials.
+- How is M1 exit verified for the deferred adapters? Contract tests against the interface, with concrete-adapter integration tests landing per-adapter as they ship?
+
+**Recommendation.** Ship the interface (`scripts/sync/adapters/types.ts`) plus an in-memory mock plus GitHub Issues + GitHub Discussions at M1. Defer Jira / Linear / Confluence / Notion / Figma to a follow-up epic between M1 and M2 (call it M1.5 in sequencing language only — the adapters remain v1 scope). Contract tests against the interface gate M1 exit; per-adapter integration tests gate adapter-shipping PRs.
+
+**Status.** OPEN. Pending sequencing decision.
+
+---
+
+## 17 · Round-trip whitelist surface
+
+**Scenario.** M1 exit criterion (per `../strategic/BUILD-SEQUENCE.md §5 M1`) requires that "markdown → datastore → projector → markdown is byte-identical" for the canonical doc classes. "Byte-identical" needs a precise contract — otherwise trivial normalizations (trailing newline, YAML key ordering) produce false drift signals while real divergences slip through.
+
+**Open questions:**
+- Which doc classes are in the round-trip set? Candidates: `docs/architecture/decisions/*.md`, `.atelier/territories.yaml`, `.atelier/config.yaml`, `traceability.json`, `docs/functional/BRD.md` story regions, `docs/functional/PRD-COMPANION.md` decision entries.
+- What normalizations are permitted? Candidates: trailing-newline addition, YAML key sort if explicitly canonicalized, JSON pretty-print with stable key order, line-ending normalization.
+- What normalizations are forbidden? At minimum: any change to the ADR body text, any change to `traceability.json` entry contents, any change to BRD story IDs or acceptance text.
+- Where is the contract documented so future test additions don't drift it? Recommend `scripts/sync/README.md` with the table embedded.
+
+**Recommendation.** Document the contract as a table in `scripts/sync/README.md` listing each doc class, the parser, the projector, and the explicit normalization set. The round-trip test fails on any byte difference outside the listed normalizations. Adding a new doc class to the round-trip set requires a PR that updates the contract first.
+
+**Status.** OPEN. Land the contract before implementing the round-trip test.
+
+---
+
+## 18 · publish-delivery trigger model (pre-broadcast-substrate)
+
+**Scenario.** `publish-delivery` (US-9.2) fires on contribution state transitions. M1 ships the four-table schema and the sync scripts via direct internal-library writes (per `../strategic/BUILD-SEQUENCE.md §5 M1`). The endpoint surface lands at M2; the broadcast substrate (`BroadcastService`) lands at M4.
+
+**Open questions:**
+- Without an event bus, how does `publish-delivery` know a state transition occurred? Options:
+  - **Polling.** Cron scans `contributions` for `updated_at > last_run`. Simple; some lag.
+  - **Post-write hook in the internal library.** Every write through `scripts/sync/lib/datastore.ts` invokes `publish-delivery` synchronously. Tightest coupling but no out-of-band catch-up if a write crashes after DB commit.
+  - **Pull broadcast forward.** Land the `BroadcastService` interface at M1 with the polling-driven default impl, lit up properly at M4. Most consistent with capability-level architecture; expands M1 scope.
+- Does the answer change at M2 when the endpoint becomes the canonical write path? (E.g., M1 polls; M2 swaps to endpoint-emitted events; M4 swaps to real broadcast.)
+
+**Recommendation.** Polling at M1 with a documented cutover plan: M2 layers post-commit hooks via the endpoint write path; M4 swaps the hook to real broadcast. Each cutover is a single write-path change, not a publish-delivery rewrite. Avoids pulling broadcast substrate work forward unnecessarily.
+
+**Status.** OPEN. Decision needed before M1 implementation begins.
 
 ---

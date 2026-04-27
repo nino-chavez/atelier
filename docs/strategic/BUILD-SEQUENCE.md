@@ -3,7 +3,7 @@
 **Companion to:** `NORTH-STAR.md`, `../functional/PRD.md`, `../functional/BRD.md`
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
-**Last updated:** 2026-04-24
+**Last updated:** 2026-04-27
 **Related:** `../architecture/decisions`, `../functional/PRD-COMPANION.md`, `../functional/BRD-OPEN-QUESTIONS.md`
 
 ---
@@ -39,7 +39,7 @@ The reference impl runs on **GitHub + Supabase (Postgres + Realtime + Auth + pgv
 
 ## 3. The recursion check
 
-Atelier dogfoods itself. From **M2** onward, every contribution toward building Atelier is tracked *in* Atelier. From **M5** onward, every contribution is checked via find_similar against the corpus. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.
+Atelier dogfoods itself. From **M1** onward, every contribution toward building Atelier is tracked *in* Atelier — through M1's thin schema and sync substrate. From **M2** onward, those contributions are written through the endpoint rather than directly. From **M5** onward, every contribution is checked via find_similar against the corpus. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.
 
 **At each milestone, ask:** "Did we use the previous milestone to coordinate building this one?" If the answer is no, dogfooding has drifted and the milestone is suspect.
 
@@ -52,8 +52,8 @@ This is also the strongest disconfirming test available before public release. A
 | ID | Title | Bootstrap function | Status |
 |---|---|---|---|
 | **M0** | Methodology | Repo + git + markdown is the starting substrate | **Done** (2026-04-24) |
-| **M1** | SDLC sync substrate (5 scripts) | Markdown↔datastore↔projector consistency | Planned |
-| **M2** | Schema + 12-tool endpoint stub + fenced locks | Coordination substrate goes live; contributions become trackable | Planned |
+| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) | Sync scripts run against real persistence; dogfooding ignition point | Planned |
+| **M2** | 12-tool endpoint + fenced locks + remaining schema (5 tables) | Coordination substrate goes live; agents coordinate through the endpoint | Planned |
 | **M3** | Prototype shell + `/atelier` + 5 lenses | The dashboard you build is the dashboard you use | Planned |
 | **M4** | Multi-composer concurrency (real broadcast) | Concurrent authoring is observable and conflict-safe | Planned |
 | **M5** | find_similar + eval harness + CI gate | Disconfirming test on the commercial wedge fires | Planned |
@@ -84,39 +84,47 @@ This is also the strongest disconfirming test available before public release. A
 
 ---
 
-### M1 — SDLC sync substrate
+### M1 — SDLC sync substrate + thin schema
 
 **Status:** Planned
 
-**Produces.** All five sync scripts (per ADR-008): markdown→datastore, datastore→projector, traceability validation, decisions mirror, territories mirror.
+**Produces.** All five sync scripts per ADR-008: `publish-docs` (repo → published-doc system, full overwrite + banner), `publish-delivery` (contribution state → delivery tracker), `mirror-delivery` (delivery tracker → registry, nightly), `reconcile` (bidirectional drift detector, reports only), `triage` (external comments → `kind=proposal` contributions, never auto-merges).
 
-**Operationalizes.** ADR-005, ADR-008, ADR-016.
+Plus the four schema tables the sync scripts read or write — `projects`, `territories`, `contributions`, `decisions` — with their `ARCHITECTURE.md §5.2` indexes (`contributions(project_id, state)`, GIN on `contributions.trace_ids`, GIN on `decisions.trace_ids`, `decisions(project_id, created_at DESC)`). Row-level authorization scaffolding scoped to `project_id`; append-only enforcement on `decisions`. An internal library `scripts/sync/lib/datastore.ts` wraps writes; no public endpoint surface yet.
 
-**Advances.** BRD Epic 9 (sync substrate).
+The traceability validator under `scripts/traceability/` (separate concern from the five sync scripts) lands here too, since CI gates depend on it.
 
-**Bootstrap function.** Once consistent, every doc edit from M2 onward propagates without manual reconciliation. This is the layer that makes "repo is canonical, datastore mirrors" actually true.
+**Why the four tables land here, not at M2.** Three of the five sync scripts (`publish-delivery`, `mirror-delivery`, `triage`) write to or read from `contributions`. Without the table, ADR-008's "all 5 ship together" cannot be honored against real persistence — only against stubs. Landing the four tables here is the smallest change that makes ADR-008 executable. The remaining five tables (`composers`, `sessions`, `locks`, `contracts`, `telemetry`) stay at M2 because the endpoint is what needs them.
 
-**Demoable.** Edit `../architecture/decisions` and watch the datastore mirror update; edit `traceability.json` and watch BRD links resolve in CI; rename a territory in `.atelier/territories.yaml` and watch downstream references reconcile.
+**Operationalizes.** ADR-005, ADR-008, ADR-016, ADR-018 (triage never auto-merges), ADR-021 (multi-trace, GIN indexes).
 
-**Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Round-trip integrity test passes (markdown → datastore → projector → markdown is byte-identical).
+**Advances.** BRD Epic 9 (sync substrate, all 5 scripts), Epic 4 (territory + contribution — schema portion), Epic 5 (decision durability — schema portion + mirror), Epic 10 (adapter interface + first concrete adapter — see §7 Q5).
+
+**Bootstrap function.** **The dogfooding ignition point.** From M1 exit onward, every contribution toward Atelier is tracked in the four-table schema. Every doc edit propagates through the sync scripts without manual reconciliation. M2 coordinates against persistence that already exists rather than scaffolding it.
+
+**Demoable.** Commit a BRD edit; `publish-docs` overwrites the published-doc page with a banner. Transition a contribution row to `claimed`; `publish-delivery` upserts the delivery-tracker issue. Run `reconcile`; report enumerates every divergence between repo and external. Post a comment on a published-doc page; `triage` classifies and drafts a `kind=proposal` row that requires human merge.
+
+**Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Schema migration applied; the four indexes exist. Round-trip integrity test passes against the new tables (markdown → datastore → projector → markdown is byte-identical for the canonical doc classes — see §7 Q6 for whitelist scope). At least one concrete adapter (per §7 Q5) ships with the interface.
 
 ---
 
-### M2 — Schema + 12-tool endpoint stub + fenced locks
+### M2 — 12-tool endpoint + fenced locks + remaining schema
 
 **Status:** Planned
 
-**Produces.** Relational schema with `projects`, `composers`, `sessions`, `contributions`, `decisions`, `locks`, `contracts`, `telemetry` tables (per ARCHITECTURE §5.1). The 12-tool agent endpoint per ADR-013, with find_similar returning `unknown` (real find_similar arrives in M5). Locks with fencing tokens from day one. `atelier datastore init` ships in raw form here (Epic 1 partial; polished at M7).
+**Produces.** The five remaining tables on top of M1's four — `composers`, `sessions`, `locks`, `contracts`, `telemetry` (per ARCHITECTURE §5.1). The 12-tool agent endpoint per ADR-013, with find_similar returning `unknown` (real find_similar arrives in M5). Locks with fencing tokens from day one. The `BroadcastService` interface (per ADR-029) lands here — default impl Supabase Realtime, documented migration impl Postgres NOTIFY/LISTEN — though the broadcast substrate goes live at M4. `atelier datastore init` ships in raw form here (Epic 1 partial; polished at M7).
 
-**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-021 (multi-trace), ADR-022 (claim atomic-create), ADR-023 (remote-surface committer), ADR-024 (transcript schema field), ADR-026 (own-impl lock+fencing), ADR-027 (Supabase + Vercel reference stack), ADR-028 (Supabase Auth default), ADR-029 (GCP-portability constraint; `BroadcastService` interface lands here).
+Per-composer attribution kicks in: M1's service-role internal writes are joined by per-session attributed writes through the endpoint.
 
-**Advances.** BRD Epic 2 (endpoint), Epic 4 (territory + contribution), Epic 5 (decision durability — write path), Epic 7 (locks + fencing), Epic 8 (territory contracts).
+**Operationalizes.** ADR-002, ADR-003, ADR-004, ADR-013 (12 tools, MCP reference), ADR-014, ADR-015, ADR-022 (claim atomic-create), ADR-023 (remote-surface committer), ADR-024 (transcript schema field), ADR-026 (own-impl lock+fencing), ADR-027 (Supabase + Vercel reference stack), ADR-028 (Supabase Auth default), ADR-029 (GCP-portability constraint; `BroadcastService` interface lands here).
 
-**Bootstrap function.** **The dogfooding ignition point.** Every contribution toward M3+ is itself a tracked contribution. Every decision goes into `../architecture/decisions` first (per ADR-005), then mirrors via M1's scripts.
+**Advances.** BRD Epic 2 (endpoint), Epic 4 (territory + contribution — endpoint surface), Epic 5 (decision durability — endpoint write path), Epic 7 (locks + fencing), Epic 8 (territory contracts).
 
-**Demoable.** Two `claim_scope` calls on the same scope; second rejected with stale-fencing-token error. `log_decision` appends to `../architecture/decisions` and the datastore mirror reflects within one M1 sync cycle.
+**Bootstrap function.** Coordination substrate goes live. Agents register sessions, claim contributions through the endpoint, acquire fenced locks. The contributions table (already populated by M1's sync scripts) gains its endpoint write path so M3 onward composes through the protocol rather than direct DB writes.
 
-**Exit criteria.** All 12 tools respond with real (non-stub) values except `find_similar`. Fencing tokens enforced in CI integration tests. The build of M3 onward registers contributions in this datastore.
+**Demoable.** Two `claim_scope` calls on the same scope; second rejected with stale-fencing-token error. `log_decision` appends to `../architecture/decisions` and the datastore mirror reflects within one sync cycle.
+
+**Exit criteria.** All 12 tools respond with real (non-stub) values except `find_similar`. Fencing tokens enforced in CI integration tests. The build of M3 onward registers contributions through the endpoint, not direct DB writes.
 
 ---
 
@@ -212,8 +220,10 @@ This is also the strongest disconfirming test available before public release. A
 
 ## 6. How this document evolves
 
-- **Editable in place.** Re-ordering within a milestone, refining exit criteria, or adjusting demoable artifacts happens via PR to this file.
-- **Major reorders log an ADR.** Moving a milestone (e.g., bringing find_similar forward to M3) is consequential and warrants an entry in `../architecture/decisions` referencing the prior sequence. The ADR explains *why* the order changed; this doc reflects the *current* order.
+- **Editable in place.** Re-ordering within a milestone, refining exit criteria, adjusting demoable artifacts, or redistributing scope between adjacent milestones to honor an existing dependency happens via PR to this file. The rationale lives inline (or in `../architecture/walks/` if it grows).
+- **Reorders log an ADR only when load-bearing.** A reorder warrants an ADR only when it reflects a load-bearing architectural choice with real alternatives — for example, swapping which capability arrives first when both orderings are coherent. Tightening the sequence to honor a dependency that already exists in the design is not architectural; it is sequence hygiene, and it lives in this file.
+
+  Apply the test from `../methodology/METHODOLOGY.md §6.1`: *if we'd done this right from the start, would the ADR survive?* If the answer is no — the reorder would simply be how this doc was authored — it is not ADR-worthy.
 - **Status transitions** (`Planned` → `In progress` → `Done`) are PR-tracked. Mark a milestone Done only when its exit criteria are met.
 - **No phase tags in design docs.** This file holds all sequencing language. `NORTH-STAR.md` / `../functional/PRD.md` / `../functional/BRD.md` / `../architecture/ARCHITECTURE.md` remain phase-free per ADR-011.
 
@@ -227,6 +237,9 @@ These are sequence-specific open items distinct from `../functional/BRD-OPEN-QUE
 2. **Should M4 (concurrency) precede M3 (UI)?** Demoing concurrency without a UI is harder, but demoing UI without real concurrency makes M3 partly fake. The current order assumes thin UI on top of stubbed concurrency is acceptable for one milestone; revisit if M3 dogfooding feels hollow.
 3. **D24 (embedding model default) must resolve before M5 starts.** M5 ships find_similar; find_similar needs a chosen model. Recommend resolving D24 during M3/M4 (benchmark ≥3 candidates against the seed eval set) so M5 can begin without blocking. Currently the only OPEN ADR-relevant decision (D22, D23 already resolved as ADR-026 and ADR-028).
 4. **What is the smallest M2 that still unblocks M3?** If the 12-tool endpoint can be split into a "coordination subset" (claim/release/log_decision) shipped first, M3 could begin in parallel. Investigate at M1 exit.
+5. **Adapter sequencing within M1.** Per ADR-008, all 5 sync scripts ship at M1; per BRD US-10.3/10.4/10.5, all five external adapters (Jira, Linear, Confluence, Notion, Figma) are v1 deliverables. Open question: does M1 require all five concrete adapters, or does M1 ship the adapter interface (per US-10.2) plus one reference adapter (e.g., GitHub Issues — already the configured `git_provider`), with the remaining adapters batched into a follow-up M1.5? Tracked in `../functional/BRD-OPEN-QUESTIONS.md §16`.
+6. **Round-trip whitelist surface.** The M1 round-trip integrity test ("markdown → datastore → projector → markdown is byte-identical") needs a precise contract for what counts as permissible normalization (trailing newline, YAML key ordering, etc.) versus drift. Tracked in `../functional/BRD-OPEN-QUESTIONS.md §17`.
+7. **publish-delivery trigger model.** publish-delivery fires on contribution state transitions. Pre-M2, those transitions are direct DB writes from the sync library; pre-M4, there is no broadcast substrate. Open question: does M1's publish-delivery use polling, post-commit hooks on the write library, or does this dependency pull the broadcast substrate forward? Tracked in `../functional/BRD-OPEN-QUESTIONS.md §18`.
 
 ---
 

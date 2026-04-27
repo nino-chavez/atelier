@@ -285,10 +285,18 @@ telemetry
 
 ### 5.4 Vector index
 
-- Embeddings generated on: new decisions, merged contributions, BRD/PRD section commits, research artifact commits.
-- Refresh: real-time on writes; full rebuild available via `atelier eval find_similar --rebuild-index`.
-- Model: swappable via config. Default documented in `.atelier/config.yaml`.
-- Query: `find_similar` runs cosine similarity; threshold configurable; top-k returned.
+Logical store for semantic-search embeddings. Per-row shape:
+
+- `id` (uuid)
+- `project_id` (fk, RLS-scoped per section 5.3)
+- `source_kind` (decision | contribution | brd_section | prd_section | research_artifact)
+- `source_ref` (text -- repo path, or table+id reference)
+- `trace_ids` (text[] -- denormalized from source for query-time filtering)
+- `embedding` (vector)
+- `embedding_model_version` (text -- enables model swappability per section 6.4.2)
+- `created_at`, `updated_at`
+
+Operational concerns -- what gets embedded when, removal semantics, model swappability mechanics, rebuild triggers -- are specified in section 6.4.2. Query semantics (thresholds, bands, scoping) are in section 6.4 + 6.4.1 + 6.4.3.
 
 ---
 
@@ -353,7 +361,7 @@ Agent → find_similar(description, optional trace_id)
   Endpoint:
     1. Generate embedding for description
     2. kNN search against vector index
-       (scoped to project_id, optionally to trace_id subtree)
+       (scoped to project_id, optionally to a trace_id scope per section 6.4.3)
     3. Partition matches into bands per §6.4.1
     4. Enrich with source metadata (decision/contribution/BRD section/research)
     5. Return top-k of each band with scores
@@ -385,6 +393,70 @@ Thresholds are read from `.atelier/config.yaml` at query time; both are per-proj
 **Default-threshold tuning.** The chosen default value (`0.80` at present) is a starting point. The actually-correct value is data-dependent and is tuned against the labeled seed eval set when M5 ships, against the precision/recall gates in `ADR-006`. See `BRD-OPEN-QUESTIONS §12`.
 
 **UI rule.** Prototype web app and any client UI render `primary_matches` prominently and `weak_suggestions` in a collapsible "weak matches (N)" section by default. Agents may render both inline; the band assignment is the contract, the visual treatment is the consumer's choice.
+
+#### 6.4.2 Corpus composition and embedding lifecycle
+
+**Description input format.** The `description` parameter is free-form text. Markdown is allowed but not interpreted -- it is passed to the embedding model as plain text. Hard cap: 8000 characters (provides headroom under typical embedding model token limits). Empty or whitespace-only input returns `BAD_REQUEST`; there is no implicit "match everything" mode.
+
+**What gets embedded, at what granularity.**
+
+| source_kind | Granularity | One row represents |
+|---|---|---|
+| `decision` | One row per ADR file under `docs/architecture/decisions/` | The full ADR body + frontmatter |
+| `contribution` | One row per contribution that reaches `state=merged` | The contribution's resolved content (content_ref body) |
+| `brd_section` | One row per BRD story (US-X.Y block) | The story heading + acceptance + NFR |
+| `prd_section` | One row per top-level PRD section | The full section text |
+| `research_artifact` | One row per file under `research/` | The full artifact body |
+
+**Embed cadence.**
+
+- **Decisions.** A versioned-file-store webhook fires on commits to `main` touching `docs/architecture/decisions/ADR-NNN-*.md`. The endpoint enqueues an embed job; the job runs asynchronously and populates the vector index row within seconds. New ADRs always insert; existing ADRs are append-only and never re-embedded.
+- **Contributions.** When a contribution transitions to `state=merged`, the endpoint embeds inline (synchronous with the merge transaction). Failure to embed degrades to keyword search for that row but does not roll back the merge.
+- **BRD/PRD sections.** Same webhook trigger as decisions, scoped to `docs/functional/BRD.md` and `docs/functional/PRD.md`. Section parser splits on heading boundaries; sections that changed are re-embedded; unchanged sections are skipped via content hash.
+- **Research artifacts.** Webhook fires on commits touching `research/**`. New files insert; modified files re-embed; deleted files (git rm) trigger removal from the index.
+
+**Removal semantics.**
+
+| Event | Index action |
+|---|---|
+| ADR reversed by a new ADR | Both rows remain. The reversal ADR carries `reverses` frontmatter; query results surface both with the reversal flagged in result metadata so callers can weigh accordingly. Reversed ADRs are not silently dropped -- the historical decision matters. |
+| Contribution rejected (state transitions to rejected) | Row removed |
+| Research artifact deleted | Row removed |
+| BRD/PRD section deleted | Row removed |
+| Project archived | All project_id rows soft-deleted (retained for audit) |
+
+**Embedding model swappability.** The `embedding_model_version` column on each row records which model produced the embedding. Switching models follows a documented procedure:
+
+1. Update `find_similar.embedding_model` in `.atelier/config.yaml`.
+2. Run `atelier eval find_similar --rebuild-index`. The CLI re-embeds the entire corpus into new rows tagged with the new `embedding_model_version`.
+3. During the rebuild, queries continue against the old version. On rebuild completion, the default-model pointer flips atomically to the new version.
+4. Old-version rows are retained for one config-defined grace period (default: 30 days) to enable rollback. After the grace window, a cleanup job removes them.
+
+Concurrent model versions are queryable but only the default version answers `find_similar` calls. There is no per-query model selection at v1.
+
+**Index rebuild.** `atelier eval find_similar --rebuild-index` is the one administrative operation that rebuilds. Triggers:
+
+- Embedding model change (per above procedure).
+- Suspected corpus drift after a bulk operation (e.g., a template upgrade that renamed many files).
+- Eval-set evolution that requires re-scoring.
+
+The index is otherwise incrementally maintained via the embed pipeline above. There is no scheduled rebuild -- if the incremental pipeline is healthy, rebuilds are administrative not operational.
+
+#### 6.4.3 Trace scoping and cross-project isolation
+
+**Trace scoping.** The optional `trace_id` parameter on `find_similar` (and the related `trace_ids` filter on the underlying index) defines a `trace_id scope`. The scope contains:
+
+1. The trace_id itself (e.g., `US-1.3`).
+2. Its epic siblings -- other stories sharing the same epic prefix (e.g., `US-1.3` and `US-1.5` both belong to `BRD:Epic-1`). Epic prefix is parsed from the `US-<epic>.<story>` format.
+3. Trace IDs of contributions whose `trace_ids` array intersects the scope.
+
+This matches the adjacency definition in section 6.7.1 for `get_context.recent_decisions`. Earlier prose in section 6.4 used the term "trace_id subtree", which implied a hierarchy that does not exist in the flat US-X.Y format. "Trace scope" replaces it with the explicit definition above.
+
+When `trace_id` is omitted, the query runs against the full project corpus (subject to project_id RLS).
+
+**Cross-project isolation.** Every `find_similar` query is project-scoped via the session token's `project_id`. The vector index is partitioned by `project_id` (via RLS on the `embedding` table per section 5.3). A composer who holds active sessions in multiple projects (per ADR-015) sees only the queried session's project results.
+
+**Intentional non-feature at v1:** there is no cross-project or guild-wide search. A composer who wants to compare prior work across projects must query each project's session independently and aggregate client-side. Cross-project search is a v1.x scope item (see `BRD-OPEN-QUESTIONS section 9` for cross-repo project handling, which is the related v1.x concern).
 
 ### 6.5 Sync substrate flows
 

@@ -56,14 +56,14 @@ Pre-conditions assumed in place:
 | **Prototype** | `/strategy` (the analyst can view the same context in the prototype web app). `/atelier` analyst lens shows recent decisions filtered to relevant trace IDs and contribution summary using the same per-band ranking. |
 | **Status** | Clean (post-2026-04-27). Earlier "Clean. No gap." was unexamined — eight gaps were latent (signature, return shape, adjacency definition, token budget, last-N policy, auth scoping, freshness, cross-project scope). All folded into ARCH §6.7. |
 
-### Step 3 — Run find_similar for prior work
+### Step 3 -- Run find_similar for prior work
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `find_similar(description="competitive research on prototype deployment for US-1.3", trace_id="US-1.3")` per `../ARCHITECTURE.md §6.4` |
-| **Schema** | Reads vector index over `decisions`, merged `contributions`, BRD/PRD sections, research artifacts. |
-| **Prototype** | Could surface in `/atelier` analyst lens as a "before you start" panel; today the design says find_similar is endpoint-only. |
-| **Status** | Clean. Minor: NORTH-STAR §5 lists the tool without parameters; ARCH §6.4 provides the signature. Acceptable doc-layer split, no design change. |
+| **Tool** | `find_similar(description="competitive research on prototype deployment for US-1.3", trace_id="US-1.3")` per ARCH section 6.4 + 6.4.1 (thresholds and bands) + 6.4.2 (corpus and lifecycle) + 6.4.3 (scoping and isolation) |
+| **Schema** | Project-scoped via session token; never crosses project boundaries (section 6.4.3). Reads `embedding` rows where `source_kind in (decision, contribution, brd_section, prd_section, research_artifact)` and trace_ids intersect the scope. Returns two bands (primary + weak) per section 6.4.1. |
+| **Prototype** | `/atelier` analyst lens surfaces matches as a "before you start" panel using the two-band response shape. The find_similar tool itself is endpoint-only; the prototype is a consumer. |
+| **Status** | Clean (post-2026-04-27). Earlier "Clean. Minor..." was unexamined -- six gaps were latent (description format and cap, corpus composition and embed cadence, removal semantics, the "trace_id subtree" term implying nonexistent hierarchy, model swappability mechanics, cross-project isolation as explicit non-feature). All folded into ARCH 6.4.2 + 6.4.3 with section 5.4 trimmed to data shape only. |
 
 ### Step 4 — Create + claim a `research_artifact` contribution
 

@@ -65,14 +65,14 @@ Pre-conditions assumed in place:
 | **Prototype** | `/atelier` analyst lens surfaces matches as a "before you start" panel using the two-band response shape. The find_similar tool itself is endpoint-only; the prototype is a consumer. |
 | **Status** | Clean (post-2026-04-27). Earlier "Clean. Minor..." was unexamined -- six gaps were latent (description format and cap, corpus composition and embed cadence, removal semantics, the "trace_id subtree" term implying nonexistent hierarchy, model swappability mechanics, cross-project isolation as explicit non-feature). All folded into ARCH 6.4.2 + 6.4.3 with section 5.4 trimmed to data shape only. |
 
-### Step 4 — Create + claim a `research_artifact` contribution
+### Step 4 -- Create + claim a research_artifact contribution
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `claim(contribution_id)` — but **what id?** No `open` contribution exists yet for this ad-hoc research. |
-| **Schema** | The 12-tool surface (ADR-013) has no `create_contribution`. ARCH §6.2 says "Create: contribution inserted with state=open" but does not specify by what mechanism. |
-| **Prototype** | `/atelier` analyst lens cannot surface a contribution that doesn't exist. |
-| **Status** | **GAP #1 — Contribution creation path for ad-hoc work.** See §4. |
+| **Tool** | `claim(contribution_id=null, kind="research", trace_ids=["US-1.3"], territory_id=<strategy-research-id>, content_stub=<optional initial markdown>, idempotency_key=<uuid>)` per ADR-022 + ARCH section 6.2.1 |
+| **Schema** | INSERT contributions (state=open, author_session_id=null, content_ref=null) + UPDATE to state=claimed + author_session_id in one transaction. If content_stub provided and surface=web, the per-project endpoint committer commits the stub to the repo as part of the same transaction (per ARCH section 7.8). Validation order: kind enum, trace_id_pattern, territory exists, role may author, content_stub size cap. |
+| **Prototype** | /atelier analyst lens shows the new contribution under "claimed by me." Returned similar_warnings (from the implicit find_similar gate, see section 6.2.1) surface as a "potentially duplicate work" panel. |
+| **Status** | **RESOLVED** -- ADR-022 closed Gap #1 at high level on 2026-04-24. ARCH section 6.2.1 (added 2026-04-27) closes the latent operational details: response shape with `similar_warnings`, validation order with specific BAD_REQUEST conditions, race handling (no implicit dedup), content_stub semantics, idempotency_key for retry safety, separation from lock acquisition. |
 
 ### Step 5 — Author research content via the agent
 

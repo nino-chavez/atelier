@@ -1,6 +1,6 @@
 ---
-last_updated: 2026-04-27
-status: pre-implementation, design phase complete, M1 scoped
+last_updated: 2026-04-28
+status: M1 implementation active, design phase complete
 sunset_at: M2 (replaced by `get_context` per US-2.4)
 ---
 
@@ -14,7 +14,7 @@ This file is a **pre-M2 stand-in for `get_context`**. Once the 12-tool endpoint 
 
 ## Where we are
 
-- **Phase:** Design complete. M1/M1.5/M2 scoped. Pre-implementation. Implementation-grade ARCH spec landed across all three composer surfaces (analyst/dev/designer).
+- **Phase:** Design complete. M1/M1.5/M2 scoped. **M1 implementation active as of 2026-04-28.** All design-side gates (data-model audit, supplemental sweep, CLI reconciliation, expert-review pass, AI-speed pivot, second-pass red-team audit) are closed. Implementation-grade ARCH spec landed across all three composer surfaces (analyst/dev/designer).
 - **Last milestone done:** M0 per `../../docs/strategic/BUILD-SEQUENCE.md`.
 - **Most recent work (2026-04-28 session: pre-M1 data-model + contract audit):**
   - Pre-M1 data-model + contract audit run (`docs/architecture/audits/pre-M1-data-model-audit.md`). 18 findings: 6 HIGH, 7 MEDIUM, 5 LOW. Five HIGH-finding ADRs landed (ADR-033 through ADR-037); one strategic-call finding filed as BRD-OPEN-QUESTIONS section 20.
@@ -45,11 +45,26 @@ This file is a **pre-M2 stand-in for `get_context`**. Once the 12-tool endpoint 
 
 ## What the next session should do first
 
-1. Read `../../README.md` for tier-routing and the document map.
-2. Skim the three walks under `../../docs/architecture/walks/` -- they are now the canonical illustrations of how each composer surface flows end-to-end through the protocol, and each walk's "latent gaps surfaced and folded" table indexes the relevant ARCH subsections.
-3. Skim ARCH section 6 + 7 + 9 -- substantially expanded across the 2026-04-27 sessions.
-4. If implementing M1: start with the four-table schema migration, then the internal write library, then the five sync scripts (publish-docs, publish-delivery, mirror-delivery, reconcile, triage), then the GitHub adapter against the interface. Round-trip integrity test gates M1 exit per scripts/README.md.
-5. If authoring further walks (e.g., PM week-1, stakeholder week-1, multi-composer concurrent week-1): apply the latent-gaps discipline from the start. Use dev-week-1.md or designer-week-1.md as the template (they were authored with the discipline; analyst-week-1.md had it applied retroactively in section 7).
+**M1 implementation is active.** The fresh session is implementing, not auditing. Per the discipline-tax meta-finding, the cost-benefit has inverted at M1+: less spec accretion, more ergonomic hardening against running code.
+
+1. Read `../../CLAUDE.md` (the agent charter) and `../../README.md` (tier-routing + document map).
+2. Skim ARCH section 5 (data model) -- this is the schema you are migrating in step 4 below.
+3. Skim ARCH section 6 (write paths + lifecycle) -- the internal write library implements these contracts.
+4. **Implement M1 in this order:**
+   1. Four-table schema migration (contributions, decisions, contracts, locks per ARCH 5.1, with ADR-033/034/035/036/037/038 shapes already folded). Plus the supporting tables: composers, sessions, projects, telemetry. Lands as a Supabase migration under `supabase/migrations/`.
+   2. Internal write library (`scripts/sync/lib/write.ts` per `../../scripts/README.md`) -- the ARCH 6.x mutation contracts (claim, update, release, log_decision, etc.) implemented against the schema, NOT yet exposed via MCP. M1 wires these for the sync scripts to consume directly.
+   3. Five sync scripts (`publish-docs`, `publish-delivery`, `mirror-delivery`, `reconcile`, `triage`) per `../../scripts/README.md`. Per ADR-008, all five ship together. The internal event bus pattern (`scripts/sync/lib/event-bus.ts`) lands here so `publish-delivery` source-of-events can swap M1 -> M2 -> M4 in one line.
+   4. GitHub adapter against the adapter interface (per ARCH 6.6 / scripts/README.md).
+   5. Round-trip integrity test -- gates M1 exit per scripts/README.md "Round-trip integrity contract."
+5. **Open questions to resolve as their moment arrives within M1:**
+   - **§24 (branch reaping):** before authoring `reconcile.mjs`, decide whether to ship the branch-reaping pass present-but-default-off (recommendation) or defer to v1.x. The recommendation is concrete; this is a confirm-or-defer call, not a research item.
+   - **§19 (plan_review):** wants resolution before M2 contribution-lifecycle endpoint work, not blocking M1.
+6. If a gap surfaces during implementation that wasn't caught by the audits, file a BRD-OPEN-QUESTIONS entry with a recommendation, do not silently fix the spec. Per CLAUDE.md "How to propose changes."
+
+**Do NOT:**
+- Re-audit the spec. Five audit passes already landed; further audits are spec-accretion against the discipline-tax constraint.
+- Propose new ADRs unless implementation surfaces a genuinely new architectural decision the existing 38 do not cover. Apply the existing-primitives check first per the methodology.
+- Add new MCP tools, schema fields, or methodology subsections without an explicit user-approved gap. The 12-tool surface is locked at v1 per ADR-013.
 
 ## Drift discipline
 

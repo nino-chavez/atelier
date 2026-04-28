@@ -197,7 +197,8 @@ territories
   id (uuid, pk)
   project_id (fk)
   name
-  owner_role
+  owner_role                                                           -- ADR-038 (typed against composer_discipline: analyst | dev | pm | designer | architect)
+  review_role                                                          -- ADR-025 (review-routing key); nullable when same as owner_role
   scope_kind (files | doc_region | research_artifact | design_component | slice_config)
   scope_pattern
   created_at

@@ -791,6 +791,51 @@ Trigger: webhook from published-doc or delivery tracker or design tool
     4. Never auto-merges
 ```
 
+#### 6.5.1 Figma projection: explicit non-automation at v1
+
+ADR-019 establishes that Figma is a feedback surface, not a design source -- design components live in the repo. The natural reading of "Figma receives projections of components" is that Atelier auto-pushes component renders to Figma. **At v1, Figma projection is explicitly NOT an Atelier automation.** Per ADR-008 the v1 sync substrate has exactly five scripts (publish-docs, publish-delivery, mirror-delivery, reconcile, triage); `publish-design` is not one of them.
+
+Designers manually project components to Figma using their team's existing tooling (e.g., a storybook-to-figma export pipeline, the Figma API via a one-off script, or simple screenshot + paste). The projected Figma frame carries a manually-applied banner per the publish-pull asymmetry convention (NORTH-STAR section 8): "edit in repo, not here. Comment to propose changes."
+
+Atelier's v1 responsibility on the Figma surface is **inbound only**: comments on the projected frame flow back through the triage script per section 6.5.2. The projection direction stays manual.
+
+**Why explicit non-automation rather than a 6th script.** The five-script substrate is locked at v1 per ADR-008 to keep the surface area learnable. Adding `publish-design` would require either expanding the substrate (violating ADR-008) or sub-folding it into one of the existing scripts (no clean fit -- Figma is neither a delivery tracker nor a published-doc system in any structural sense). Manual projection is acceptable because designer workflows already include this step in current teams; Atelier's value-add is the inbound triage path, which is automated.
+
+**v1.x extension hook.** A future `publish-design` script (or a sub-feature of `publish-docs` extended to handle design tools) is contemplated but not committed. Teams that want auto-projection at v1 can implement a project-local CI script that reads from `prototype/src/components/**` and writes to Figma; this lives outside Atelier's substrate but is a natural plugin point.
+
+#### 6.5.2 Figma triage mechanics
+
+The triage script per section 6.5 handles inbound comments from Figma (US-9.5/9.6/9.7, US-10.5). Figma-specific operational details:
+
+**Webhook event.** Figma's webhook fires on `FILE_COMMENT` events. The triage script subscribes via the configured `integrations.design_tool.kind: figma` and `file_key`. The webhook payload includes the comment text, author, frame_id, and parent comment_id (for thread replies).
+
+**Frame-to-contribution mapping.** Atelier needs to map a Figma frame back to a contribution to know what the comment is about. The mapping happens at projection time via embedded metadata:
+
+- When a designer manually projects a component to Figma (per section 6.5.1), they paste a small JSON metadata block as a comment on the frame, in the format `{"atelier": {"contribution_id": "<uuid>", "trace_ids": ["NF-12"], "component_path": "prototype/src/components/Button.tsx"}}`. This is part of the manual projection convention, not enforced by Atelier.
+- The triage script reads this metadata comment when ingesting other comments on the same frame to attribute them.
+- If no metadata comment exists on the frame, the triage script falls back to filename-based heuristic matching (frame name vs. component file name) and flags low-confidence matches for human routing.
+
+**Drafted proposal content shape.** For Figma comments, the proposal contribution's `content_ref` is null (no patch can be auto-generated from a design comment). The proposal's `content` field carries:
+
+```yaml
+source: figma
+file_key: <key>
+frame_id: <id>
+comment_id: <id>
+comment_author: <name>
+comment_text: <verbatim>
+parent_contribution_id: <uuid or null>
+classifier_category: scope | typo | question | pushback | off-topic
+classifier_confidence: 0.0 - 1.0
+suggested_action: <free text from drafter>
+```
+
+The reviewer (the parent contribution's territory.review_role) sees the proposal in their `/atelier` lens, decides whether to address it (incorporate into the parent contribution as a follow-up update), reject it (close the proposal), or convert it to a fresh contribution.
+
+**Unmappable comments.** If neither the metadata comment nor the heuristic match yields a contribution, the proposal is created with `parent_contribution_id=null` and routed to the admin queue. Admins can manually attribute or close.
+
+**Comment edits and deletions.** Figma webhooks fire on comment updates and deletions. Triage handles updates by appending revisions to the proposal's content (the proposal does not get re-classified -- the original classifier outcome is sticky). Deletions mark the proposal as `state=rejected` with a `rejection_reason: source-deleted`.
+
 ### 6.6 Territory contract flow
 
 ```
@@ -824,6 +869,73 @@ A contract change is **breaking** if any of the following hold (conservative def
 **Publisher override.** A territory owner may classify an otherwise-breaking change as additive by passing `override_classification="additive"` plus a required `override_justification` string. The override is recorded on the `contracts` row and surfaced in `/atelier/observability` for audit. Overrides are reversible by any consumer territory by escalating to a proposal contribution.
 
 **Versioning.** Semver-style. Additive changes bump minor (`1.4 → 1.5`); breaking changes bump major (`1.5 → 2.0`). `contracts.version` is an integer pair stored as `major*1000+minor` to preserve sort order; the human-facing string is rendered on read. Consumers pin to a major version; minor upgrades are automatic.
+
+#### 6.6.2 Design contract schemas
+
+The `prototype-design` territory publishes two contracts: `design_tokens` and `component_variants`. Their v1 schemas:
+
+**`design_tokens` schema.** Captures the raw design-token definitions consumed by `prototype-app` and downstream rendering surfaces.
+
+```yaml
+contract_name: design_tokens
+version: <major.minor>
+schema:
+  tokens:
+    color:
+      <token_name>:
+        value: <hex | rgb | hsl>
+        description: <free text>
+    spacing:
+      <token_name>:
+        value: <css-length>
+    typography:
+      <token_name>:
+        family: <font stack>
+        size: <css-length>
+        weight: <100-900>
+        line_height: <number>
+    radius:
+      <token_name>:
+        value: <css-length>
+    shadow:
+      <token_name>:
+        value: <css-shadow>
+    z_index:
+      <token_name>:
+        value: <integer>
+  meta:
+    source: prototype/design-tokens/    # repo path the contract derives from
+    last_token_count: <integer>          # advisory; not a constraint
+```
+
+Breaking-change classification (per section 6.6.1) on `design_tokens`: removing a token, renaming a token, or narrowing a value type (e.g., a token that was previously a free-form color becoming a constrained-palette enum) is breaking. Adding tokens is additive. Changing a token's value (e.g., adjusting a color hex) is additive at the contract layer (the contract shape is unchanged) but may be a breaking visual change for consumers -- the breaking-visual concern is handled at PR review, not at contract versioning.
+
+**`component_variants` schema.** Captures the catalog of components and their available variants.
+
+```yaml
+contract_name: component_variants
+version: <major.minor>
+schema:
+  components:
+    <component_name>:
+      path: <repo path to component file>
+      variants:
+        - name: <variant_name>
+          props:
+            <prop_name>: <prop_type>     # primary | secondary | tertiary | etc.
+          required_tokens:
+            - <token_name>               # references design_tokens contract
+        - name: <variant_name>
+          ...
+      slots:
+        - <slot_name>: <slot_description>
+```
+
+Breaking-change classification on `component_variants`: removing a component, removing a variant, removing a required slot, narrowing a prop type, or renaming any of the above is breaking. Adding components, variants, or optional slots is additive.
+
+**Cross-contract dependency.** `component_variants.required_tokens[]` references token names in `design_tokens`. The contract publish flow (section 6.6) validates that referenced tokens exist; missing references return BAD_REQUEST and block the publish. When `design_tokens` undergoes a breaking change that removes a referenced token, `component_variants` is automatically flagged as needing a proposal-flow re-publish.
+
+**Storage.** Contracts are stored in the `contracts` table per ARCH section 5.1, with the `schema` jsonb field carrying the YAML-equivalent JSON. The repo also stores a snapshot under `docs/architecture/schema/contracts/<contract_name>-v<major>.<minor>.yaml` for offline reading and find_similar embedding.
 
 ### 6.7 Get_context execution
 
@@ -1021,6 +1133,22 @@ Examples valid on the `protocol` territory (which has `scope_pattern: ["prototyp
 **Expansion limit.** A glob expands to at most `policy.lock_glob_expansion_limit` paths (default 10000) for overlap-detection purposes. Globs that would expand further return BAD_REQUEST asking the composer to narrow. This prevents `**` against a million-file repo from blocking the project.
 
 **Per-contribution lock release.** When a contribution transitions to `state=merged` (PR merge observed) or `state=open` (release/abandon), all locks held against that `contribution_id` are released atomically.
+
+#### 7.4.1.1 scope_kind affects rendering, not lock mechanics
+
+The territory's `scope_kind` (per ADR-003: files, doc_region, research_artifact, design_component, slice_config) shapes how the prototype web app renders the lock and contribution, not how the lock substrate operates. Lock acquisition, glob matching, overlap detection, and fencing all behave identically across scope_kinds.
+
+| scope_kind | Prototype rendering hint |
+|---|---|
+| `files` | Path list; file icons; line-count summary |
+| `doc_region` | Section headings; prose excerpt |
+| `research_artifact` | Artifact title + author + word-count |
+| `design_component` | Component name + thumbnail (rendered from the prototype's storybook or equivalent); variant count |
+| `slice_config` | Slice name + traceability sub-tree summary |
+
+The mechanical equivalence is intentional: the lock substrate operates on file paths regardless of what those files represent. Specialization happens at the UI layer, not in the protocol.
+
+A territory may include the same path under different scope_kinds in different territories (e.g., `prototype/src/components/**` appears in both `prototype-app` with `scope_kind=files` and `prototype-design` with `scope_kind=design_component`). Both territories may lock the same file -- conflicts surface at lock-overlap time, not at territory-membership time.
 
 #### 7.4.2 Fencing semantics by surface
 

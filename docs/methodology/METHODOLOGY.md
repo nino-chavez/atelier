@@ -340,3 +340,133 @@ Atelier's shape is old (dual-track agile + blackboard coordination). What's new 
 3. Slices cross territory boundaries through published contracts only — deep-module discipline preserved at the workflow layer.
 
 The four together are the Atelier thesis. A team could adopt any one without the others; all four combined are the reference implementation.
+
+---
+
+## 11. Review and audit process
+
+A methodology that produces canonical artifacts also needs a discipline for keeping those artifacts honest over time. Spec docs drift; ADRs become stale; walks stop matching the code. The review and audit process is the discipline that catches drift at the cadence each surface needs.
+
+This section is part of the **Atelier specification** (tier 3 per ADR-031). Teams adopting Atelier inherit it through the bundled config defaults (`.atelier/config.yaml: review`) and the validator scripts that ship with M1. Customization happens through the config; the discipline itself is the default.
+
+### 11.1 Four review surfaces, four cadences
+
+Different artifacts need different review rhythms. Conflating them produces either ceremony fatigue or silent rot.
+
+| Surface | Cadence | Trigger | Owner | Output |
+|---|---|---|---|---|
+| **Per-PR review** | On every PR touching canonical state | PR open | Territory's `review_role` per `.atelier/territories.yaml` | Approval / requested changes; merge gated |
+| **Milestone-exit drift sweep** | At each `BUILD-SEQUENCE` milestone exit | Milestone status transition to Done | `architect` role | Sweep report; PRs to fix any drift; sign-off on the milestone |
+| **Quarterly destination check** | Every 90 days | Cron (per `.atelier/config.yaml: review.quarterly.cadence_days`) | `architect` + `pm` roles jointly | Re-affirmation or proposed pivot; updates to NORTH-STAR / BUILD-SEQUENCE if priorities shifted |
+| **Spec-to-implementation gate** | On every M2+ code PR that implements a spec'd capability | PR open with code changes | Territory's `review_role` plus a generic implementation-checker | PR comment confirming or contesting the cited ARCH section match |
+
+The four are independent. A PR can pass per-PR review while the milestone sweep is overdue; the milestone sweep can pass while the quarterly destination check identifies a strategic shift. Decoupling cadences keeps any one surface from becoming a bottleneck for the others.
+
+### 11.2 Per-PR review
+
+Every change to canonical discovery content (per CLAUDE.md "How to propose changes") goes through PR review. The reviewer matrix defaults to `territories.review_role` for the affected territory; teams may extend in `.atelier/config.yaml: review.per_pr.territory_overrides`.
+
+**Change classes and minimum reviewers:**
+
+| Change class | Required reviewers | Notes |
+|---|---|---|
+| Discovery content (NORTH-STAR, PRD, BRD, ARCHITECTURE, METHODOLOGY) | 1 architect | Architect role gates all spec changes |
+| New ADR | 1 architect + 1 territory `review_role` for any cross-cutting trace_ids | ADRs are append-only; rejection means the PR closes, not the ADR file edits |
+| ADR reversal | 2 architects | Higher bar because reversal changes load-bearing decisions |
+| BRD-OPEN-QUESTIONS entry add or status change | 1 architect | Hygiene check (per the spec-gap-vs-real-question test) happens here |
+| `.atelier/territories.yaml` change | 1 architect | Per the territories.yaml header rule |
+| `.atelier/config.yaml` change | 1 architect | Project-wide config affects all composers |
+| Walk re-write (existing) | 1 architect | Walk content is canonical |
+| New walk authoring | 1 architect | New walks must apply the latent-gaps discipline from the start |
+| Reference implementation code (post-M2) | 1 territory `review_role` | Standard code review |
+| Per-implementation citation (per section 11.5) | Same as above | Citation enforced by validator, not by reviewer |
+
+**Quorum for cross-territory changes.** A PR touching multiple territories' canonical content needs approval from each affected territory's `review_role`. The PR template (added at M1 to `.github/PULL_REQUEST_TEMPLATE.md`) prompts the author to list affected territories.
+
+**Reviewer assignment.** The validator (per scripts/README.md) computes the required reviewer set on PR open and posts a comment listing them. Missing reviewers block merge via branch protection.
+
+### 11.3 Milestone-exit drift sweep
+
+`BUILD-SEQUENCE.md` 6 already calls for this; section 11 operationalizes it.
+
+At each milestone status transition to Done, the `atelier audit --milestone-exit` command runs (or its raw form pre-M7). The sweep covers:
+
+1. **Cross-doc reference integrity** -- every section reference, ADR citation, contract name, walk fold-into reference resolves to a real target. Powered by the extended traceability validator (scripts/README.md "Extended cross-doc consistency").
+2. **Walk re-run.** Each composer-surface walk (analyst, dev, designer; eventually pm and stakeholder) is re-walked against the current spec. Any step whose Status row no longer holds is flagged for fold-in.
+3. **ADR re-evaluation triggers.** Each ADR with a `Re-evaluation triggers` section is checked: have any triggers fired? If so, an open question or a new ADR is filed.
+4. **BRD-OPEN-QUESTIONS hygiene.** Each OPEN entry is examined under the spec-gap-vs-real-question test (METHODOLOGY 6.1). Entries that are spec gaps wearing question costumes get folded into spec; the BRD-OPEN-QUESTIONS list stays tight.
+5. **Schema consistency.** Tables in ARCH 5.1 match the implemented schema (post-M2). Indexes in ARCH 5.2 exist. RLS policies match ARCH 5.3.
+6. **Traceability coverage.** Every BRD story has at least one resolution path (ADR, contribution, or implementation reference). Coverage threshold defaults to 95 percent (configurable).
+
+**Output.** A sweep report (`docs/architecture/audits/milestone-<id>-exit.md`) listing checks, status, and any drift found. Each drift item becomes a PR. The architect role signs off on the milestone by approving the audit PR.
+
+**No silent skip.** If any check fails or any drift goes unaddressed, the milestone is not marked Done. The audit report is the merge-gate artifact.
+
+### 11.4 Quarterly destination check
+
+Every 90 days (configurable), an architect + pm pair re-reads NORTH-STAR.md and asks: are we still building this? Sub-questions:
+
+- Has the strategic context shifted (market, team, technology)?
+- Have any in-flight milestones revealed that the destination needs adjustment?
+- Are any ADRs whose `Re-evaluation triggers` have fired worth resolving as reversals?
+- Does BUILD-SEQUENCE still reflect the current priorities?
+
+**Output.** Either re-affirmation (a one-line entry under `docs/architecture/audits/quarterly-<YYYY-Q>.md`: "Confirmed direction; no changes recommended") or a proposed pivot (a longer entry plus a PR updating NORTH-STAR / BUILD-SEQUENCE / risks.md as appropriate).
+
+**Why quarterly.** Long enough to accumulate signal; short enough to course-correct before too much work goes the wrong direction. Atelier doesn't dictate cadence; the default is 90 days but `review.quarterly.cadence_days` overrides.
+
+### 11.5 Spec-to-implementation gate (M2+)
+
+Once M2 is in flight, every code PR that implements a spec'd capability cites the ARCH section it implements. The citation lives in the PR description in a structured block:
+
+```
+## Implements
+- ARCH section 6.2.1 -- atomic create-and-claim semantics
+- ARCH section 7.4.1 -- lock granularity and glob semantics
+```
+
+The validator parses this block on PR open and checks:
+- Each cited section exists.
+- The PR's diff touches code paths plausibly related to those sections (heuristic: the PR's changed-files list overlaps with paths the ARCH section mentions, OR the ARCH section's tagged trace_ids overlap with the PR's branch trace_ids).
+
+A reviewer subsequently confirms the implementation matches the spec. Mismatches surface as either an implementation fix (most common) or a spec update (when implementation revealed the spec was wrong).
+
+**Why this matters.** Without a citation gate, code drifts from spec silently. With it, every code change is a small audit point: implementer reads the spec, reviewer verifies the match. This is what closes the loop between design and code that pure documentation discipline cannot.
+
+### 11.6 Walk re-walking cadence
+
+The three composer-surface walks (analyst, dev, designer) are validation instruments, not historical records. Re-walking surfaces drift the way running tests surfaces regressions. Default cadence: re-walk each at every milestone-exit drift sweep (section 11.3 step 2) plus on demand when a substantial spec change lands in the walk's surface area.
+
+Walks are also the right artifact for new composer scenarios. PM week-1, stakeholder week-1, multi-composer concurrent week-1 are all walks waiting to be authored when their scenarios become relevant. Authoring discipline: the latent-gaps approach from the start, not an after-the-fact sweep (the lesson from analyst-week-1.md section 7).
+
+### 11.7 Post-milestone retrospective
+
+At each milestone exit, the architect convenes a retrospective (sync or async). Three questions:
+
+- What did the spec get right that implementation confirmed?
+- What did the spec get wrong that implementation revealed?
+- What gap in the methodology itself was surfaced?
+
+Outputs feed back into:
+- ADR additions or reversals for spec corrections
+- New entries in this section (or this whole methodology) for methodology corrections
+- BUILD-SEQUENCE updates for sequencing corrections
+
+The retrospective notes land under `docs/architecture/audits/milestone-<id>-retrospective.md` and are searchable through find_similar from M5 onward.
+
+### 11.8 How this is baked into the Atelier template
+
+Per the three-tier consumer model (ADR-031), this process lives in three places:
+
+**Tier 1 (Reference Deployment)** -- `atelier init` scaffolds:
+- `.atelier/config.yaml: review` section with the defaults from this methodology
+- `.github/workflows/atelier-audit.yml` running the validator on every PR
+- `.github/workflows/atelier-quarterly.yml` running the destination check cron
+- `.github/PULL_REQUEST_TEMPLATE.md` with the affected-territories prompt and the spec-citation block (post-M2)
+- `docs/architecture/audits/` directory with a placeholder README
+
+**Tier 2 (Reference Implementation)** -- the `scripts/traceability/` validator implements the cross-doc checks specified in scripts/README.md "Extended cross-doc consistency"; `atelier audit` and `atelier review` CLI commands wrap the validator into operational form (raw at M1, polished at M7 per BUILD-SEQUENCE Epic 1 sequencing).
+
+**Tier 3 (Specification)** -- this section (METHODOLOGY 11). Teams adopting just the methodology without the reference impl can implement equivalent gates against their own tooling.
+
+A team that runs `atelier init` gets the discipline by default. A team that wants to customize tunes the config. A team that opts out by removing the workflow files accepts the consequences (faster initial pace, more drift over time). Atelier doesn't enforce -- it makes the disciplined path the easy path.

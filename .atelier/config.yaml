@@ -106,3 +106,79 @@ observability:
 
 # Protocol version. Bumped when endpoint tool surface changes.
 protocol_version: "1.0"
+
+# Review and audit process (per docs/methodology/METHODOLOGY.md section 11).
+# Defaults below match the bundled methodology. Teams customize without forking
+# the methodology -- the discipline is the default; customization is the override.
+review:
+  per_pr:
+    # Reviewer matrix defaults to territories.yaml review_role for the affected
+    # territory. Override here only when project-specific policies apply.
+    territory_overrides: {}
+    # Minimum reviewers per change class. Names align with section 11.2 table.
+    change_class_requires:
+      discovery_content:
+        - role: architect
+          count: 1
+      new_adr:
+        - role: architect
+          count: 1
+      adr_reversal:
+        - role: architect
+          count: 2
+      brd_open_questions:
+        - role: architect
+          count: 1
+      territories_yaml:
+        - role: architect
+          count: 1
+      config_yaml:
+        - role: architect
+          count: 1
+      walk_change:
+        - role: architect
+          count: 1
+      reference_implementation_code:
+        # post-M2; uses the affected territory's review_role
+        - role: territory_review_role
+          count: 1
+
+  milestone_exit:
+    # The drift sweep at each BUILD-SEQUENCE milestone status-to-Done transition.
+    # Run via `atelier audit --milestone-exit` (raw at M1, polished at M7).
+    enabled: true
+    require_architect_signoff: true
+    audit_report_path: "docs/architecture/audits/milestone-{milestone_id}-exit.md"
+    # Checks correspond to scripts/README.md "Extended cross-doc consistency".
+    checks:
+      - cross_doc_refs        # trace_id, ARCH section, ADR id, contract name, walk fold, markdown links
+      - walk_re_run           # re-walk each composer-surface scenario
+      - adr_re_eval_triggers  # surface ADRs with triggers for human review
+      - open_questions_hygiene
+      - traceability_validation
+      - schema_consistency    # post-M2: implemented schema matches ARCH 5.1
+      - traceability_coverage_threshold
+    traceability_coverage_threshold: 0.95
+
+  quarterly:
+    # Destination check (METHODOLOGY 11.4). Architect + PM re-read NORTH-STAR.
+    enabled: true
+    cadence_days: 90
+    audit_report_path: "docs/architecture/audits/quarterly-{year}-Q{quarter}.md"
+    # Posts a reminder via the configured messaging adapter (integrations.messaging).
+    reminder_via_messaging: true
+
+  spec_to_implementation:
+    # Gate at M2+. Every code PR cites the ARCH section it implements.
+    enabled: true
+    require_arch_section_citation: true
+    citation_block_marker: "## Implements"
+    # Validator parses the block and verifies cited sections exist + diff
+    # plausibly relates to those paths.
+    enforce_diff_overlap_heuristic: true
+
+  validator:
+    # Atelier-bundled validator scope is in scripts/README.md.
+    # Project-specific check classes can be added under
+    # scripts/traceability/checks/<check_name>.mjs and registered here.
+    custom_checks: []

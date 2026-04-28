@@ -105,7 +105,7 @@ The traceability validator under `scripts/traceability/` (separate concern from 
 
 **Demoable.** Commit a BRD edit; `publish-docs` overwrites the published-doc page with a banner. Transition a contribution row to `claimed`; `publish-delivery` upserts the delivery-tracker issue. Run `reconcile`; report enumerates every divergence between repo and external. Post a comment on a published-doc page; `triage` classifies and drafts a `kind=proposal` row that requires human merge.
 
-**Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Schema migration applied; the four indexes exist. Round-trip integrity test passes against the new tables (markdown to datastore to projector to markdown is byte-identical for the canonical doc classes per scripts/README.md round-trip integrity contract). The adapter interface (`scripts/sync/adapters/types.ts`) is defined; an in-memory mock implementation passes contract tests; the GitHub Issues + GitHub Discussions adapter ships and passes integration tests. Remaining adapters (Jira, Linear, Confluence, Notion, Figma) are deferred to M1.5 per the section 16 resolution.
+**Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Schema migration applied; the four indexes exist. Round-trip integrity test passes against the new tables (markdown to datastore to projector to markdown is byte-identical for the canonical doc classes per scripts/README.md round-trip integrity contract). The adapter interface (`scripts/sync/adapters/types.ts`) is defined; an in-memory mock implementation passes contract tests; the GitHub Issues + GitHub Discussions adapter ships and passes integration tests. Remaining adapters (Jira, Linear, Confluence, Notion, Figma) are deferred to M1.5 per the section 16 resolution. The extended traceability validator (`scripts/traceability/validate-refs.mjs`) ships with the per-PR check classes from scripts/README.md "Extended cross-doc consistency"; `.github/workflows/atelier-audit.yml` runs the validator on every PR; first milestone-exit drift sweep runs at M1 exit per METHODOLOGY section 11.3.
 
 ---
 
@@ -281,8 +281,10 @@ This repo is **hand-bootstrapped** — it is the artifact that `atelier init` wi
 | `atelier deploy` | M3 (raw deploy script for prototype + endpoint) | M7 |
 | `atelier invite` | M6 (token issuance for remote-principal composers) | M7 |
 | `atelier territory add` | M2 (manual `.atelier/territories.yaml` edit pattern) | M7 |
-| `atelier doctor` | — | M7 |
-| `atelier upgrade` | — | M7 |
+| `atelier audit` | M1 (raw script invocations of the extended validator per scripts/README.md; supports --per-pr, --milestone-exit, --quarterly modes) | M7 |
+| `atelier review` | M1 (raw script computing required reviewers from territories.yaml + config.yaml) | M7 |
+| `atelier doctor` | -- | M7 |
+| `atelier upgrade` | -- | M7 |
 
 **Why split:** the destination-first rule (ADR-011) governs feature scope, not packaging. Ergonomics polish (CLI commands, `--help` text, exit-code contracts, end-to-end tests) is correctly batched into M7 once all the underlying capabilities exist. The earlier milestones use the underlying scripts directly; M7 wraps them.
 

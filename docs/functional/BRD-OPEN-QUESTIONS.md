@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-27 (M1 scoping pass; entries 16–18 added; §4/§6/§10/§11/§12/§14/§17 resolved as spec gaps folded into canonical homes; only data-dependent residue remains in §6 and §12)
+**Last updated:** 2026-04-27 (M1 scoping pass; entries 16-18 added; sections 4, 6, 10, 11, 12, 14, 16, 17, 18 resolved; only data-dependent residue remains in 6 and 12; genuinely OPEN: 3 (embedding), 7 (scale), 8 (cost - OUT v1), 9 (cross-repo - DEFERRED v1.x))
 
 ---
 
@@ -265,9 +265,9 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 - If only one adapter ships at M1, which one? GitHub Issues is already configured as `git_provider`; lowest external setup cost; usable end-to-end without procuring Jira/Linear/Confluence/Notion/Figma credentials.
 - How is M1 exit verified for the deferred adapters? Contract tests against the interface, with concrete-adapter integration tests landing per-adapter as they ship?
 
-**Recommendation.** Ship the interface (`scripts/sync/adapters/types.ts`) plus an in-memory mock plus GitHub Issues + GitHub Discussions at M1. Defer Jira / Linear / Confluence / Notion / Figma to a follow-up epic between M1 and M2 (call it M1.5 in sequencing language only — the adapters remain v1 scope). Contract tests against the interface gate M1 exit; per-adapter integration tests gate adapter-shipping PRs.
+**Recommendation.** Ship the interface (`scripts/sync/adapters/types.ts`) plus an in-memory mock plus GitHub Issues + GitHub Discussions at M1. Defer Jira / Linear / Confluence / Notion / Figma to a follow-up epic between M1 and M2 (call it M1.5 in sequencing language only -- the adapters remain v1 scope). Contract tests against the interface gate M1 exit; per-adapter integration tests gate adapter-shipping PRs.
 
-**Status.** OPEN. Pending sequencing decision.
+**Status.** **RESOLVED** (2026-04-27). Per the recommendation. M1.5 is now a named milestone in `../strategic/BUILD-SEQUENCE.md` section 5 between M1 and M2 with its own exit criteria. M1 exit requires the interface plus the GitHub adapter passing both contract tests (against the interface) and integration tests (against a real or recorded GitHub fixture). M1.5 ships the four remaining provider adapters with their own integration tests and per-provider setup runbooks under `docs/user/integrations/`.
 
 ---
 

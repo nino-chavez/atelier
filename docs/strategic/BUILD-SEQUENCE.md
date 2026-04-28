@@ -52,7 +52,8 @@ This is also the strongest disconfirming test available before public release. A
 | ID | Title | Bootstrap function | Status |
 |---|---|---|---|
 | **M0** | Methodology | Repo + git + markdown is the starting substrate | **Done** (2026-04-24) |
-| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) | Sync scripts run against real persistence; dogfooding ignition point | Planned |
+| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) + adapter interface + GitHub adapter | Sync scripts run against real persistence; dogfooding ignition point | Planned |
+| **M1.5** | Remaining external adapters (Jira, Linear, Confluence, Notion, Figma) | Full v1 adapter coverage; sequenced after M1 to avoid blocking dogfooding ignition | Planned |
 | **M2** | 12-tool endpoint + fenced locks + remaining schema (5 tables) | Coordination substrate goes live; agents coordinate through the endpoint | Planned |
 | **M3** | Prototype shell + `/atelier` + 5 lenses | The dashboard you build is the dashboard you use | Planned |
 | **M4** | Multi-composer concurrency (real broadcast) | Concurrent authoring is observable and conflict-safe | Planned |
@@ -104,11 +105,31 @@ The traceability validator under `scripts/traceability/` (separate concern from 
 
 **Demoable.** Commit a BRD edit; `publish-docs` overwrites the published-doc page with a banner. Transition a contribution row to `claimed`; `publish-delivery` upserts the delivery-tracker issue. Run `reconcile`; report enumerates every divergence between repo and external. Post a comment on a published-doc page; `triage` classifies and drafts a `kind=proposal` row that requires human merge.
 
-**Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Schema migration applied; the four indexes exist. Round-trip integrity test passes against the new tables (markdown → datastore → projector → markdown is byte-identical for the canonical doc classes — see §7 Q6 for whitelist scope). At least one concrete adapter (per §7 Q5) ships with the interface.
+**Exit criteria.** All 5 scripts green in CI on this repo's own corpus. Schema migration applied; the four indexes exist. Round-trip integrity test passes against the new tables (markdown to datastore to projector to markdown is byte-identical for the canonical doc classes per scripts/README.md round-trip integrity contract). The adapter interface (`scripts/sync/adapters/types.ts`) is defined; an in-memory mock implementation passes contract tests; the GitHub Issues + GitHub Discussions adapter ships and passes integration tests. Remaining adapters (Jira, Linear, Confluence, Notion, Figma) are deferred to M1.5 per the section 16 resolution.
 
 ---
 
-### M2 — 12-tool endpoint + fenced locks + remaining schema
+### M1.5 -- Remaining external adapters
+
+**Status:** Planned
+
+**Produces.** Concrete adapter implementations for the four remaining external systems against the adapter interface that landed at M1: Jira and Linear (delivery trackers, US-10.3), Confluence and Notion (published-doc systems, US-10.4), Figma (design tool, US-10.5). Each ships with integration tests against a live or recorded fixture for the external service.
+
+**Operationalizes.** ADR-008 in full (the five sync scripts now have full provider coverage, not just GitHub).
+
+**Advances.** BRD Epic 10 (US-10.3, US-10.4, US-10.5).
+
+**Bootstrap function.** Dogfooding remains on GitHub since this repo lives there; the additional adapters become testable for downstream Atelier adopters who use other providers. M1.5 is sequenced before M2 so any adapter surface changes that would affect the endpoint surface are caught before the endpoint lands.
+
+**Demoable.** Configure `.atelier/config.yaml: integrations.delivery_tracker.kind: jira` (or linear); publish-delivery upserts a real Jira issue. Configure `published_docs.kind: confluence`; publish-docs writes a Confluence page with the canonical banner. Configure `design_tool.kind: figma`; triage picks up Figma comments and routes them to proposal contributions.
+
+**Exit criteria.** All five non-GitHub adapters pass their integration tests in CI against either live test instances or recorded HTTP fixtures. Each adapter's setup runbook lands in `docs/user/integrations/<provider>.md` (the user-docs layer fills in here for the first time).
+
+**Why this is M1.5 not M2.** Per the section 16 resolution: shipping all five non-GitHub adapters at M1 would significantly expand M1 scope and require procuring credentials for five external services before M1 could exit. The interface plus the GitHub adapter is sufficient to validate the substrate and unblock M2 dogfooding (which lives on GitHub). The M1.5 epic is real v1 scope per ADR-011 -- all adapters ship before public release -- but its order of construction is decoupled from M2's endpoint work.
+
+---
+
+### M2 -- 12-tool endpoint + fenced locks + remaining schema
 
 **Status:** Planned
 
@@ -237,7 +258,7 @@ These are sequence-specific open items distinct from `../functional/BRD-OPEN-QUE
 2. **Should M4 (concurrency) precede M3 (UI)?** Demoing concurrency without a UI is harder, but demoing UI without real concurrency makes M3 partly fake. The current order assumes thin UI on top of stubbed concurrency is acceptable for one milestone; revisit if M3 dogfooding feels hollow.
 3. **D24 (embedding model default) must resolve before M5 starts.** M5 ships find_similar; find_similar needs a chosen model. Recommend resolving D24 during M3/M4 (benchmark ≥3 candidates against the seed eval set) so M5 can begin without blocking. Currently the only OPEN ADR-relevant decision (D22, D23 already resolved as ADR-026 and ADR-028).
 4. **What is the smallest M2 that still unblocks M3?** If the 12-tool endpoint can be split into a "coordination subset" (claim/release/log_decision) shipped first, M3 could begin in parallel. Investigate at M1 exit.
-5. **Adapter sequencing within M1.** Per ADR-008, all 5 sync scripts ship at M1; per BRD US-10.3/10.4/10.5, all five external adapters (Jira, Linear, Confluence, Notion, Figma) are v1 deliverables. Open question: does M1 require all five concrete adapters, or does M1 ship the adapter interface (per US-10.2) plus one reference adapter (e.g., GitHub Issues — already the configured `git_provider`), with the remaining adapters batched into a follow-up M1.5? Tracked in `../functional/BRD-OPEN-QUESTIONS.md §16`.
+5. **Adapter sequencing within M1.** RESOLVED 2026-04-27. M1 ships the adapter interface (US-10.2) plus the GitHub Issues + GitHub Discussions adapter as the reference. Jira, Linear, Confluence, Notion, Figma adapters land at M1.5 (new milestone added between M1 and M2). All five non-GitHub adapters remain v1 scope per ADR-011; only their order of construction is sequenced after M1's substrate validation.
 6. **Round-trip whitelist surface.** The M1 round-trip integrity test ("markdown → datastore → projector → markdown is byte-identical") needs a precise contract for what counts as permissible normalization (trailing newline, YAML key ordering, etc.) versus drift. Tracked in `../functional/BRD-OPEN-QUESTIONS.md §17`.
 7. **publish-delivery trigger model.** publish-delivery fires on contribution state transitions. Pre-M2, those transitions are direct DB writes from the sync library; pre-M4, there is no broadcast substrate. Open question: does M1's publish-delivery use polling, post-commit hooks on the write library, or does this dependency pull the broadcast substrate forward? Tracked in `../functional/BRD-OPEN-QUESTIONS.md §18`.
 

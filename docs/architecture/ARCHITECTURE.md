@@ -701,6 +701,9 @@ Trigger: commit touching BRD.md, PRD.md, or strategy content
 **publish-delivery** (repo → delivery tracker):
 ```
 Trigger: contribution transitions to claimed or later
+  (Trigger mechanism evolves across milestones --
+   polling at M1, post-commit hooks at M2, broadcast at M4.
+   See scripts/README.md "publish-delivery trigger model" for cutover plan.)
   Script:
     1. Lookup delivery adapter for project's configured tracker
     2. Upsert issue (create if new, update status/assignee/sprint if existing)

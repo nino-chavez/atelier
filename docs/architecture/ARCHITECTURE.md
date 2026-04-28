@@ -843,7 +843,44 @@ get_context(
 ) → ContextResponse
 ```
 
-`lens` does not filter access — every project member sees every project-scoped row. It tunes per-section depth defaults. For example, `lens="dev"` weights more contribution detail and fewer charter excerpts; `lens="analyst"` weights more research-kind contributions and recent decisions. Defaults documented in `.atelier/config.yaml: get_context.lens_defaults`.
+`lens` does not filter access -- every project member sees every project-scoped row. It tunes per-section depth defaults. Defaults are read from `.atelier/config.yaml: get_context.lens_defaults`:
+
+```yaml
+get_context:
+  lens_defaults:
+    analyst:
+      charter_excerpts: false
+      recent_decisions_per_band_limit: 15        # weight recent design context heavily
+      contributions_active_limit: 10              # fewer code-kind contributions in active list
+      contributions_kind_weights: {research: 3, decision: 2, proposal: 2, implementation: 1, design: 1}
+      traceability_entries_limit: 60              # broader trace context for cross-cutting research
+    dev:
+      charter_excerpts: false
+      recent_decisions_per_band_limit: 10
+      contributions_active_limit: 30              # more in-flight code-kind contributions
+      contributions_kind_weights: {implementation: 3, decision: 2, proposal: 1, research: 1, design: 1}
+      traceability_entries_limit: 30
+    pm:
+      charter_excerpts: true                      # PMs often need full charter context
+      recent_decisions_per_band_limit: 10
+      contributions_active_limit: 40              # PMs see across territories for capacity tracking
+      contributions_kind_weights: {implementation: 1, research: 1, decision: 1, proposal: 1, design: 1}
+      traceability_entries_limit: 80
+    designer:
+      charter_excerpts: false
+      recent_decisions_per_band_limit: 10
+      contributions_active_limit: 15
+      contributions_kind_weights: {design: 3, decision: 2, research: 1, implementation: 1, proposal: 1}
+      traceability_entries_limit: 30
+    stakeholder:
+      charter_excerpts: true                      # stakeholders read for context, not action
+      recent_decisions_per_band_limit: 10
+      contributions_active_limit: 10
+      contributions_kind_weights: {decision: 2, design: 1, research: 1, implementation: 1, proposal: 1}
+      traceability_entries_limit: 50
+```
+
+When `lens` is omitted, the response uses unweighted defaults from the same config (under `get_context.section_limits` per section 6.7.2). Per-project teams may override the lens defaults to suit their workflow; the schema above is the bundled-template default.
 
 **Return shape (ContextResponse).**
 

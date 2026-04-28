@@ -2,60 +2,15 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-27 (M1 scoping pass; entries 16-18 added; sections 4, 6, 10, 11, 12, 14, 16, 17, 18 resolved; only data-dependent residue remains in 6 and 12; genuinely OPEN: 3 (embedding), 7 (scale), 8 (cost - OUT v1), 9 (cross-repo - DEFERRED v1.x))
+**Last updated:** 2026-04-28 (restructure: Open at top, Resolved compressed to redirect-only entries; numbering preserved for external citations)
+
+**File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
 ---
 
-## 1 · Territory-model validation on the analyst case
+## Open
 
-**Scenario.** An analyst composer begins week-1 competitive research on US-1.3. They connect their web-based agent client via remote protocol, register a session with `surface=web`, and need to:
-
-1. Read the current strategy context for US-1.3
-2. Claim a research artifact contribution
-3. Run find_similar to see if prior research exists
-4. Author research content via their agent
-5. Log decisions about findings
-6. Release the contribution for PM review
-
-**Open questions:**
-- Does the territory schema with `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly support this flow? Or does the schema need a structural rework for knowledge-work artifact types?
-- What happens when the analyst's research touches multiple trace IDs (e.g., research on US-1.3 reveals implications for US-1.5)? Does it become two contributions, or one with multi-trace-ID?
-- How are agent-session transcripts stored alongside the distilled research artifact? Sidecar file? External blob store?
-- When the analyst releases the contribution to `review`, who (which role + which lens) sees it for triage/approval?
-
-**Recommendation.** Walk the scenario end-to-end through the schema + endpoint + prototype views **before any code is written**. If a step requires a concept not yet in the design, add it to the design — don't code around it.
-
-**Status.** **RESOLVED** (2026-04-24). Walk completed in `../architecture/walks/analyst-week-1.md`. Five gaps surfaced and landed:
-
-| Gap | ADR | Sub-question resolved |
-|---|---|---|
-| #1 — Contribution creation path for ad-hoc work | ADR-022 (claim atomic-creates) | Q: who creates the open row? A: `claim` does, atomically |
-| #2 — Remote-surface repo write path unspecified | ADR-023 (per-project endpoint committer) | Implicit gap surfaced and closed via ARCH §7.8 |
-| #3 — Transcript storage | ADR-024 (sidecar, opt-in) | Q3 |
-| #4 — Multi-trace-ID support | ADR-021 (`trace_ids text[]`) | Q2 |
-| #5 — Lens routing for `state=review` | ADR-025 (`territory.review_role`) | Q4 |
-
-Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly support the flow?) — **yes**, confirmed against `.atelier/territories.yaml`. No schema change needed.
-
----
-
-## 2 · Switchman as dependency vs. own-implementation for file locks
-
-**Scenario.** Atelier's lock + fencing primitive overlaps with Switchman's core offering. Switchman (full product April 2026) ships MCP-based file-level locks with support for Claude Code, Cursor, Codex, Windsurf, Aider.
-
-**Open questions:**
-- Does Switchman expose fencing tokens in its public API or is that internal?
-- Is Switchman's license compatible with Atelier's OSS distribution model?
-- How stable is Switchman's API surface? Are there public version/deprecation policies?
-- What's the maintainer health (solo vs team)? Single-maintainer dependencies carry abandonment risk.
-
-**Recommendation.** Evaluate Switchman's public surface before v1 commit. If it's stable with fencing + clean MCP, integrate and inherit ~2 weeks of work. If any concern, own-implementation.
-
-**Status.** **RESOLVED** (2026-04-25). Own-implementation. See ADR-026 and PRD-COMPANION D22 for the full evaluation rubric. Headline: Switchman is MIT/MCP-native but its lease+scope model exposes **no fencing tokens**, which disqualifies it under ADR-004 (fencing mandatory on every lock from v1). Re-evaluation trigger: Switchman 1.0 with explicit fencing-token API + semver commitment.
-
----
-
-## 3 · Embedding-model default + swappability for find_similar
+### 3 · Embedding-model default + swappability for find_similar
 
 **Scenario.** Find_similar's precision depends on the embedding model's semantic representation of decisions + contributions + BRD/PRD sections + research artifacts.
 
@@ -72,58 +27,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 4 · Contract-breaking-change heuristics
-
-**Scenario.** A territory owner publishes a contract update. The system classifies it as "breaking" (routes through proposal flow) or "additive" (broadcasts immediately).
-
-**Open questions:**
-- What heuristics classify a contract change as breaking?
-  - Obvious breaking: removed fields, narrowed type constraints, renamed fields
-  - Ambiguous: added optional fields (could break consumers with strict validators), reordered fields, moved defaults
-- Should the publisher have an override ("I know this looks breaking; it's not")?
-- How do we handle contract versioning over time? Semver-style? Monotonic? Snapshot per commit?
-
-**Recommendation.** Conservative defaults (any field removal, narrowing, or rename = breaking). Publisher override with justification required. Semver-style versioning with major-version bump on breaking. Document heuristics so consumers understand what triggers a proposal.
-
-**Status.** **RESOLVED** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §6.6.1` (breaking-change classifier table) + the §6.6 flow narrative. This was a spec gap, not a decision — recommendation became spec.
-
----
-
-## 5 · Identity-service default
-
-**Scenario.** Atelier requires an identity service for per-composer signed tokens. Options:
-- Self-hosted OIDC (complex deploy; team owns identity)
-- External provider (Auth0, Clerk, Supabase Auth, etc. — clean integration but vendor dependency)
-- Bring-your-own with a documented default
-
-**Open questions:**
-- What's the default that ships with `atelier init`?
-- For teams with existing SSO, how does Atelier integrate without making them set up a separate identity service?
-- What's the token-rotation UX? How do composers rotate their own tokens?
-
-**Recommendation.** BYO with a documented default recipe (most likely a specific external provider for the default to reduce ceremony). Support SSO federation via OIDC claims mapping.
-
-**Status.** **RESOLVED** (2026-04-25). Default: **Supabase Auth** (sub-decision of ADR-027 reference stack). BYO via OIDC federation through `.atelier/config.yaml: identity.provider`. See ADR-028 and PRD-COMPANION D23.
-
----
-
-## 6 · Upgrade path semantics for template versions
-
-**Scenario.** A team on Atelier template v1.0 wants to adopt template v1.1 without re-scaffolding.
-
-**Open questions:**
-- `atelier upgrade` runs migrations. What about authored content that conflicts with new defaults?
-- Are migrations idempotent? Reversible?
-- How does the datastore schema get migrated? Compatibility window for in-flight contributions across versions?
-- Do projects have to upgrade in lockstep if they share a guild?
-
-**Recommendation.** Migrations are additive-preferred (no destructive changes). Conflicts reported, not auto-resolved. Datastore schema supports N and N−1 simultaneously for a grace window. Projects upgrade independently within a guild.
-
-**Status.** **RESOLVED at design level** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §9.7` (template version upgrades): additive-preferred + idempotent migrations, no auto-rollback, conflicts reported not auto-resolved, schema N/N−1 co-existence, no-lockstep upgrades, decision-log preservation. **Data-dependent residue:** the actual grace-window length (default starting point: "until all projects in the guild have upgraded, capped at one minor-version cycle") is tuned post-M7 from operational experience.
-
----
-
-## 7 · Scale ceiling per guild
+### 7 · Scale ceiling per guild
 
 **Scenario.** One guild hosts N projects with M composers total. What are the design limits?
 
@@ -138,7 +42,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 8 · Cross-composer cost accounting
+### 8 · Cross-composer cost accounting
 
 **Scenario.** Each composer's agent consumes LLM tokens (for their own agent usage and for Atelier-side operations like find_similar embedding). How does a team manage aggregate spend?
 
@@ -153,7 +57,7 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 9 · Cross-repo projects
+### 9 · Cross-repo projects
 
 **Scenario.** A project spans multiple repositories (e.g., frontend + backend in separate git repos).
 
@@ -168,138 +72,116 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 ---
 
-## 10 · Offline / disconnected mode
+## Resolved
 
-**Scenario.** A composer is offline for an extended period. What works? What doesn't?
+Each entry below is a one-line redirect to the canonical home where the decision now lives. Recommendations and full Q-and-A blocks have been removed to avoid parallel-summary drift per METHODOLOGY section 6.1; see git history for the original full-context entries.
 
-**Open questions:**
-- Can a dev work in the repo with their agent offline? Yes — git + `get_context` can fall back to local charter files + local decisions.md cache.
-- Can they claim contributions offline? No — that requires datastore.
-- What happens on reconnect? Replay? Merge conflicts?
+### 1 - Territory-model validation on the analyst case
 
-**Recommendation.** Document the capability matrix. Offline: read canonical state + edit files + commit. Online-required: claim contributions, acquire locks, log decisions, find_similar. On reconnect: session re-registers; conflicts reported, not auto-resolved.
+Validate territory model end-to-end against an analyst's web-surface week-1 research scenario.
 
-**Status.** **RESOLVED** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §9.6` (offline / disconnected behavior) with the full capability matrix and reconnect semantics. Web-surface composers explicitly noted as offline-incapable.
+**Status.** RESOLVED 2026-04-24. See `../architecture/walks/analyst-week-1.md` and ADRs 021/022/023/024/025. Five gaps surfaced and landed via the walk; territory schema confirmed adequate for research_artifact flows. Walk re-examined 2026-04-27 with the latent-gaps discipline; see walk section 7 for the per-step audit-trail of additional ARCH subsections folded in.
 
 ---
 
-## 11 · Solo-to-guild transition
+### 2 - Switchman as dependency vs. own-implementation for file locks
 
-**Scenario.** A solo dev starts a project with `atelier init --local-only`. Six months later, they want to add collaborators.
+Decide whether to integrate Switchman or build Atelier's own lock + fencing implementation.
 
-**Open questions:**
-- How does `atelier datastore init` migrate local state (SQLite + file-based pub/sub) to production datastore?
-- Is decision history preserved across the transition?
-- Do local-only fencing tokens remain valid?
-
-**Recommendation.** Migration script. Full decision-log transfer (all per-ADR files preserved with provenance). Fencing counter reset at transition with a new ADR documenting the cutover.
-
-**Status.** **RESOLVED at design level** (2026-04-27). Design intent folded into `../architecture/ARCHITECTURE.md §9.5` (local → guild promotion): additive-preferred migration, full decision-log transfer, fencing reset with a transition ADR, in-flight contributions migrate as-is, locks dropped + re-acquired. Operational runbook lands at M7 alongside `atelier upgrade`.
+**Status.** RESOLVED 2026-04-25. See ADR-026. Own-implementation; Switchman lacks a fencing-token API, disqualifying under ADR-004.
 
 ---
 
-## 12 · Find_similar sensitivity trade-off
+### 4 - Contract-breaking-change heuristics
 
-**Scenario.** Find_similar returns matches above similarity threshold. Too sensitive = false positives blocking legitimate work. Too loose = duplicate implementations slip through.
+Define when a territory contract change classifies as breaking vs additive.
 
-**Open questions:**
-- Where does the default threshold sit? 0.75? 0.80? 0.85?
-- Is threshold per-project-configurable or global?
-- Do composers see all matches below threshold (as "weak suggestions") or only those above?
-
-**Recommendation.** Default threshold 0.80 (tuned against seed eval set). Per-project configurable. UI shows matches ≥0.80 prominently and matches 0.65–0.80 as collapsible "weak suggestions."
-
-**Status.** **RESOLVED at design level** (2026-04-27). Folded into `../architecture/ARCHITECTURE.md §6.4.1` (threshold semantics + two-band response): per-project configurable thresholds, primary/weak-suggestion bands, `thresholds_used` echoed in response, top-k per band, UI rule documented. Config keys already present in `../../.atelier/config.yaml`. **Data-dependent residue:** the actual default-threshold *value* (`0.80` at present) is tuned against the labeled seed eval set when M5 ships, against `ADR-006` precision/recall gates.
+**Status.** RESOLVED 2026-04-27. See ARCH section 6.6.1. Conservative classifier table with publisher override (justification required) and semver-style versioning.
 
 ---
 
-## 13 · Decision-log growth and searchability
+### 5 - Identity-service default
 
-**Scenario.** A long-running project accumulates thousands of decisions. The decision log must remain navigable.
+Pick the default identity service shipped with `atelier init`.
 
-**Open questions (closed by ADR-030):**
-- Is the decision log a single file or partitioned? → **Per-ADR file from v1**, one file per ADR under `../architecture/decisions/`. Each file is independently navigable, diffable, and `git blame`-able.
-- How does find_similar handle a large decision log? → Vector index ingests one embedding per ADR file. Sharding becomes a query-time concern only at very large scales (>10K ADRs); not a v1 problem.
-- Is there a "decisions view" in the prototype? → Yes: `/atelier/decisions` route per Epic 12 plans, surfacing the directory's index README plus per-ADR detail.
-
-**Status.** **RESOLVED** (2026-04-25) by ADR-030 (per-ADR file split). Per-file model from v1 means there is no "single-file growth" problem to defer; the problem is structurally avoided.
+**Status.** RESOLVED 2026-04-25. See ADR-028. Default Supabase Auth; BYO via OIDC federation through `.atelier/config.yaml: identity.provider`.
 
 ---
 
-## 14 · Analyst-proposed territory changes
+### 6 - Upgrade path semantics for template versions
 
-**Scenario.** An analyst decides the `strategy` territory's scope pattern is too narrow — they want to include `research/**` alongside `BRD.md#*`.
+Define how a team adopts a new Atelier template version without re-scaffolding.
 
-**Open questions:**
-- Who has authority to modify territory definitions? Is it by role? By explicit admin assignment?
-- Does a territory change require a cross-composer vote or just the admin?
-- Does modifying `territories.yaml` trigger a proposal flow or is it an immediate change?
-
-**Recommendation.** Territory changes are repo-committed PRs. Any composer can propose; admin (or defined approver role) must merge. Change takes effect on merge + datastore reload.
-
-**Status.** **RESOLVED** (2026-04-27). Governance rule landed in `../../.atelier/territories.yaml` header comment: any composer proposes via PR; admin (or delegated role per `config.yaml`) merges; effect on merge + next datastore reload via the M1 territories-mirror sync script. Active contributions/locks on renamed or narrowed scopes are not auto-released; merging admin coordinates with affected composers.
+**Status.** RESOLVED at design level 2026-04-27. See ARCH section 9.7. Additive-preferred + idempotent migrations, no auto-rollback, schema N/N-1 co-existence, no-lockstep upgrades. Data-dependent residue: grace-window length tuned post-M7 from operational experience.
 
 ---
 
-## 15 · Prototype deployment per environment
+### 10 - Offline / disconnected mode
 
-**Scenario.** A team wants different Atelier environments (staging, production). How?
+Specify what works and doesn't for a composer offline.
 
-**Open questions:**
-- One guild with multiple projects representing environments, or one project with multiple deploy targets?
-- Are sessions/contributions shared across environments or isolated?
-
-**Recommendation.** Environments are separate projects within one guild. Each has its own repo branch, datastore schema namespace, deploy target. Cross-environment references via trace IDs if needed. Documented pattern, not a schema construct.
-
-**Status.** DOCUMENTED convention (no schema change).
+**Status.** RESOLVED 2026-04-27. See ARCH section 9.6. Capability matrix + reconnect semantics; web-surface composers explicitly offline-incapable.
 
 ---
 
-## 16 · Adapter sequencing within M1
+### 11 - Solo-to-guild transition
 
-**Scenario.** Per ADR-008, all 5 sync substrate scripts ship at M1. Per BRD US-10.3 / US-10.4 / US-10.5, all five external adapters (Jira, Linear, Confluence, Notion, Figma) are v1 deliverables. The adapter interface (per US-10.2) is itself a v1 deliverable.
+Define how a solo `atelier init --local-only` project promotes to a guild-shared deployment.
 
-**Open questions:**
-- Does M1 require all five concrete adapters live, or does M1 ship the interface plus one reference adapter (with the remaining four batched into a follow-up M1.5 epic)?
-- Strict ADR-011 reading says no deferral. Adapters are I/O leaves, not capability changes — does that distinction warrant a documented carve-out?
-- If only one adapter ships at M1, which one? GitHub Issues is already configured as `git_provider`; lowest external setup cost; usable end-to-end without procuring Jira/Linear/Confluence/Notion/Figma credentials.
-- How is M1 exit verified for the deferred adapters? Contract tests against the interface, with concrete-adapter integration tests landing per-adapter as they ship?
-
-**Recommendation.** Ship the interface (`scripts/sync/adapters/types.ts`) plus an in-memory mock plus GitHub Issues + GitHub Discussions at M1. Defer Jira / Linear / Confluence / Notion / Figma to a follow-up epic between M1 and M2 (call it M1.5 in sequencing language only -- the adapters remain v1 scope). Contract tests against the interface gate M1 exit; per-adapter integration tests gate adapter-shipping PRs.
-
-**Status.** **RESOLVED** (2026-04-27). Per the recommendation. M1.5 is now a named milestone in `../strategic/BUILD-SEQUENCE.md` section 5 between M1 and M2 with its own exit criteria. M1 exit requires the interface plus the GitHub adapter passing both contract tests (against the interface) and integration tests (against a real or recorded GitHub fixture). M1.5 ships the four remaining provider adapters with their own integration tests and per-provider setup runbooks under `docs/user/integrations/`.
+**Status.** RESOLVED at design level 2026-04-27. See ARCH section 9.5. Additive-preferred migration, full decision-log transfer, fencing reset with a transition ADR. Operational runbook lands at M7 alongside `atelier upgrade`.
 
 ---
 
-## 17 · Round-trip whitelist surface
+### 12 - Find_similar sensitivity trade-off
 
-**Scenario.** M1 exit criterion (per `../strategic/BUILD-SEQUENCE.md §5 M1`) requires that "markdown → datastore → projector → markdown is byte-identical" for the canonical doc classes. "Byte-identical" needs a precise contract — otherwise trivial normalizations (trailing newline, YAML key ordering) produce false drift signals while real divergences slip through.
+Set find_similar threshold + UI presentation policy.
 
-**Open questions:**
-- Which doc classes are in the round-trip set? Candidates: `docs/architecture/decisions/*.md`, `.atelier/territories.yaml`, `.atelier/config.yaml`, `traceability.json`, `docs/functional/BRD.md` story regions, `docs/functional/PRD-COMPANION.md` decision entries.
-- What normalizations are permitted? Candidates: trailing-newline addition, YAML key sort if explicitly canonicalized, JSON pretty-print with stable key order, line-ending normalization.
-- What normalizations are forbidden? At minimum: any change to the ADR body text, any change to `traceability.json` entry contents, any change to BRD story IDs or acceptance text.
-- Where is the contract documented so future test additions don't drift it? Recommend `scripts/sync/README.md` with the table embedded.
-
-**Recommendation.** Document the contract as a table in `scripts/sync/README.md` listing each doc class, the parser, the projector, and the explicit normalization set. The round-trip test fails on any byte difference outside the listed normalizations. Adding a new doc class to the round-trip set requires a PR that updates the contract first.
-
-**Status.** **RESOLVED** (2026-04-27). Filed as a question in error during the M1 scoping pass; this was a spec gap, not a decision. Contract now landed in `../../scripts/README.md` ("Round-trip integrity contract") with the doc-class table, forbidden-normalization list, test shape, and PR rules for adding new doc classes.
+**Status.** RESOLVED at design level 2026-04-27. See ARCH section 6.4.1. Two-band response (primary + weak), per-project configurable, top-k per band. Data-dependent residue: actual default-threshold value tuned at M5 against the seed eval set per ADR-006.
 
 ---
 
-## 18 · publish-delivery trigger model (pre-broadcast-substrate)
+### 13 - Decision-log growth and searchability
 
-**Scenario.** `publish-delivery` (US-9.2) fires on contribution state transitions. M1 ships the four-table schema and the sync scripts via direct internal-library writes (per `../strategic/BUILD-SEQUENCE.md §5 M1`). The endpoint surface lands at M2; the broadcast substrate (`BroadcastService`) lands at M4.
+Keep a long-running project's decision log navigable.
 
-**Open questions:**
-- Without an event bus, how does `publish-delivery` know a state transition occurred? Options:
-  - **Polling.** Cron scans `contributions` for `updated_at > last_run`. Simple; some lag.
-  - **Post-write hook in the internal library.** Every write through `scripts/sync/lib/datastore.ts` invokes `publish-delivery` synchronously. Tightest coupling but no out-of-band catch-up if a write crashes after DB commit.
-  - **Pull broadcast forward.** Land the `BroadcastService` interface at M1 with the polling-driven default impl, lit up properly at M4. Most consistent with capability-level architecture; expands M1 scope.
-- Does the answer change at M2 when the endpoint becomes the canonical write path? (E.g., M1 polls; M2 swaps to endpoint-emitted events; M4 swaps to real broadcast.)
-
-**Recommendation.** Polling at M1 with a documented cutover plan: M2 layers post-commit hooks via the endpoint write path; M4 swaps the hook to real broadcast. Each cutover is a single write-path change, not a publish-delivery rewrite. Avoids pulling broadcast substrate work forward unnecessarily.
-
-**Status.** **RESOLVED** (2026-04-27). Per the recommendation. The full trigger-model evolution (M1 polling, M2 post-commit hooks via endpoint, M4 broadcast subscription) is documented in `../../scripts/README.md` "publish-delivery trigger model" with the milestone progression table, cutover discipline, and invariants across milestones. ARCH section 6.5 cross-references the trigger model rather than duplicating.
+**Status.** RESOLVED 2026-04-25. See ADR-030. Per-ADR file split structurally avoids the single-file growth problem.
 
 ---
+
+### 14 - Analyst-proposed territory changes
+
+Govern who can modify territory definitions and how.
+
+**Status.** RESOLVED 2026-04-27. See `../../.atelier/territories.yaml` header. Any composer proposes via PR; admin (or delegated approver per `config.yaml`) merges; effect on merge + next datastore reload via the M1 territories-mirror sync script.
+
+---
+
+### 15 - Prototype deployment per environment
+
+Run multiple Atelier environments (staging, production).
+
+**Status.** DOCUMENTED convention. Environments are separate projects within one guild; each has its own repo branch, datastore schema namespace, deploy target. Cross-environment refs via trace IDs. No schema change.
+
+---
+
+### 16 - Adapter sequencing within M1
+
+Decide whether all five non-GitHub external adapters ship at M1 or are sequenced.
+
+**Status.** RESOLVED 2026-04-27. See `../strategic/BUILD-SEQUENCE.md` M1.5. M1 ships the adapter interface + GitHub adapter; M1.5 ships Jira/Linear/Confluence/Notion/Figma with their own integration tests and per-provider runbooks under `docs/user/integrations/`. All five remain v1 scope per ADR-011; only their construction order is sequenced.
+
+---
+
+### 17 - Round-trip whitelist surface
+
+Define what counts as permissible normalization vs drift in the M1 round-trip integrity test.
+
+**Status.** RESOLVED 2026-04-27. See `../../scripts/README.md` "Round-trip integrity contract". Filed as a question in error; was a spec gap (recommendation became spec).
+
+---
+
+### 18 - publish-delivery trigger model (pre-broadcast-substrate)
+
+Pick the trigger mechanism for publish-delivery before the broadcast substrate exists.
+
+**Status.** RESOLVED 2026-04-27. See `../../scripts/README.md` "publish-delivery trigger model". Polling at M1, post-commit hooks at M2, broadcast subscription at M4 -- non-destructive cutover at each milestone.

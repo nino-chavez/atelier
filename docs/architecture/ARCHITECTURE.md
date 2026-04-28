@@ -394,6 +394,35 @@ If `content_stub` is null, no artifact is created; the contribution row carries 
 
 **Lock acquisition is separate.** Claim does not acquire any lock. The agent must follow up with `acquire_lock(contribution_id, artifact_scope)` per the lifecycle above. If `acquire_lock` fails (e.g., the scope is already locked by another contribution), the contribution remains claimed but cannot be authored against. The agent's choices: wait, narrow the scope, or `release(contribution_id)` to give it back to `state=open`. There is no auto-release on lock failure -- an analyst may legitimately hold a contribution while waiting for a busy artifact.
 
+#### 6.2.1.5 Pre-existing claim path
+
+Section 6.2.1 specified the atomic-create path. The pre-existing path is the more common case for IDE-surface dev composers picking up BRD-ingested user-story contributions:
+
+**Signature.**
+
+```
+claim(
+  contribution_id: uuid,                                     // required; identifies the existing open row
+  idempotency_key: string | null                             // optional; same semantics as atomic-create
+) -> ClaimResponse
+```
+
+`kind`, `trace_ids`, `territory_id`, `content_stub` are NOT permitted on the pre-existing path -- they would conflict with the row's existing values. Including them returns BAD_REQUEST.
+
+**Validation.**
+
+1. The named `contribution_id` exists in the project.
+2. The contribution is in `state=open` (not already claimed by another session).
+3. The calling session's composer holds a role that may author into the contribution's territory (same role check as atomic-create per section 6.2.1).
+
+**Conditional UPDATE.** The state transition is `UPDATE contributions SET state="claimed", author_session_id=<session>, updated_at=now WHERE id=<id> AND state="open"`. The `state="open"` predicate prevents racing claims: only one session can win the transition. The losing session receives `CONFLICT` with the current `author_session_id` so they know who claimed it.
+
+**Find_similar gate.** Same as atomic-create -- the implicit gate runs and surfaces matches in `similar_warnings`. For pre-existing rows, the description is derived from the contribution's existing fields (`kind + trace_ids + territory.name`); `content_stub` is unavailable because the row is pre-existing.
+
+**Idempotency.** Same per-session 1-hour dedup. A retry with the same key returns the original ClaimResponse.
+
+**Created flag.** `ClaimResponse.created` is `false` for the pre-existing path, distinguishing it from atomic-create.
+
 #### 6.2.2 Update operation semantics
 
 `update` is the tool that advances a contribution from `claimed` through `in_progress` to `review`, and is the write-path for artifact content. Latent details from ARCH 6.2's high-level lifecycle:
@@ -427,7 +456,19 @@ update(
 - Branch name: `<contribution_kind>/<first-trace-id>-<contribution_id_short>` (e.g., `research/US-1.3-a3f2e1b9`).
 - Branch is created on the first `update` that produces a commit.
 - The branch is merged to `main` when the contribution transitions to `merged` (via the review path; see section 6.2.3).
-- IDE-surface composers commit to whatever branch their local git is on; the endpoint observes the branch via the contribution row's `repo_branch` field (added at M2 with the contributions table).
+- IDE-surface composers commit to whatever branch their local git is on; the endpoint observes the branch via the contribution row's `repo_branch` field (added at M2 with the contributions table) and via versioned-file-store webhooks per section 6.2.2.1.
+
+#### 6.2.2.1 Endpoint observation of IDE-surface commits
+
+For IDE-surface composers the endpoint does not mediate writes. The composer commits and pushes locally. The endpoint learns about commits via the versioned-file-store webhook (configured at `atelier deploy` time):
+
+- **Webhook events subscribed:** `push` (any branch), `pull_request.opened`, `pull_request.synchronize`, `pull_request.merged`.
+- **Push handler:** parses the pushed branch name. If the name matches `<kind>/<trace-id>-<short-id>` for a known contribution, the endpoint updates `contributions.commit_count` and `contributions.last_observed_commit_sha`. Branches not matching the convention are ignored (the endpoint does not own all branches).
+- **PR handlers:** see section 6.2.3 for the merge-observation path.
+- **Latency:** webhook delivery is best-effort by the provider. Typical latency under 5 seconds; SLA depends on the configured provider.
+- **Catch-up.** If the endpoint missed a webhook (provider downtime, restart), the periodic reconcile script (section 6.5) detects branches with commits ahead of the recorded `last_observed_commit_sha` and updates lazily.
+
+The `repo_branch` field is set on the first IDE `update` call -- the agent declares its branch name explicitly. The endpoint does not infer branch from commit history; declaration is required to handle composers using non-conventional branch names.
 
 **Commit message convention.** When `commit_message` is null, the endpoint synthesizes:
 
@@ -450,7 +491,12 @@ When `commit_message` is provided, the endpoint uses it verbatim (still appendin
 
 When `update(state="review")` succeeds, the contribution is routed to a reviewer per `territories.review_role` (ADR-025). What happens after review depends on the contribution's nature:
 
-- **For repo-resident artifacts (most contributions):** the contribution branch carries an open PR (created by the endpoint committer at the moment of the `state=review` transition). The reviewer approves and merges the PR via the versioned-file-store UI or CLI. The merge webhook fires; the endpoint observes the merge via commit on `main` and transitions the contribution to `state=merged`.
+- **For repo-resident artifacts (most contributions):** the contribution branch carries an open PR. PR creation responsibility depends on surface:
+  - For remote-surface composers (web/terminal without local repo), the per-project endpoint committer (per section 7.8) opens the PR using its bot identity at the moment of the `state=review` transition.
+  - For IDE-surface composers, the endpoint opens the PR via the versioned-file-store API at the `state=review` transition. By default the PR is attributed to the project's bot identity (consistent with remote-surface) so the PR-open audit trail is uniform; teams that prefer the dev's own identity on PRs may set `git_provider.use_composer_identity_for_pr_open: true` in `.atelier/config.yaml`, in which case the PR is opened via the composer's identity (requires the composer's identity provider to grant a write-scoped token to Atelier).
+  - In both cases the endpoint validates that commits exist on the declared `repo_branch` before opening the PR. If no commits exist, `update(state="review")` returns BAD_REQUEST asking the composer to push first.
+
+  The reviewer approves and merges the PR via the versioned-file-store UI or CLI. The merge webhook fires; the endpoint observes the merge via commit on `main` and transitions the contribution to `state=merged`.
 - **For research artifacts (no PR pattern):** the reviewer calls `update(contribution_id, state="merged")` directly via the endpoint; no PR is involved because the artifact already lives on the branch and no code review applies.
 - **For decisions:** decisions log via `log_decision` (see section 6.3), not via update. They have no `review` state.
 
@@ -556,6 +602,8 @@ The append-only convention is preserved: the original ADR file is not modified. 
 - The committer retries push with exponential backoff (3 attempts, 5s/15s/45s).
 - On final retry failure: the entire `log_decision` returns a retryable error with a stable `idempotency_key` echoed to the caller. The caller may retry; the local commit is preserved across retries via the idempotency table.
 - The local commit is never auto-discarded -- recovering from a stuck push state is an admin operation via `atelier doctor` (M7).
+
+**Decision commits always route through the endpoint committer regardless of composer surface.** IDE-surface composers commit code edits locally (per section 6.2.2.1) but `log_decision` calls always trigger a commit by the per-project endpoint committer (section 7.8). Two reasons: (1) ADR-NNN allocation requires the per-project monotonic counter held server-side; an IDE composer cannot pick a globally-unique NNN locally without a round trip. (2) The append-only invariant on the decisions directory requires server-side enforcement -- the committer is the choke point that ensures no ADR file is ever modified, only created. Decision commits are attributed via the same Co-Authored-By scheme as remote-surface code commits (section 7.8 attribution rules) so the calling composer's identity is preserved in `git log`.
 
 **Step 3 reconciliation with section 6.4.2.** The ARCH section 6.3 four-step text historically described "Step 3: generates embedding + upserts into vector index" as inline. With section 6.4.2 (added 2026-04-27) embedding becomes webhook-driven on commit to main -- it is the same operation but happens out-of-transaction with respect to log_decision. Step 1's commit triggers the same webhook the embed pipeline already listens to; no separate trigger from log_decision is needed. The four-step description retains "Step 3" as a phase name for clarity but the implementation is asynchronous to log_decision.
 
@@ -909,8 +957,49 @@ This is the explicit "what changed since I was last here" mode — the protocol 
 ### 7.4 Fencing & concurrency
 
 - Every lock carries a monotonic fencing_token per project.
-- Every write to a locked artifact validates the token server-side.
+- Every write to a locked artifact validates the token server-side (the meaning of "validates" depends on surface; see section 7.4.2).
 - Stale tokens (from sessions whose locks have been reaped and reassigned) are rejected unconditionally.
+
+#### 7.4.1 Lock granularity, glob semantics, and multi-lock per contribution
+
+**Artifact_scope as glob patterns.** `acquire_lock(contribution_id, artifact_scope)` accepts `artifact_scope` as a string array. Each entry is a glob pattern matched against the territory's `scope_pattern` and against active lock entries for overlap detection. Glob semantics follow the standard `picomatch` / `minimatch` rules:
+
+- `*` matches any character except `/`
+- `**` matches any character including `/`
+- `?` matches exactly one character except `/`
+- `[abc]` character class
+- `{a,b}` alternation
+
+Examples valid on the `protocol` territory (which has `scope_pattern: ["prototype/src/lib/protocol/**", "scripts/sync/**"]`):
+- `prototype/src/lib/protocol/tools/acquire_lock.ts` -- exact file
+- `prototype/src/lib/protocol/tools/*.ts` -- all .ts files at one level
+- `prototype/src/lib/protocol/**` -- entire subtree (broad lock, generally avoided)
+
+**Territory-scope check.** Every `artifact_scope` entry must be a subset of (i.e., be matched by) at least one of the territory's `scope_pattern` entries. Entries outside the territory return BAD_REQUEST. This prevents a dev from accidentally locking the analyst's `research/` files via a too-broad glob.
+
+**Multi-lock per contribution.** A single contribution may hold multiple locks acquired across multiple `acquire_lock` calls. Each call returns a new `lock_id` and a new `fencing_token`. This handles the common case where a dev discovers more files needed mid-work without forcing them to release-and-reacquire.
+
+**Overlap detection.** A new lock conflicts with an existing lock if any glob pattern in the new lock's `artifact_scope` matches any glob pattern in the existing lock's `artifact_scope` (computed via union of expanded paths, capped at a configurable expansion limit to prevent pathological globs). On conflict, the response includes `conflicting_lock: { id, holder_session_id, artifact_scope }` so the calling agent can decide to wait, narrow, or escalate.
+
+**Expansion limit.** A glob expands to at most `policy.lock_glob_expansion_limit` paths (default 10000) for overlap-detection purposes. Globs that would expand further return BAD_REQUEST asking the composer to narrow. This prevents `**` against a million-file repo from blocking the project.
+
+**Per-contribution lock release.** When a contribution transitions to `state=merged` (PR merge observed) or `state=open` (release/abandon), all locks held against that `contribution_id` are released atomically.
+
+#### 7.4.2 Fencing semantics by surface
+
+The phrase "every write to a locked artifact validates the token server-side" in section 7.4 has different operational meanings depending on the composer's surface:
+
+**Remote-surface composers (web, terminal-without-repo).** Writes flow through the per-project endpoint committer (section 7.8). Every commit-producing call (`update(payload=...)`) carries the `fencing_token` in the request. The endpoint validates the token against the active `locks` table before performing the commit. Stale or missing tokens return CONFLICT and no commit happens. This is the strongest enforcement -- the server is in the write path.
+
+**IDE-surface composers.** Writes happen on the composer's local machine; the endpoint never sees individual file edits. Fencing for IDE composers operates as **soft coordination at acquire time, hard validation at PR-open time**:
+
+- *Soft at acquire time.* The lock prevents OTHER composers (any surface) from claiming overlapping artifact_scope. The IDE composer trusts that holding the lock means they're the only one touching those files. There is no protocol-level enforcement preventing the IDE composer from editing files outside their lock; the social contract (and the territory boundary) is the only constraint.
+- *Hard at PR-open time.* When the IDE composer transitions to `state=review` (per section 6.2.3, opens a PR), the endpoint inspects the changed-files list of the branch's commits. If the changed files include any path outside the contribution's held locks, the `update(state="review")` returns CONFLICT with the offending paths and the contribution stays in `state=in_progress`. The composer must either acquire additional locks for the missing paths or revert those edits before re-attempting the review transition.
+- *Stale-token detection.* If the IDE composer's session was reaped (network drop > `session_ttl_seconds`) and their locks were released and re-acquired by another session before they reconnect, the PR-open check still uses the original lock-holder check; the offending PR-open is rejected. The composer must claim again and re-acquire (which will conflict with the new holder).
+
+This split keeps the IDE workflow ergonomic (no fencing-token plumbing in every local command) while preserving the integrity guarantee at the PR boundary, where work becomes visible to the team.
+
+**Decisions are always endpoint-mediated.** Regardless of surface, `log_decision` always commits through the per-project endpoint committer (per section 6.3.1). Decisions require ADR-NNN allocation and the append-only invariant per ADR-005, both of which require server-side coordination. IDE composers do not commit ADR files locally.
 
 ### 7.5 Triage sandboxing
 

@@ -208,6 +208,12 @@ Atelier evolved from prior work on coordination substrates, prototype-as-canonic
 
 ## 10. Known staleness
 
-- Competitive analysis dated 2026-04-24. The agent-tooling ecosystem moves faster than any single doc can track. Re-audit at least quarterly.
+- Competitive analysis dated 2026-04-24. The agent-tooling ecosystem moves faster than any single doc can track. Re-audit at least quarterly. Recent partial re-audit: `addenda/2026-04-28-multi-agent-coordination-landscape.md` (covers Maggie Appleton's talk + GitHub Next project survey; recommendations pending action).
 - Cost estimates assume 2026 compute/personnel markets. Re-estimate annually.
 - Red team findings reflect the 2026-04-24 session only. Re-run with different stakeholders at least once before major commit (e.g., before building commercial surface).
+
+---
+
+## 11. Addenda
+
+Time-stamped analyses that inform strategic positioning without modifying this canonical document live in [`addenda/`](addenda/). Each addendum is a snapshot of inputs (competitive scans, talks, papers, market signals) at a moment in time; this document absorbs durable conclusions through normal PR cadence. See [`addenda/README.md`](addenda/README.md) for the pattern.

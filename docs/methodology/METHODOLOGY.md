@@ -411,8 +411,9 @@ Every 90 days (configurable), an architect + pm pair re-reads NORTH-STAR.md and 
 - Have any in-flight milestones revealed that the destination needs adjustment?
 - Are any ADRs whose `Re-evaluation triggers` have fired worth resolving as reversals?
 - Does BUILD-SEQUENCE still reflect the current priorities?
+- Have adjacent research surfaces (GitHub Next, Anthropic / OpenAI research blogs, comparable industry sources) published patterns that should inform Atelier's direction? File any substantive analysis as a strategy addendum under `docs/strategic/addenda/` per the pattern established by the 2026-04-28 multi-agent-coordination-landscape addendum.
 
-**Output.** Either re-affirmation (a one-line entry under `docs/architecture/audits/quarterly-<YYYY-Q>.md`: "Confirmed direction; no changes recommended") or a proposed pivot (a longer entry plus a PR updating NORTH-STAR / BUILD-SEQUENCE / risks.md as appropriate).
+**Output.** Either re-affirmation (a one-line entry under `docs/architecture/audits/quarterly-<YYYY-Q>.md`: "Confirmed direction; no changes recommended") or a proposed pivot (a longer entry plus a PR updating NORTH-STAR / BUILD-SEQUENCE / risks.md as appropriate). Adjacent-research scans land as strategy addenda regardless of whether they trigger updates to the canonical strategy.
 
 **Why quarterly.** Long enough to accumulate signal; short enough to course-correct before too much work goes the wrong direction. Atelier doesn't dictate cadence; the default is 90 days but `review.quarterly.cadence_days` overrides.
 

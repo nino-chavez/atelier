@@ -26,7 +26,8 @@ This file is a **pre-M2 stand-in for `get_context`**. Once the 12-tool endpoint 
   - Convention: ASCII in commit messages and new doc content per feedback memory. Pre-existing decorated content not retroactively swept.
 - **Stack locked:** GitHub + Supabase + Vercel + MCP, GCP-portability constrained (ADR-027/028/029).
 - **Three-tier consumer model:** Specification / Reference Implementation / Reference Deployment, all first-class at v1 (ADR-031).
-- **Open ADR-relevant decisions:** D24 (embedding model default -- needed at M5 entry).
+- **Open ADR-relevant decisions:** D24 (embedding model default -- needed at M5 entry); plan_review checkpoint per BRD-OPEN-QUESTIONS section 19 (wants resolution before M2 contribution-lifecycle endpoint work; surfaced by 2026-04-28 strategy addendum on multi-agent coordination landscape).
+- **Strategy addenda pattern established** at `../../docs/strategic/addenda/`. First addendum: 2026-04-28-multi-agent-coordination-landscape.md (Maggie Appleton talk + GitHub Next survey).
 - **Nothing blocks M1 design-wise.** Implementation can begin.
 
 ## What the next session should do first

@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (sections 8 and 9 moved to Resolved; v1 commitments landed in ARCH 8.1 / 8.2 / 9.2; only sections 3 and 7 remain genuinely open, both with research plans)
+**Last updated:** 2026-04-28 (sections 8 and 9 moved to Resolved; v1 commitments landed in ARCH 8.1 / 8.2 / 9.2; section 19 added per strategy addendum 2026-04-28 multi-agent-coordination-landscape; sections 3, 7, 19 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Two entries remain genuinely open. Both require benchmark data; both have research plans drafted under `docs/testing/`. Neither blocks M1 or M2.
+Three entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on whether to add a new contribution-lifecycle state. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work lands.
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -44,19 +44,31 @@ Two entries remain genuinely open. Both require benchmark data; both have resear
 
 ---
 
-### 8 - Cross-composer cost accounting
+### 19 - Plan-review checkpoint between claim and implementation
 
-Manage aggregate LLM-token spend across a team's composers + Atelier-side operations.
+**Scenario.** A composer (or their agent) atomic-creates and claims a contribution per ARCH 6.2.1. Today the contribution lifecycle goes `open -> claimed -> in_progress -> review -> merged`. There is no checkpoint where a human edits the agent's intent before implementation begins. Implementation may take minutes; the only alignment touchpoint is PR review at the end, when the work is already done.
 
-**Status.** RESOLVED at v1 design level 2026-04-28. v1 ships visibility (token-usage telemetry per ARCH 8.1, Cost lens in /atelier/observability per ARCH 8.2). Active cost-governance (budgets, hard limits) explicitly DEFERRED to v1.x with trigger "if demand surfaces"; v1 telemetry is the substrate any future governance work builds on.
+This pattern was surfaced by the 2026-04-28 strategy addendum (`../strategic/addenda/2026-04-28-multi-agent-coordination-landscape.md`) drawing on:
+- Maggie Appleton's talk -- "alignment touchpoints have collapsed; PR holds all the coordination weight"
+- ACE -- multiplayer sessions where teams collaboratively edit agent-generated plans before code is written
+- SpecLang -- spec-as-source pattern
+- Copilot Workspace -- plan-then-implement workflow
 
----
+Three independent projects converge on the same pattern: agent generates plan -> team edits collaboratively -> code follows.
 
-### 9 - Cross-repo projects
+**Open questions:**
+- Should Atelier add a `plan_review` state between `claimed` and `in_progress`?
+- If yes, opt-in per territory (so simple work is not slowed) or default-on?
+- What's the plan format -- free-form markdown? Structured (intent / approach / files-touched / risks)?
+- Who approves -- the territory's `review_role`, or a different reviewer (the contribution requester, the cross-territory consumer)?
+- What's the agent's behavior when the plan is rejected? Revise and re-submit, or release?
+- Does plan_review require its own `acquire_lock` (agent grabs files mentioned in the plan), or are locks deferred to in_progress?
 
-Atelier projects spanning multiple git repositories.
+**Recommendation.** Add an opt-in `plan_review` state, gated per-territory via `territories.yaml: requires_plan_review: true` (default false to keep simple work fast). The agent calls `update(state="plan_review", payload=<plan markdown>, fencing_token=<from acquire_lock if files known>)`. The territory's `review_role` approves via `update(state="in_progress")` (with same author_session_id semantics as the original claim, i.e., only the original author can transition). On rejection, the contribution returns to `state=claimed` with the reviewer's comments stored in the contribution's content_ref or transcript_ref. Plan format is free-form markdown at v1; structured templates can be added per-territory at v1.x as a config knob.
 
-**Status.** RESOLVED as deferral 2026-04-28. v1 commitment "one repo per project" landed in ARCH 9.2 with rationale and workarounds. v1.x extension hook (`.atelier/repos.yaml` with `repo://name/path` scope qualifier) sketched; designed when the v1.x epic is authored.
+This addresses the "should we build it" alignment bottleneck at the right point -- before code, not at PR. Per-territory opt-in means territories with established patterns (e.g., trivial config edits) don't pay the latency cost; territories with high-stakes work (e.g., architecture changes, design tokens) do.
+
+**Status.** OPEN. Wants resolution before M2 contribution-lifecycle endpoint work lands. If accepted, becomes an ADR + ARCH addition (likely a new section 6.2.1.7 between 6.2.1.5 pre-existing claim path and 6.2.2 update operation semantics). If rejected, document the rejection rationale (e.g., "plan-as-checkpoint adds latency disproportionate to alignment value at Atelier's target team scale") and revisit if v1 deployment surfaces the gap.
 
 ---
 
@@ -101,6 +113,22 @@ Pick the default identity service shipped with `atelier init`.
 Define how a team adopts a new Atelier template version without re-scaffolding.
 
 **Status.** RESOLVED at design level 2026-04-27. See ARCH section 9.7. Additive-preferred + idempotent migrations, no auto-rollback, schema N/N-1 co-existence, no-lockstep upgrades. Data-dependent residue: grace-window length tuned post-M7 from operational experience.
+
+---
+
+### 8 - Cross-composer cost accounting
+
+Manage aggregate LLM-token spend across a team's composers + Atelier-side operations.
+
+**Status.** RESOLVED at v1 design level 2026-04-28. v1 ships visibility (token-usage telemetry per ARCH 8.1, Cost lens in /atelier/observability per ARCH 8.2). Active cost-governance (budgets, hard limits) explicitly DEFERRED to v1.x with trigger "if demand surfaces"; v1 telemetry is the substrate any future governance work builds on.
+
+---
+
+### 9 - Cross-repo projects
+
+Atelier projects spanning multiple git repositories.
+
+**Status.** RESOLVED as deferral 2026-04-28. v1 commitment "one repo per project" landed in ARCH 9.2 with rationale and workarounds. v1.x extension hook (`.atelier/repos.yaml` with `repo://name/path` scope qualifier) sketched; designed when the v1.x epic is authored.
 
 ---
 

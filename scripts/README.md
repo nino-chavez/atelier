@@ -2,26 +2,32 @@
 
 Substrate and tooling scripts that run outside the prototype web app.
 
-## Structure (not yet implemented)
+## Structure
+
+The sync substrate landed at M1 step 4.iii (commit history). The traceability
+substrate lands later in M1 (step 4.v exit gate prep). All TypeScript; entry
+points use `npx tsx` shebangs so they run directly without compilation.
 
 ```
 scripts/
-├── traceability/             # Registry generation + link injection
-│   ├── build-registry.mjs    # Scan docs + emit traceability.json
-│   ├── inject-links.mjs      # Inject trace-ID callouts into markdown
-│   ├── validate-refs.mjs     # Pre-commit check: every trace ID resolves
+├── traceability/             # Registry generation + link injection (not yet implemented)
+│   ├── build-registry.ts     # Scan docs + emit traceability.json
+│   ├── inject-links.ts       # Inject trace-ID callouts into markdown
+│   ├── validate-refs.ts      # Pre-commit check: every trace ID resolves
 │   └── schema.json           # JSON schema for traceability.json (graph-ready per below)
-└── sync/                     # The 5-script sync substrate (all v1)
+└── sync/                     # The 5-script sync substrate (all v1; M1 step 4.iii)
     ├── lib/
-    │   └── event-bus.ts      # In-memory event bus; trigger-source-agnostic per "publish-delivery trigger model" below
-    ├── publish-docs.mjs      # repo → published-doc system
-    ├── publish-delivery.mjs  # contribution state → delivery tracker (subscribes to event bus)
-    ├── mirror-delivery.mjs   # delivery tracker → registry (nightly)
-    ├── reconcile.mjs         # bidirectional drift detector (reports only)
+    │   ├── write.ts          # Internal write library (M1 step 4.ii); claim / update / release / logDecision
+    │   ├── event-bus.ts      # In-memory typed event bus; trigger-source-agnostic per "publish-delivery trigger model" below
+    │   └── adapters.ts       # External-system adapter interfaces + registry; M1 ships noop adapter, M2 step 4.iv adds GitHub
+    ├── publish-docs.ts       # repo doc → published-doc system
+    ├── publish-delivery.ts   # contribution state → delivery tracker (polling source + bus subscriber)
+    ├── mirror-delivery.ts    # delivery tracker → registry (nightly)
+    ├── reconcile.ts          # bidirectional drift detector + branch-reaping pass (default-off per BRD-OPEN-QUESTIONS section 24)
     └── triage/
-        ├── classifier.mjs    # external comment → category
-        ├── drafter.mjs       # classified comment → proposal draft
-        └── route-proposal.mjs # drafted proposal → contribution with kind=<discipline> + requires_owner_approval=true (per ADR-033)
+        ├── classifier.ts     # external comment → category (heuristic v1; LLM seam for v1.x)
+        ├── drafter.ts        # classified comment → proposal draft
+        └── route-proposal.ts # drafted proposal → contribution with kind=<discipline> + requires_owner_approval=true (per ADR-033)
 ```
 
 ## Traceability registry: graph-ready from M1
@@ -155,7 +161,7 @@ In an AI-speed reality where agents may try N variants of an implementation befo
 
 **Surfaced by:** 2026-04-28 AI-speed red-team pivot (Ghost Implementation Surge gap).
 
-**Reaping rejected/orphaned contribution branches.** The happy-merge case deletes the contribution branch post-PR-squash. The rejected-contribution and orphaned-branch cases (e.g., agent creates branch, contribution gets `state=rejected`, branch lingers; or session reaping cascade-deletes the contribution row, leaving an orphan branch) are handled by an extension to `reconcile.mjs`: a branch-reaping pass that lists `atelier/*` branches whose last-commit age exceeds `reconcile.branch_reaping.max_age_days` (default 30) AND whose contribution_id either resolves to a `merged` or `rejected` row OR does not resolve at all. Default off at v1 (opt-in until the team has operational evidence of what's safe to delete); dry-run mode lists candidates without acting. Strategic call open per `../docs/functional/BRD-OPEN-QUESTIONS.md` section 24.
+**Reaping rejected/orphaned contribution branches.** The happy-merge case deletes the contribution branch post-PR-squash. The rejected-contribution and orphaned-branch cases (e.g., agent creates branch, contribution gets `state=rejected`, branch lingers; or session reaping cascade-deletes the contribution row, leaving an orphan branch) are handled by `reconcile.ts`'s branch-reaping pass: lists `atelier/*` branches whose last-commit age exceeds `ATELIER_RECONCILE_BRANCH_REAPING_MAX_AGE_DAYS` (default 30) AND whose contribution_id either resolves to a `merged` or `rejected` row OR does not resolve at all. Off by default per `ATELIER_RECONCILE_BRANCH_REAPING_ENABLED=false`; dry-run by default when enabled (`--reap-branches --apply` to actually delete). Branch enumeration + deletion go through the delivery adapter's optional `listManagedBranches` / `deleteRemoteBranch` methods (M1 noop adapter returns an empty list; M2 GitHub adapter calls the GitHub branch API). Resolved per BRD-OPEN-QUESTIONS section 24 during M1 step 4.iii.
 
 **Invariants across milestones.**
 - `last_synced_at` on the contribution row is updated atomically with the external upsert; replay on retry is idempotent on `(contribution_id, external_issue_url)`.

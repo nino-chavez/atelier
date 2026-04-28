@@ -363,6 +363,20 @@ A deterministic smoke-test sequence verifies that a client + endpoint + identity
 
 **Why deterministic.** The sequence intentionally avoids any tool that depends on project state (no `claim`, no `find_similar`, no `log_decision`). It exercises the auth + session + read paths only. A fresh project with no contributions / no decisions / no contracts still passes.
 
+#### 6.1.2 Session row cleanup policy
+
+The reaper (per section 6.1) marks expired sessions as `status=dead` but does not delete them. Without a separate cleanup pass the `sessions` table grows indefinitely as projects accumulate short-lived agent sessions.
+
+A second phase of the same reaper cron deletes `status=dead` rows older than `policy.session_dead_retention_seconds` (default 86400, i.e. 24 hours). The 24-hour retention preserves recent session history for debugging and `/atelier/observability` queries (per section 8.2) while bounding table growth.
+
+**What survives cleanup.** Telemetry events emitted by the session (per section 8.1: `session.registered`, `session.heartbeat`, `session.deregistered`, `session.reaped`, etc.) live in the `telemetry` table and are not affected by session row deletion. The `composer_id` and timing data in those events provide audit-trail continuity even after the source `sessions` row is gone.
+
+**What deletion frees.** Foreign-key references to the deleted session are nulled (contributions previously claimed by that session were already returned to `state=open` at reap time per section 6.1; the FK reference is cosmetic at that point). Lock rows are similarly already released at reap time.
+
+**Configurability.** Teams running with stricter audit requirements can set `session_dead_retention_seconds` higher (e.g., 30 days) at the cost of larger session table. Teams with high session churn can set it lower (e.g., 1 hour) at the cost of less debugging context. Default 24 hours balances both.
+
+**Surfaced by:** `scale-ceiling-benchmark-plan.md` section 5.1 architectural analysis; landed in this ARCH as a side-deliverable of the scale-ceiling planning work.
+
 ### 6.2 Contribution lifecycle
 
 ```
@@ -1123,6 +1137,57 @@ When `since_session_id` is provided, the response is a delta — each section re
 - `traceability_slice` — full (registry is small and the diff isn't worth computing)
 
 This is the explicit "what changed since I was last here" mode — the protocol primitive that finally retires `.atelier/checkpoints/SESSION.md`.
+
+---
+
+### 6.8 Broadcast topology
+
+The broadcast substrate (lit up at M4 per BUILD-SEQUENCE; designed against the `BroadcastService` interface per ADR-029) carries real-time state-change events from the endpoint to interested subscribers. Topology is **per-project channel by default.**
+
+**Channel naming.** Each project gets a dedicated channel: `atelier:project:<project_id>:events`. The channel name is computable from `project_id` so subscribers don't need a separate discovery step.
+
+**Event categories on the project channel.**
+
+| Event | Payload includes | Subscribers typically interested |
+|---|---|---|
+| `contribution.state_changed` | contribution_id, prior_state, new_state, author_session_id, trace_ids | `/atelier` lenses; territory consumers; publish-delivery (post-M2) |
+| `contribution.released` | contribution_id, prior_author_session_id, reason | `/atelier` lenses; admin lens for abandon-pattern observability |
+| `decision.created` | decision_id, adr_id, trace_ids, summary (per ARCH 6.3.1 broadcast shape) | `/atelier` decisions panel; M5 find_similar pipeline (cache invalidation); territory consumers via territory contracts |
+| `lock.acquired` | lock_id, contribution_id, artifact_scope, holder_session_id, fencing_token | `/atelier` lenses; admin lens for conflict observability |
+| `lock.released` | lock_id, contribution_id, prior_holder_session_id, reason (released / reaped) | Same |
+| `contract.published` | contract_id, territory_id, name, version, breaking | Consumer territories of that contract; admin lens for cross-territory awareness |
+| `session.presence_changed` | session_id, composer_id, status (active / idle / dead) | `/atelier` lenses for composer-presence indicators |
+
+**Why per-project, not per-guild.**
+
+- **Fanout limit.** A single guild channel would mean every composer in every project receives every event. At v1 envelope (100 composers per guild), each event would be delivered 100 times even if 99 of those subscribers don't care. Per-project channel limits delivery to ~20 subscribers per event (composers in the affected project).
+- **Subscriber simplicity.** Per-project channels mean clients subscribe to exactly the channels they care about; no client-side filtering. A composer with sessions in projects A and B subscribes to two channels.
+- **Provider capacity.** Supabase Realtime supports thousands of channels per cluster; v1 envelope (10 projects per guild, multiple guilds per Supabase project) stays well within capacity. Per-guild would put no pressure on channel count but high pressure on per-channel subscriber count.
+- **Authorization fit.** The endpoint authenticates each subscription against the channel's project_id; channel name maps directly to RLS scope.
+
+**Cross-project events: explicit non-feature at v1.** Some hypothetical events (e.g., "composer X joined the guild") would naturally be guild-scoped. v1 does not emit these. If they become needed at v1.x, the channel naming convention extends naturally (`atelier:guild:<guild_id>:events`) without breaking the per-project default.
+
+**Subscriber lifecycle.**
+
+1. Client calls `register` (section 6.1) and receives `session_token`.
+2. Client opens a Realtime connection to the configured `BroadcastService` provider.
+3. Client subscribes to `atelier:project:<project_id>:events` presenting the bearer JWT.
+4. `BroadcastService` validates the JWT against the project_id in the channel name; rejects on mismatch.
+5. Events flow until subscription is closed or session is reaped.
+
+**`BroadcastService` interface contract (per ADR-029).**
+
+```
+publish(channel: string, event: { kind, payload }) -> Promise<void>
+subscribe(channel: string, jwt: string, handler: (event) => void) -> Subscription
+unsubscribe(subscription: Subscription) -> Promise<void>
+```
+
+Reference impl uses Supabase Realtime; documented migration impl uses Postgres NOTIFY/LISTEN with a thin compatibility shim. Both satisfy the interface; neither leaks past it.
+
+**Failure mode: degraded broadcast.** If `BroadcastService` is unreachable, the endpoint continues to write to the datastore (ADR-005: repo-first; broadcast is a downstream concern). Subscribers receive a `degraded=true` flag on next reconnect; the `/atelier` UI renders a banner. State eventually converges via polling fallback (the publish-delivery cutover at M2 already establishes the polling pattern; broadcasts simply augment, not replace, the canonical state).
+
+**Surfaced by:** `scale-ceiling-benchmark-plan.md` section 5.3 architectural analysis; landed in this ARCH as a side-deliverable of the scale-ceiling planning work, ahead of M4 implementation.
 
 ---
 

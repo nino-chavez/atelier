@@ -96,6 +96,7 @@ transcripts:
 policy:
   session_heartbeat_interval_seconds: 30
   session_ttl_seconds: 90
+  session_dead_retention_seconds: 86400  # 24 hours; status=dead rows deleted after this (per ARCH 6.1.2)
   lock_default_ttl_seconds: 7200     # 2 hours
   lock_max_ttl_seconds: 28800        # 8 hours
   reap_interval_seconds: 60

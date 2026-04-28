@@ -85,7 +85,7 @@ Per ARCH section 6.1 the reaper scans `sessions` for `heartbeat_at < now() - ses
 
 **Hypothesis:** Reaper completes in <100ms even with 10K total sessions in the table (most marked dead/cleaned). Single global scan; no per-project parallelization needed at v1 envelope.
 
-**Risk:** If a project has many short-lived ephemeral sessions (e.g., agents that register/deregister per task), the table grows fast. ARCH does not currently specify a `sessions` cleanup policy beyond the reaper marking dead. **Gap surfaced by this analysis: need cleanup policy for `status=dead` sessions older than X.** Address in ARCH section 6.1 separately if confirmed.
+**Risk:** If a project has many short-lived ephemeral sessions (e.g., agents that register/deregister per task), the table grows fast. ~~ARCH does not currently specify a `sessions` cleanup policy beyond the reaper marking dead.~~ **Gap surfaced by this analysis: need cleanup policy for `status=dead` sessions older than X.** **RESOLVED 2026-04-28** -- see ARCH section 6.1.2 (session row cleanup policy; default 24-hour retention, configurable via `policy.session_dead_retention_seconds`).
 
 ### 5.2 Endpoint p95 latency under concurrent load
 
@@ -103,7 +103,7 @@ ARCH section 6 doesn't specify channel topology explicitly. Two models possible:
 
 **Hypothesis:** Per-project channel is the right default. Cleaner subscriber model (no client-side filtering); Supabase Realtime handles channel count comfortably (documented limits in the thousands per cluster); per-project-channel limits subscriber fanout to `composers_in_project` (max 20 at envelope) which is well within typical channel-subscriber limits.
 
-**Decision needed pre-M4:** Add an ARCH subsection explicitly specifying per-project channel topology before M4 lands. Currently a gap.
+~~**Decision needed pre-M4:** Add an ARCH subsection explicitly specifying per-project channel topology before M4 lands. Currently a gap.~~ **RESOLVED 2026-04-28** -- see ARCH section 6.8 (broadcast topology; per-project channels with naming convention, event categories, subscriber lifecycle, BroadcastService interface contract, degraded-broadcast failure mode).
 
 ### 5.4 Vector index ceiling (post-M5)
 
@@ -200,8 +200,8 @@ When benchmark results are in:
 3. **Observability alert specs** -- per-dimension alerts at 80% of envelope, defined as configuration in `.atelier/config.yaml: observability.alerts`
 4. **ADR(s) only if results force architectural change** -- per section 7 decision criteria
 5. **Plus side-deliverables surfaced by analysis (section 5):**
-   - ARCH addition: `sessions` cleanup policy for `status=dead` rows older than X (per section 5.1 risk)
-   - ARCH addition: explicit pub/sub channel topology spec (per section 5.3 decision needed)
+   - ~~ARCH addition: `sessions` cleanup policy for `status=dead` rows older than X (per section 5.1 risk)~~ **LANDED 2026-04-28** as ARCH section 6.1.2
+   - ~~ARCH addition: explicit pub/sub channel topology spec (per section 5.3 decision needed)~~ **LANDED 2026-04-28** as ARCH section 6.8
 
 ---
 

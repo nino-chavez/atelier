@@ -77,4 +77,23 @@ A PR that adds a new doc class to the round-trip set must:
 3. Include at least one round-trip test fixture.
 4. Be merge-approved by an `architect` role composer.
 
-The contract is the source of truth — the test reads from this table at run time (or asserts that its hardcoded list is consistent with the table; M1 implementation chooses).
+The contract is the source of truth -- the test reads from this table at run time (or asserts that its hardcoded list is consistent with the table; M1 implementation chooses).
+
+---
+
+## publish-delivery trigger model
+
+`publish-delivery` (per ARCH section 6.5) fires on contribution state transitions (`claimed` and beyond). The trigger mechanism evolves across milestones to avoid pulling later substrate work forward into M1:
+
+| Milestone | Trigger mechanism | Why |
+|---|---|---|
+| **M1** | Polling. A cron job runs `publish-delivery` every `policy.publish_delivery_poll_interval_seconds` (default 60) and scans `contributions` for rows where `updated_at > last_run AND state in (claimed, in_progress, review, merged, blocked)`. | The endpoint surface is not yet live (lands at M2). The broadcast substrate is not yet live (lands at M4). Polling is the only mechanism that works against M1's direct-DB-write substrate without pulling future capabilities forward. |
+| **M2** | Post-commit hooks via endpoint write path. Every `claim` / `update` / `release` call that changes contribution state invokes `publish-delivery` synchronously after the DB transaction commits. The polling cron remains as a safety-net catch-up but scans `WHERE last_synced_at < updated_at - 300s` (5-minute lag triggers catch-up sync). | The endpoint becomes the canonical write path; hooking into it gives near-real-time delivery sync without polling overhead. The catch-up cron handles the rare hook-fired-but-sync-failed case. |
+| **M4** | Broadcast subscription via `BroadcastService` (per ADR-029). `publish-delivery` becomes a long-running subscriber to `contribution.state_changed` events; the cron is removed. | The broadcast substrate is the canonical event bus; subscriptions are the right abstraction once it exists. Removing the cron eliminates the periodic load. |
+
+**Cutover discipline.** Each cutover is a one-line change to the trigger registration in `scripts/sync/publish-delivery.mjs` (or its successor) -- not a rewrite of the publish logic. The script's input contract (a `ContributionStateChange` event) is identical at every milestone; only the source of the event changes. This is what makes the milestone progression non-destructive.
+
+**Invariants across milestones.**
+- `last_synced_at` on the contribution row is updated atomically with the external upsert; replay on retry is idempotent on `(contribution_id, external_issue_url)`.
+- Adapter calls are bounded by `adapter.timeout_seconds` (default 30); adapter failures are logged but do not block subsequent contributions.
+- Failed syncs surface in `/atelier/observability` (per ARCH section 8.2) regardless of trigger mechanism.

@@ -300,6 +300,6 @@ Q1 (does `scope_kind=research_artifact` + `scope_pattern=research/**` cleanly su
 
 **Recommendation.** Polling at M1 with a documented cutover plan: M2 layers post-commit hooks via the endpoint write path; M4 swaps the hook to real broadcast. Each cutover is a single write-path change, not a publish-delivery rewrite. Avoids pulling broadcast substrate work forward unnecessarily.
 
-**Status.** OPEN. Decision needed before M1 implementation begins.
+**Status.** **RESOLVED** (2026-04-27). Per the recommendation. The full trigger-model evolution (M1 polling, M2 post-commit hooks via endpoint, M4 broadcast subscription) is documented in `../../scripts/README.md` "publish-delivery trigger model" with the milestone progression table, cutover discipline, and invariants across milestones. ARCH section 6.5 cross-references the trigger model rather than duplicating.
 
 ---

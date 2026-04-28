@@ -166,27 +166,28 @@ projects
   default_branch
   datastore_url
   deploy_url
-  template_version
+  template_version (text)                                              -- semver-shaped string (e.g., "1.0", "1.0.2") per audit G7; validated by `atelier upgrade` against compatibility rules in ARCH 9.7 (additive-preferred + N/N-1 co-existence)
   created_at
 
 composers
   id (uuid, pk)
   project_id (fk)
-  email
+  email                                                                -- UNIQUE(project_id, email) per audit G3 -- one composer per project per email
   display_name
-  default_role (analyst | dev | pm | designer | admin | stakeholder)
+  default_role (analyst | dev | pm | designer | admin | stakeholder)   -- BRD-OPEN-QUESTIONS section 20 OPEN: split into discipline + access_level
   token_hash
   token_issued_at
-  token_rotated_at
+  token_rotated_at                                                     -- single timestamp; granular rotation log deferred to v1.x per audit G6 (replay-detection is via the identity service's event log)
   status (active | suspended | removed)
+  UNIQUE (project_id, email)                                           -- audit G3
 
 sessions
   id (uuid, pk)
   project_id (fk)
   composer_id (fk)
   surface (ide | web | terminal | passive)
-  agent_client (free text — e.g., "claude-code", "claude.ai", "cursor")
-  status (active | idle | dead)
+  agent_client (text)                                                  -- opaque-by-design free text per audit G5; e.g., "claude-code/0.4.2", "claude.ai", "cursor". The endpoint records but does not validate; agents may use any identifier they choose.
+  status (active | idle | dead)                                        -- transitions per audit G4: active when heartbeat_at within policy.session_active_window_seconds (default 60s); idle when within policy.session_ttl_seconds (default 90s) but past active window; dead when past ttl (reaper transitions). Idle is observable but does not affect lock/contribution validity -- the session retains its claims until reaped.
   heartbeat_at
   created_at
 
@@ -212,6 +213,8 @@ contributions
   requires_owner_approval (bool, default false)                         -- ADR-033 (set when author role != territory owner_role; gates merge per ARCH 7.5)
   blocked_by (fk to contributions, nullable)                            -- ADR-034 (non-null implies blocked, regardless of state)
   blocked_reason (text, nullable)                                       -- ADR-034 (optional human-readable, e.g., "waiting on auth contract")
+  approved_by_composer_id (fk to composers, nullable)                   -- audit G2: set when an authorized reviewer clears requires_owner_approval via update(owner_approval=true) per ARCH 6.2.2; null otherwise
+  approved_at (timestamp, nullable)                                     -- audit G2: timestamp of approval recording; null when requires_owner_approval has not been cleared
   content_ref (path or URL)
   transcript_ref (text, nullable, CHECK matches path-or-url pattern)    -- ADR-024 + audit F8 (repo path under transcripts/** OR fully-qualified URL)
   fencing_token (bigint, nullable)
@@ -294,9 +297,10 @@ telemetry
 
 - All tables scoped to `project_id`; composer must belong to project.
 - `sessions`: composer can only write their own session row.
-- `contributions`: writes to `author_session_id` must match current session; reads are project-scoped.
-- `decisions`: append-only (policy rejects UPDATE and DELETE).
-- `locks`: writes restricted to holding session; reads are project-scoped.
+- `contributions`: writes to `author_composer_id`-owned rows must match the calling session's composer (per ADR-036 -- the immortal identity is the authorization key; `author_session_id` is operational metadata that may be NULL after session reap and is not used for authorization). Reads are project-scoped.
+- `contributions.approved_by_composer_id` writes (via `update(owner_approval=true)` per ARCH 6.2.2): writer must hold the contribution's `territories.review_role` AND must NOT be the same composer as `author_composer_id` (a composer cannot self-approve their own cross-role contribution).
+- `decisions`: append-only (policy rejects UPDATE and DELETE). Authorship checked against `author_composer_id` (per ADR-036).
+- `locks`: writes restricted to the lock's `holder_composer_id` (per ADR-036). Reads are project-scoped.
 - `contracts`: writes restricted to territory-owner role; reads are project-scoped.
 
 ### 5.4 Vector index
@@ -506,15 +510,16 @@ claim(
 
 ```
 update(
-  contribution_id:   uuid,                                   // required
-  state:             "claimed" | "in_progress" | "review" | null,   // optional; null means no state change; per ADR-034 blocked is no longer a state value
-  content_ref:       string | null,                          // optional; sets the artifact path on first call
-  payload:           string | null,                          // optional; the artifact body
-  payload_format:    "full" | "patch",                       // optional; defaults to "full"
-  fencing_token:     bigint,                                 // required when payload is provided
-  blocked_by:        uuid | null,                            // optional; non-null sets the contribution as blocked on the named contribution (per ADR-034); null clears
-  blocked_reason:    string | null,                          // optional; human-readable when blocked_by is non-null
-  commit_message:    string | null                           // optional; remote-surface only; defaults to convention below
+  contribution_id:    uuid,                                   // required
+  state:              "claimed" | "in_progress" | "review" | null,   // optional; null means no state change; per ADR-034 blocked is no longer a state value
+  content_ref:        string | null,                          // optional; sets the artifact path on first call
+  payload:            string | null,                          // optional; the artifact body
+  payload_format:     "full" | "patch",                       // optional; defaults to "full"
+  fencing_token:      bigint,                                 // required when payload is provided
+  blocked_by:         uuid | null,                            // optional; non-null sets the contribution as blocked on the named contribution (per ADR-034); null clears
+  blocked_reason:     string | null,                          // optional; human-readable when blocked_by is non-null
+  owner_approval:     boolean,                                // optional, default false; when true, clears requires_owner_approval per audit G2 -- caller must hold territory.review_role AND must not be the contribution's author_composer_id (RLS rule per ARCH 5.3)
+  commit_message:     string | null                           // optional; remote-surface only; defaults to convention below
 ) -> UpdateResponse
 ```
 
@@ -526,6 +531,16 @@ update(
 `payload` may be null when only `state` is changing (e.g., `claimed` to `in_progress` to signal start without content yet).
 
 **Fencing token requirement.** Any call providing `payload` must include a valid `fencing_token` from a prior `acquire_lock` against the artifact's scope. The endpoint validates the token server-side per ARCH section 7.4. State-only updates (no `payload`) do not require a fencing token.
+
+**Owner approval recording (per audit G2).** `update(owner_approval=true)` is the explicit human approval action recorded in datastore per ARCH 7.5. On success, the endpoint atomically:
+- Sets `contributions.requires_owner_approval = false`.
+- Sets `contributions.approved_by_composer_id` to the calling session's composer.
+- Sets `contributions.approved_at` to now.
+- Emits telemetry event `contribution.approval_recorded` with the approving composer and the contribution's prior author for audit.
+
+Validation per ARCH 5.3: the caller must hold the contribution's `territories.review_role` AND must not be the contribution's `author_composer_id` (no self-approval). Calls failing either check return 403 with the specific reason. Calls on a contribution where `requires_owner_approval=false` (already approved or never required) are no-ops (idempotent).
+
+This pairs with the merge gate in ARCH 6.2.3: `update(state="merged")` on a contribution where `requires_owner_approval=true` returns CONFLICT with the message "owner approval required; call update(owner_approval=true) from a reviewer first." The CI mirror per ARCH 7.5 enforces the same constraint at the repo layer.
 
 **Branch strategy for remote-surface composers.** The per-project endpoint committer (per ADR-023, ARCH section 7.8) commits each `update` call as a discrete commit on a per-contribution branch:
 

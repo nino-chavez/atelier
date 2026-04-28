@@ -1,8 +1,8 @@
 ---
-last_updated: 2026-04-28
-status: complete; all findings landed (ADR-033/034/035/036/037 + ARCH 5.1 edits + BRD-OPEN-QUESTIONS section 20). This doc is now the forensic + worked-example record per METHODOLOGY 11.5.
+last_updated: 2026-04-28 (supplemental sweep added: G1-G7 covering projects/composers/sessions tables and ARCH 5.3 RLS rules; gaps from initial audit closed in same commit)
+status: complete; all findings landed (ADR-033/034/035/036/037 + ARCH 5.1 + 5.3 edits + BRD-OPEN-QUESTIONS section 20 + supplemental G1-G7). This doc is now the forensic + worked-example record per METHODOLOGY 11.5.
 audit_kind: data-model + contract
-applies_to: ARCH section 5.1 (Datastore schema), 5.4 (Vector index), 6.6 (Contract flow), 7.4 (Fencing)
+applies_to: ARCH section 5.1 (Datastore schema, all tables), 5.3 (Authorization), 5.4 (Vector index), 6.2.2 (Update operation), 6.6 (Contract flow), 7.4 (Fencing)
 ---
 
 # Pre-M1 data-model and contract audit
@@ -52,6 +52,26 @@ The audit applies five checks to the v1 schema before M1 implementation encodes 
 | F16 | MEDIUM | `contributions.trace_ids` non-empty constraint enforced API-level only; direct SQL inserts could bypass | ARCH 5.1 CHECK constraint (this commit) |
 | F17 | LOW | `locks.expires_at` lifecycle unclear (auto-enforced? hint?) | ARCH 7.4 documentation note (this commit) |
 | F18 | HIGH (folded with F9) | `telemetry.session_id` dangling FK after session deletion | [ADR-036](../decisions/ADR-036-immortal-author-identity-via-composer-id.md) |
+
+---
+
+## Supplemental sweep (G1-G7, run same day)
+
+The initial audit applied the five checks to the contribution-adjacent tables (contributions, decisions, locks, contracts, telemetry) plus the vector index. A supplemental sweep on the same day extended coverage to `projects`, `composers`, `sessions`, and ARCH 5.3 (Authorization) -- triggered by the user's "confirm hardened and complete" check, which surfaced that the initial audit's scope was narrower than `applies_to: 5.1` claimed.
+
+| # | Severity | Smell (one-line) | Landed at |
+|---|---|---|---|
+| G1 | HIGH | ARCH 5.3 RLS rule referenced `author_session_id` for authorization despite ADR-036 making `author_composer_id` the immortal identity -- spec drift introduced by today's commit | ARCH 5.3 rewritten (this commit) |
+| G2 | HIGH | `requires_owner_approval` flag (added by ADR-033) had no specified clearing mechanism -- no tool recorded approval in datastore per ARCH 7.5 | `update()` extended with `owner_approval` parameter; `contributions.approved_by_composer_id` + `approved_at` columns added; ARCH 6.2.2 specifies the recording operation (this commit) |
+| G3 | MEDIUM | `composers.email` lacked UNIQUE(project_id, email) constraint -- two composers per project with same email was unspecified behavior | UNIQUE constraint added to ARCH 5.1 (this commit) |
+| G4 | MEDIUM | `sessions.status` value `idle` -- transition rule undefined (only active->dead was spec'd via reaper) | ARCH 5.1 documented: active when heartbeat within `policy.session_active_window_seconds` (default 60s), idle when within `session_ttl_seconds` (default 90s) but past active window, dead past ttl (this commit) |
+| G5 | LOW | `sessions.agent_client` free text without validation rule | ARCH 5.1 documented as opaque-by-design; endpoint records but does not validate (this commit) |
+| G6 | LOW | `composers.token_hash` rotation history collapsed into single `token_rotated_at` timestamp; no replay-detection log | Deferred to v1.x (replay detection lives in identity service event log; documented in ARCH 5.1 inline note this commit) |
+| G7 | LOW | `projects.template_version` schema unspecified | ARCH 5.1 documented as semver-shaped string validated by `atelier upgrade` per ARCH 9.7 (this commit) |
+
+**Why the gaps existed.** The initial audit pass focused on tables it had touched recently (contributions, decisions, locks, contracts, telemetry) and treated projects/composers/sessions as "background infrastructure." That implicit scope-narrowing was not declared. Going forward, a data-model audit per METHODOLOGY 11.5 is REQUIRED to enumerate every table in scope at the start, or explicitly declare which are deferred and why.
+
+**Process correction folded into METHODOLOGY 11.5:** the audit's first step is now an explicit "tables in scope" enumeration; deferrals require justification.
 
 ---
 

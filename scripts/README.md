@@ -10,10 +10,12 @@ scripts/
 │   ├── build-registry.mjs    # Scan docs + emit traceability.json
 │   ├── inject-links.mjs      # Inject trace-ID callouts into markdown
 │   ├── validate-refs.mjs     # Pre-commit check: every trace ID resolves
-│   └── schema.json           # JSON schema for traceability.json
+│   └── schema.json           # JSON schema for traceability.json (graph-ready per below)
 └── sync/                     # The 5-script sync substrate (all v1)
+    ├── lib/
+    │   └── event-bus.ts      # In-memory event bus; trigger-source-agnostic per "publish-delivery trigger model" below
     ├── publish-docs.mjs      # repo → published-doc system
-    ├── publish-delivery.mjs  # contribution state → delivery tracker
+    ├── publish-delivery.mjs  # contribution state → delivery tracker (subscribes to event bus)
     ├── mirror-delivery.mjs   # delivery tracker → registry (nightly)
     ├── reconcile.mjs         # bidirectional drift detector (reports only)
     └── triage/
@@ -21,6 +23,48 @@ scripts/
         ├── drafter.mjs       # classified comment → proposal draft
         └── route-proposal.mjs # drafted proposal → contribution with kind=<discipline> + requires_owner_approval=true (per ADR-033)
 ```
+
+## Traceability registry: graph-ready from M1
+
+`traceability.json` ships as an adjacency-list-shaped graph from M1, even though v1 query patterns treat the corpus as flat. The shape:
+
+```jsonc
+{
+  "$schema": "./scripts/traceability/schema.json",
+  "generated_at": "<iso8601>",
+  "project_id": "<uuid>",
+  "project_name": "<string>",
+  "template_version": "<semver>",
+  "counts": { ... },              // unchanged from existing shape
+  "entries": [                    // nodes in the graph
+    {
+      "id": "BRD:Epic-1",
+      "label": "Project scaffolding & lifecycle",
+      "kind": "brd-epic",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#epic-1--project-scaffolding--lifecycle",
+      "prototypePages": []
+    },
+    ...
+  ],
+  "edges": [                      // edges in the graph; populated by build-registry.mjs at M1
+    { "from": "ADR-033", "to": "BRD:Epic-2", "rel": "implements" },
+    { "from": "US-2.4", "to": "ADR-013", "rel": "depends_on" },
+    { "from": "ADR-033", "to": "BRD-OPEN-QUESTIONS:section-20", "rel": "supersedes" },
+    ...
+  ]
+}
+```
+
+**Edge relations at v1:**
+- `implements` -- ADR or contribution implements a BRD story / epic
+- `depends_on` -- entry references another entry as a precondition
+- `supersedes` -- new entry replaces an old one (e.g., ADR-033 supersedes the kind=proposal mechanism in ADR-018)
+- `derives_from` -- entry was authored in response to another (e.g., a strategy addendum derives from a referenced external source)
+
+**Why graph-ready at M1:** v1 find_similar treats the corpus as flat semantic vectors. v1.x graph-aware find_similar (see strategy addenda) re-ranks results by graph proximity to the query's trace_id. If `traceability.json` is flat at M1, the v1.x feature is a schema migration + data backfill. If `traceability.json` is graph-ready at M1, it's a retrieval-layer addition only. Cost difference: ~zero now vs. one milestone of M1 work later. Recommendation surfaced by 2026-04-28 expert review.
+
+**Edges are derived, not authored.** `build-registry.mjs` infers edges from frontmatter (`trace_id` -> implements; `reverses` -> supersedes; cross-references in body text -> depends_on). Authors do not hand-edit edges.
 
 ## Status
 
@@ -92,6 +136,8 @@ The contract is the source of truth -- the test reads from this table at run tim
 | **M4** | Broadcast subscription via `BroadcastService` (per ADR-029). `publish-delivery` becomes a long-running subscriber to `contribution.state_changed` events; the cron is removed. | The broadcast substrate is the canonical event bus; subscriptions are the right abstraction once it exists. Removing the cron eliminates the periodic load. |
 
 **Cutover discipline.** Each cutover is a one-line change to the trigger registration in `scripts/sync/publish-delivery.mjs` (or its successor) -- not a rewrite of the publish logic. The script's input contract (a `ContributionStateChange` event) is identical at every milestone; only the source of the event changes. This is what makes the milestone progression non-destructive.
+
+**Implementation pattern: internal event bus from M1 onward.** To make the cutover claim above actually one-line rather than "small refactor": M1's polling implementation publishes detected state changes to an in-memory event bus (`scripts/sync/lib/event-bus.ts`), and `publish-delivery` is registered as a subscriber. At M2, the endpoint's post-commit hook publishes to the same bus. At M4, `BroadcastService` events (per ARCH 6.8) are bridged into the same bus by a thin `subscribe -> bus.publish` adapter. The `publish-delivery` subscriber code does not change across milestones; only the bus's source-of-events changes. This is what the "one-line cutover" actually requires under the hood, and M1 must establish this pattern up front to honor the claim.
 
 **Invariants across milestones.**
 - `last_synced_at` on the contribution row is updated atomically with the external upsert; replay on retry is idempotent on `(contribution_id, external_issue_url)`.

@@ -172,14 +172,16 @@ projects
 composers
   id (uuid, pk)
   project_id (fk)
-  email                                                                -- UNIQUE(project_id, email) per audit G3 -- one composer per project per email
+  email                                                                -- UNIQUE(project_id, email) per audit G3
   display_name
-  default_role (analyst | dev | pm | designer | admin | stakeholder)   -- BRD-OPEN-QUESTIONS section 20 OPEN: split into discipline + access_level
+  discipline (analyst | dev | pm | designer | architect | null)        -- ADR-038: work-discipline axis; null when composer is access-level-only (e.g., platform admin without a work role)
+  access_level (member | admin | stakeholder)                          -- ADR-038: participation/permission axis; default member
   token_hash
   token_issued_at
   token_rotated_at                                                     -- single timestamp; granular rotation log deferred to v1.x per audit G6 (replay-detection is via the identity service's event log)
   status (active | suspended | removed)
   UNIQUE (project_id, email)                                           -- audit G3
+  CHECK (discipline IS NOT NULL OR access_level IN ('admin', 'stakeholder'))   -- ADR-038: a composer must have either a discipline or an access-level-only role; never both null
 
 sessions
   id (uuid, pk)
@@ -297,7 +299,7 @@ telemetry
 
 - All tables scoped to `project_id`; composer must belong to project.
 - `sessions`: composer can only write their own session row.
-- `contributions`: writes to `author_composer_id`-owned rows must match the calling session's composer (per ADR-036 -- the immortal identity is the authorization key; `author_session_id` is operational metadata that may be NULL after session reap and is not used for authorization). Reads are project-scoped.
+- `contributions`: writes to `author_composer_id`-owned rows must match the calling session's composer (per ADR-036 -- the immortal identity is the authorization key; `author_session_id` is operational metadata that may be NULL after session reap and is not used for authorization). Reads are project-scoped. Territory-authorship checks per ARCH 6.2.1 step 4 read `composers.discipline` (per ADR-038) -- e.g., a territory with `owner_role=architect` admits composers where `discipline=architect`.
 - `contributions.approved_by_composer_id` writes (via `update(owner_approval=true)` per ARCH 6.2.2): writer must hold the contribution's `territories.review_role` AND must NOT be the same composer as `author_composer_id` (a composer cannot self-approve their own cross-role contribution).
 - `decisions`: append-only (policy rejects UPDATE and DELETE). Authorship checked against `author_composer_id` (per ADR-036).
 - `locks`: writes restricted to the lock's `holder_composer_id` (per ADR-036). Reads are project-scoped.
@@ -455,7 +457,7 @@ claim(
 1. `kind` is in the three-value enum (per ADR-033).
 2. `trace_ids` is non-empty and every entry matches the project's `trace_id_pattern` from `.atelier/config.yaml`. Trace IDs need not yet exist in `traceability.json` (the registry catches up via the M1 traceability sync); the pattern check prevents typos.
 3. `territory_id` references a row in `territories` for this project.
-4. The calling session's composer holds a role that may author into this territory. By default, only `territories.owner_role` may author; `.atelier/config.yaml: territories.allow_cross_role_authoring` can opt-in to broader authoring. When the calling composer's role does NOT match `territories.owner_role` (and cross-role authoring is opted-in), the contribution is created with `requires_owner_approval=true` per ADR-033 -- the merge gate per ARCH 7.5 reads this flag.
+4. The calling session's composer holds a discipline (per ADR-038 `composers.discipline`) that may author into this territory. By default, only composers whose discipline matches `territories.owner_role` may author; `.atelier/config.yaml: territories.allow_cross_role_authoring` can opt-in to broader authoring. When the calling composer's discipline does NOT match `territories.owner_role` (and cross-role authoring is opted-in), the contribution is created with `requires_owner_approval=true` per ADR-033 -- the merge gate per ARCH 7.5 reads this flag. Composers whose `discipline` is null (access-level-only roles like admin or stakeholder) cannot create contributions; they participate via the lens model + comment routing (per ADR-017).
 5. `content_stub`, if provided, fits within a configurable size cap (default 8 KiB).
 
 **Implicit find_similar gate.** On atomic-create, the endpoint synchronously runs `find_similar(description=<derived>, trace_id=<first trace_id>)` where `<derived>` is `content_stub` if provided, otherwise a synthesized string from `kind + trace_ids + territory.name`. Results are returned in `similar_warnings` (primary band only; weak suggestions excluded to keep the response compact). The gate never blocks claim -- it warns. Composers can choose to release the new contribution immediately if a strong match exists.
@@ -1218,6 +1220,15 @@ unsubscribe(subscription: Subscription) -> Promise<void>
 ```
 
 Reference impl uses Supabase Realtime; documented migration impl uses Postgres NOTIFY/LISTEN with a thin compatibility shim. Both satisfy the interface; neither leaks past it.
+
+**Ordering guarantees (required of every implementation).** Subscribers must see events in the order the endpoint published them, **per channel**. There is no cross-channel ordering guarantee (events on `atelier:project:A:events` and `atelier:project:B:events` may interleave arbitrarily). Within a channel:
+
+- **FIFO per channel.** A subscriber receives events in the same order the endpoint published them.
+- **No deduplication guarantee.** A network retry by the broadcast provider may deliver the same event twice; subscribers must be idempotent (use the event's `id` field, which the endpoint allocates monotonically per project).
+- **No exactly-once.** At-least-once delivery within a channel; subscribers tolerate redelivery via the `id`-based dedup above.
+- **Connection break behavior.** On reconnect, the subscriber may have missed events; the `degraded=true` flag on the next received event signals "you may want to query canonical state for definitive truth." Per-event sequence numbers (`event.seq`, monotonic per channel) let subscribers detect gaps.
+
+These constraints intentionally fit both Supabase Realtime (which provides per-channel FIFO + at-least-once) and Postgres NOTIFY/LISTEN with a sequence-number wrapper. Implementations that cannot honor per-channel FIFO are not valid `BroadcastService` providers; the ARCH 6.5 `reconcile` script provides the eventual-consistency backstop when broadcast is degraded or unavailable.
 
 **Failure mode: degraded broadcast.** If `BroadcastService` is unreachable, the endpoint continues to write to the datastore (ADR-005: repo-first; broadcast is a downstream concern). Subscribers receive a `degraded=true` flag on next reconnect; the `/atelier` UI renders a banner. State eventually converges via polling fallback (the publish-delivery cutover at M2 already establishes the polling pattern; broadcasts simply augment, not replace, the canonical state).
 

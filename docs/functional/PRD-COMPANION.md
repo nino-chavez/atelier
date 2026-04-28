@@ -85,8 +85,9 @@ These decisions landed as ADRs. Full rationale, alternatives, and consequences l
 | D38 | Contract metadata covers ARCH 6.6.1 classifier surface | [ADR-035](../architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md) |
 | D39 | Immortal author identity via composer_id; session_id is operational only | [ADR-036](../architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md) |
 | D40 | Decisions table cleanup: drop "convention" category, add triggering-contribution link | [ADR-037](../architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md) |
+| D41 | Composer role split into discipline + access_level (architect added as first-class discipline) | [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md) |
 
-D36–D40 surfaced by the pre-M1 data-model audit (`../architecture/audits/pre-M1-data-model-audit.md`).
+D36–D40 surfaced by the pre-M1 data-model audit (`../architecture/audits/pre-M1-data-model-audit.md`); D41 by the 2026-04-28 expert review prompted same-day resolution of BRD-OPEN-QUESTIONS section 20.
 
 D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md`).
 

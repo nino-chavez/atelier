@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (section 20 added per pre-M1 data-model audit F12; sections 3, 7, 19, 20 are the genuinely-open list)
+**Last updated:** 2026-04-28 (section 20 RESOLVED as ADR-038 same-day per expert-review prompt; sections 3, 7, 19 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Four entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on whether to add a new contribution-lifecycle state; section 20 requires a strategic call on splitting the composer role enum (surfaced by the pre-M1 data-model audit). None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work lands; section 20 wants resolution before deployment exposes the conflation in real teams.
+Three entries remain genuinely open after section 20 resolved as ADR-038 on 2026-04-28. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on whether to add a new contribution-lifecycle state. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work lands.
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -24,6 +24,8 @@ Four entries remain genuinely open. Sections 3 and 7 require benchmark data; sec
 - How is model swappability implemented? Re-embed the whole index on switch, or maintain multiple indices?
 
 **Recommendation.** Benchmark ≥3 candidates on the seed eval set. Default to a self-hostable model for regulated-team viability. Document swappability as a first-class config knob with a documented re-index procedure.
+
+**Hybrid fallback (per 2026-04-28 expert review).** The ADR-006 precision gate (>=75% precision at >=60% recall) is aggressive. If the M5 benchmark consistently shows <70% precision against the seed eval set, the duplication-detection value prop weakens. Recommendation: design `find_similar` from M5 onward with a keyword-heavy semantic-hybrid retrieval path (semantic vector search + BM25-or-equivalent keyword search, scores combined via reciprocal rank fusion or similar) so the system degrades gracefully when the embedding model alone underperforms. The existing `degraded=true` flag on `find_similar` responses already supports this -- the hybrid path is the fallback that fills the degraded path with usable results rather than pure keyword search. Decision on whether to ship hybrid as default vs. as a fallback lands with the embedding benchmark resolution.
 
 **Status.** OPEN. Pending benchmark per `../testing/embedding-model-benchmark-plan.md`. Resolution gates M5 entry per BUILD-SEQUENCE section 7 question 3.
 
@@ -74,21 +76,9 @@ This addresses the "should we build it" alignment bottleneck at the right point 
 
 ### 20 - Composer role enum mixes work-discipline with access-level
 
-**Scenario.** `composers.default_role` is currently a single enum: `analyst | dev | pm | designer | admin | stakeholder`. Four values are work disciplines (analyst, dev, pm, designer). Two are access levels (admin = platform privileges; stakeholder = read-only). Two axes in one field.
+Split into `composers.discipline` (5 values including newly-added `architect`) + `composers.access_level` (3 values).
 
-A pm is naturally also a stakeholder for work outside their territories. A designer might also need admin privileges. The current model handles this via "secondary roles per `.atelier/config.yaml`" but the primary role conflates the two. ADR-017 lenses (analyst/dev/pm/designer/stakeholder) further muddy the water -- stakeholder is a lens (a viewing mode) AND a role-permission. Two different concepts share the name.
-
-Surfaced by `../architecture/audits/pre-M1-data-model-audit.md` finding F12.
-
-**Open questions:**
-- Does the enum need splitting into `discipline` (analyst | dev | pm | designer) + `access_level` (member | admin | stakeholder)? Or rename to acknowledge it's a fuzzy classifier?
-- If split, what is the migration path for existing `default_role=admin` and `default_role=stakeholder` composers (they have no discipline)?
-- Does the lens model in ADR-017 stay a 5-lens model with stakeholder-as-lens, or split lens-stakeholder from access-level-stakeholder?
-- Does territories.yaml `owner_role` and `review_role` continue to reference the discipline values only (cleaner), or remain ambiguous?
-
-**Recommendation.** Split into two columns: `composers.discipline (analyst | dev | pm | designer)` + `composers.access_level (member | admin | stakeholder)`. Cleanest semantically; matches how teams actually think about people ("Sarah is a designer who is also an admin"). Migration: existing `default_role=admin` composers default to `discipline=null, access_level=admin`; existing `default_role=stakeholder` composers default to `discipline=null, access_level=stakeholder`; the four discipline values map to `discipline=<value>, access_level=member`. ADR-017 lens model keeps the same five viewing modes; the stakeholder lens applies whenever `access_level=stakeholder` OR a discipline composer chooses to view-as-stakeholder.
-
-**Status.** OPEN. Does not block M1 -- current enum works for the schema's first migration. The right resolution touches `.atelier/territories.yaml` owner_role/review_role values, BRD acceptance criteria referencing roles, and the lens-vocabulary in ADR-017. Wants resolution before deployment surfaces the conflation in real teams. Likely lands as ADR-038 + a coordinated migration commit.
+**Status.** RESOLVED 2026-04-28. See [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md). Resolved same-day per expert-review prompt that surfaced this should land before M1 schema implementation, not v1.x. The fix also closed a previously-undetected drift: `architect` was used as `owner_role` across 4 territories but missing from the composers enum -- now first-class as `discipline=architect`.
 
 ---
 

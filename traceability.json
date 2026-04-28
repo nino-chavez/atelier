@@ -7,11 +7,11 @@
   "counts": {
     "brd-epics": 16,
     "brd-stories": 98,
-    "decisions": 40,
+    "decisions": 41,
     "open-questions": 20,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 37
+    "adrs": 38
   },
   "entries": [
     {

@@ -118,8 +118,9 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-035:** Contract metadata covers ARCH 6.6.1 classifier surface. `contracts.breaking_change` bool replaced with `classifier_decision`, `classifier_reasons`, `override_decision`, `override_justification`, and a generated `effective_decision`.
 - **ADR-036:** Immortal author identity via composer_id; session_id is operational only. Tables (`contributions`, `decisions`, `locks`, `telemetry`) gain `*_composer_id` (immortal) alongside existing `*_session_id` (operational, ON DELETE SET NULL).
 - **ADR-037:** Decisions table cleanup — drop vestigial `convention` category, add `triggered_by_contribution_id` link.
+- **ADR-038:** Composer role split into discipline + access_level. `composers.default_role` becomes `composers.discipline` (analyst | dev | pm | designer | architect) + `composers.access_level` (member | admin | stakeholder). Adds `architect` as first-class discipline (closing the territories.yaml drift). Resolves BRD-OPEN-QUESTIONS section 20.
 
-Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR). ADR-033 through ADR-037 surfaced by the pre-M1 data-model + contract audit (`docs/architecture/audits/pre-M1-data-model-audit.md`); supplemental G1-G7 sweep on same day extended coverage to projects/composers/sessions tables + ARCH 5.3 RLS rules (no ADRs; ARCH-only edits).
+Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR). ADR-033 through ADR-037 surfaced by the pre-M1 data-model + contract audit (`docs/architecture/audits/pre-M1-data-model-audit.md`); supplemental G1-G7 sweep on same day extended coverage to projects/composers/sessions tables + ARCH 5.3 RLS rules (no ADRs; ARCH-only edits). ADR-038 surfaced by 2026-04-28 expert review prompting same-day resolution of section 20.
 
 ---
 

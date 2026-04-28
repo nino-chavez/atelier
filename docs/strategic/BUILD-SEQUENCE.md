@@ -281,7 +281,7 @@ This repo is **hand-bootstrapped** — it is the artifact that `atelier init` wi
 | `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | M7 |
 | `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | M7 |
 | `atelier territory add` | Lifecycle (Epic 1) | M2 (manual `.atelier/territories.yaml` edit pattern) | M7 |
-| `atelier doctor` | Lifecycle (Epic 1) | -- | M7 |
+| `atelier doctor` | Lifecycle (Epic 1) | M2 (raw script invocation of the ARCH 6.1.1 self-verification flow once the endpoint exists; recommended priority per 2026-04-28 expert review -- in self-hosted, connectivity issues will be the dominant support volume) | M7 |
 | `atelier upgrade` | Lifecycle (Epic 1) | -- | M7 |
 | `atelier sync` | Sync substrate (Epic 9) | M1 (direct invocation of underlying script per scripts/README.md) | M7 |
 | `atelier reconcile` | Sync substrate (Epic 9) | M1 (direct invocation of `scripts/sync/reconcile.mjs`) | M7 |

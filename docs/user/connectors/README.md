@@ -19,6 +19,7 @@ Every client that connects to an Atelier project speaks **MCP over Streamable HT
 | Windsurf (IDE MCP) | ide | Streamable HTTP | static bearer (workspace config) | DESIGN ONLY | -- | (not yet authored) | Tier-2 IDE client |
 | Codex CLI (terminal MCP) | terminal | Streamable HTTP | static bearer (env var) | DESIGN ONLY | -- | (not yet authored) | Tier-2 terminal client |
 | Custom web/CLI agents (AI SDK) | web/terminal | Streamable HTTP | static bearer or OAuth | DESIGN ONLY | -- | (not yet authored) | Anything that speaks remote MCP with bearer auth |
+| Chat-app bot (Slack / Discord / Teams) -- pattern | passive | Streamable HTTP | static bearer (bot service config) | DESIGN ONLY | -- | [chatbot-pattern.md](chatbot-pattern.md) | Pattern, not a single client. The bot is the MCP client; the human in chat is the composer. Reference impl deferred to v1.x M6 |
 
 ### Verified-status meaning
 

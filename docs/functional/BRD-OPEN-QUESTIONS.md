@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (sections 21/22/23 added per AI-speed red-team pivot covering auto-reviewers / semantic contradiction check / contribution annotations; sections 3, 7, 19, 21, 22, 23 are the genuinely-open list)
+**Last updated:** 2026-04-28 (section 24 added on branch reaping in `reconcile.ts`, surfaced by the second-pass post-compact red-team audit; sections 3, 7, 19, 21, 22, 23, 24 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Six entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on adding a new contribution-lifecycle state; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work; sections 21-23 want resolution before M5/M6 to inform the auto-reviewer + semantic-check + annotation-surface implementations.
+Seven entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on adding a new contribution-lifecycle state; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x; section 24 surfaced by the 2026-04-28 second-pass red-team audit and asks whether `reconcile.ts` should grow a branch-reaping pass to bound git-rot from AI-speed contribution churn. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work; sections 21-23 want resolution before M5/M6; section 24 wants resolution before M2 (when `reconcile.ts` lands per BUILD-SEQUENCE M1 ordering).
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -150,6 +150,28 @@ GitHub ACE (per 2026-04-28 strategy addendum on AI-speed coordination) is making
 **Status.** OPEN. Strategic call: does adding a 13th MCP tool + a new schema table for annotations cross the line into "Atelier becomes a wiki" (which ADR-010 excludes)? Recommendation is no -- annotations are coordination-object metadata, not standalone content. But the boundary is worth being explicit about. If accepted, lands at v1.x (M6 alongside other coordination-surface enhancements) as ADR-040.
 
 Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing market interest in tool-resident chat.
+
+**Update 2026-04-28 (post-chatbot-pattern landing).** The chatbot-as-MCP-client pattern (per `../user/connectors/chatbot-pattern.md`) covers much of this motivation: lightweight rationale flows through the chat surface where humans already are, and gets canonicalized via `log_decision` (with `transcript_ref` capturing the conversation under ADR-024). Annotations remain a separable concern only for non-chat contexts (e.g., a designer in `/atelier` wanting to attach a note to a contribution without opening chat). The strategic call now narrows to: is the non-chat annotation use case load-bearing enough for a 13th tool, or does the chatbot pattern + existing PR comment surface cover the practical need? Recommendation softens: defer to v1.x M6 with a higher bar to land (concrete pre-M6 user request needed, not speculative coordination-surface gap).
+
+---
+
+### 24 - Branch reaping in `reconcile.ts` for AI-speed contribution churn
+
+**Scenario.** The throwaway-branches convention (per `../../scripts/README.md` from the 2026-04-28 AI-speed pivot) commits per-contribution branches in the form `atelier/<contribution-id>` so multiple agents can work concurrently without trampling each other's working tree. At AI implementation speed, a guild may produce hundreds of `atelier/*` branches per week. The datastore reaper handles session + lock cleanup, but no current spec addresses long-stale branches whose contributions have been merged or rejected days ago.
+
+This was surfaced by the 2026-04-28 second-pass red-team audit (Weakness: "Git Rot — While the datastore is reaped, the repo accumulates hundreds of AI-speed branches with no specified GIT_REAPER policy"). The first-pass post-implementation symptom would be: `git branch -r` listing 500+ stale `atelier/*` branches, slowing fetch, cluttering UI, and obscuring active work.
+
+**Open questions:**
+- Where does branch reaping live? Existing-primitives check answer: `reconcile.ts` already walks repo state vs. datastore state; a branch-reaping pass is a natural extension, not a new script.
+- What's the deletion criterion? Likely: contribution merged or rejected, branch's last commit older than N days (default 30?), no open PR referencing the branch.
+- Local vs remote? Reconcile is server-side; it deletes remote branches. Local branches on composer machines are out of scope (composer's git client handles those).
+- What about branches whose contribution row has been deleted (e.g., session reaping cascaded a delete)? Likely: orphaned `atelier/*` branches with last-commit > N days are also reapable, per the same age criterion.
+- Does the reaping pass run on the same cadence as the existing reconcile cron, or separately? Likely same cron; a dry-run flag for the first M2 deployment lets the team eyeball the deletion list before enabling actual deletion.
+- Configuration surface? `.atelier/config.yaml: reconcile.branch_reaping: { enabled: bool, max_age_days: int, dry_run: bool }` -- defaults to enabled=false at v1 (opt-in until a team has operational data on what's safe to delete), with the toggle documented in the M2 launch runbook.
+
+**Recommendation.** Extend `reconcile.ts` (M1 deliverable per BUILD-SEQUENCE) with a branch-reaping pass guarded by a config flag. No new script, no new ADR. Document the criterion + defaults in `scripts/README.md` reconcile section. The existing reconcile script already has the right shape (idempotent, server-side, runs as cron); branch reaping adds one more pass to its loop.
+
+**Status.** OPEN. Wants resolution before `reconcile.ts` lands at M1 (so the script ships with the branch-reaping pass present-but-default-off, rather than requiring a follow-up edit to add it). Strategic call is small: confirm the recommendation OR explicitly defer the pass to v1.x and accept manual `git push origin --delete` as the v1 hygiene path.
 
 ---
 

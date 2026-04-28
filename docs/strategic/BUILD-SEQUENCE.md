@@ -217,7 +217,9 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 **Demoable.** An external Claude Code session claims a `research_artifact`, authors it, runs find_similar, queues it for triage; PM principal approves via `/atelier`; decision is logged; release_scope completes — all observable end-to-end.
 
-**Exit criteria.** Analyst-week-1 scenario passes. Triage gate cannot be bypassed. Remote composer auth tokens are scoped, revocable, and audited.
+**Reference chat-app bot (deferred from v1).** A reference Slack and Discord bot ships under `apps/reference-bots/` implementing the chatbot pattern from `../user/connectors/chatbot-pattern.md`. Per-platform runbook + smoke tests + identity flow (Model B per the pattern doc) demonstrate the chat-surface coordination path end-to-end. The pattern itself is documented at v1; the reference implementation lands here at M6 alongside other AI-coordination concentrations (auto-reviewers per BRD-OPEN-QUESTIONS section 21, annotation surface per section 23).
+
+**Exit criteria.** Analyst-week-1 scenario passes. Triage gate cannot be bypassed. Remote composer auth tokens are scoped, revocable, and audited. Reference chat-bot scaffold runs end-to-end against a staging endpoint with at least one human-in-chat flow exercised (claim + log_decision via Slack).
 
 ---
 

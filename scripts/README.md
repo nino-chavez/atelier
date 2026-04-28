@@ -155,6 +155,8 @@ In an AI-speed reality where agents may try N variants of an implementation befo
 
 **Surfaced by:** 2026-04-28 AI-speed red-team pivot (Ghost Implementation Surge gap).
 
+**Reaping rejected/orphaned contribution branches.** The happy-merge case deletes the contribution branch post-PR-squash. The rejected-contribution and orphaned-branch cases (e.g., agent creates branch, contribution gets `state=rejected`, branch lingers; or session reaping cascade-deletes the contribution row, leaving an orphan branch) are handled by an extension to `reconcile.mjs`: a branch-reaping pass that lists `atelier/*` branches whose last-commit age exceeds `reconcile.branch_reaping.max_age_days` (default 30) AND whose contribution_id either resolves to a `merged` or `rejected` row OR does not resolve at all. Default off at v1 (opt-in until the team has operational evidence of what's safe to delete); dry-run mode lists candidates without acting. Strategic call open per `../docs/functional/BRD-OPEN-QUESTIONS.md` section 24.
+
 **Invariants across milestones.**
 - `last_synced_at` on the contribution row is updated atomically with the external upsert; replay on retry is idempotent on `(contribution_id, external_issue_url)`.
 - Adapter calls are bounded by `adapter.timeout_seconds` (default 30); adapter failures are logged but do not block subsequent contributions.

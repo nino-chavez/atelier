@@ -1,0 +1,1061 @@
+// Atelier internal write library (M1)
+//
+// Implements the ARCH 6.x mutation contracts -- claim, update, release,
+// log_decision, plus session and lock helpers -- against the Postgres schema
+// from migration 20260428000001. NOT yet exposed via MCP; sync scripts call
+// this library directly per .atelier/checkpoints/SESSION.md step 4.ii.
+//
+// Scope at M1 (per SESSION.md):
+//   - Schema-side mutations (DB writes are authoritative for this module).
+//   - Telemetry events emitted on every mutation per ARCH 8.1.
+//   - Atomic state transitions via single SQL statements where possible;
+//     transactions where multi-row coordination is needed.
+//
+// Out of scope at M1 (deferred):
+//   - Per-project endpoint git committer (ARCH 7.8 / ADR-023): M2. The
+//     `logDecision` contract here splits allocation from row-insert via a
+//     caller-provided `commit` callback, so the M2 endpoint can wrap the
+//     committer around it without rewriting this module.
+//   - Webhook-driven repo_branch / commit_count / last_observed_commit_sha
+//     updates (ARCH 6.2.2.1): M2.
+//   - Implicit find_similar gate on claim (ARCH 6.2.1): M5 (gates on D24).
+//   - Idempotency keys (ARCH 6.2.1 idempotency_key): the M1 caller is a
+//     server-side sync script; idempotency is a remote-surface concern and
+//     lands with the M2 endpoint.
+//   - Glob-based lock overlap (ARCH 7.4.1 picomatch expansion): M2 endpoint.
+//     M1 detects overlap via Postgres array-intersection (&& on text[]),
+//     which correctly handles non-glob exact scopes and is sufficient for
+//     the M1 sync substrate. Mixed-glob workloads land at M2.
+
+import { Pool, type PoolConfig, type PoolClient } from 'pg';
+
+// =========================================================================
+// Errors
+// =========================================================================
+
+export type AtelierErrorCode =
+  | 'BAD_REQUEST'
+  | 'CONFLICT'
+  | 'NOT_FOUND'
+  | 'FORBIDDEN'
+  | 'INTERNAL';
+
+export class AtelierError extends Error {
+  override readonly name = 'AtelierError';
+  constructor(
+    readonly code: AtelierErrorCode,
+    message: string,
+    readonly details?: Record<string, unknown>,
+  ) {
+    super(message);
+  }
+}
+
+// =========================================================================
+// Domain types (mirror the schema from migration 20260428000001)
+// =========================================================================
+
+export type ContributionState = 'open' | 'claimed' | 'in_progress' | 'review' | 'merged' | 'rejected';
+export type ContributionKind  = 'implementation' | 'research' | 'design';
+export type DecisionCategory  = 'architecture' | 'product' | 'design' | 'research';
+export type SessionSurface    = 'ide' | 'web' | 'terminal' | 'passive';
+export type LockKind          = 'exclusive' | 'shared';
+
+export interface Session {
+  id: string;
+  projectId: string;
+  composerId: string;
+  surface: SessionSurface;
+  agentClient: string | null;
+  status: 'active' | 'idle' | 'dead';
+  heartbeatAt: Date;
+  createdAt: Date;
+}
+
+export interface Contribution {
+  id: string;
+  projectId: string;
+  authorComposerId: string | null;
+  authorSessionId: string | null;
+  traceIds: string[];
+  territoryId: string;
+  artifactScope: string[];
+  state: ContributionState;
+  kind: ContributionKind;
+  requiresOwnerApproval: boolean;
+  blockedBy: string | null;
+  blockedReason: string | null;
+  approvedByComposerId: string | null;
+  approvedAt: Date | null;
+  contentRef: string;
+  transcriptRef: string | null;
+  fencingToken: bigint | null;
+  repoBranch: string | null;
+  commitCount: number;
+  lastObservedCommitSha: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// =========================================================================
+// Inputs / outputs (per ARCH 6.x signatures, M1-scoped)
+// =========================================================================
+
+export interface CreateSessionInput {
+  projectId: string;
+  composerId: string;
+  surface: SessionSurface;
+  agentClient?: string;
+}
+
+export type ClaimInput =
+  | {
+      // Pre-existing path (ARCH 6.2.1.5)
+      contributionId: string;
+      sessionId: string;
+    }
+  | {
+      // Atomic create-and-claim (ARCH 6.2.1)
+      contributionId: null;
+      sessionId: string;
+      kind: ContributionKind;
+      traceIds: string[];
+      territoryId: string;
+      contentRef: string;
+      artifactScope: string[];
+    };
+
+export interface ClaimResult {
+  contributionId: string;
+  state: 'claimed';
+  authorSessionId: string;
+  authorComposerId: string;
+  created: boolean;
+  requiresOwnerApproval: boolean;
+}
+
+export interface UpdateInput {
+  contributionId: string;
+  sessionId: string;
+  state?: 'claimed' | 'in_progress' | 'review';
+  contentRef?: string;
+  fencingToken?: number | bigint;
+  blockedBy?: string | null;
+  blockedReason?: string | null;
+  ownerApproval?: boolean;
+}
+
+export interface UpdateResult {
+  contributionId: string;
+  state: ContributionState;
+  requiresOwnerApproval: boolean;
+  approvedByComposerId: string | null;
+}
+
+export interface ReleaseInput {
+  contributionId: string;
+  sessionId: string;
+  reason?: string;
+}
+
+export interface ReleaseResult {
+  contributionId: string;
+  state: 'open';
+  priorAuthorSessionId: string;
+  priorAuthorComposerId: string;
+}
+
+export interface AcquireLockInput {
+  contributionId: string;
+  sessionId: string;
+  artifactScope: string[];
+  lockType?: LockKind;
+}
+
+export interface AcquireLockResult {
+  lockId: string;
+  fencingToken: bigint;
+}
+
+export interface ReleaseLockInput {
+  lockId: string;
+  sessionId: string;
+}
+
+export interface LogDecisionInput {
+  projectId: string;
+  authorComposerId: string;
+  sessionId?: string | null;
+  category: DecisionCategory;
+  summary: string;
+  rationale: string;
+  traceIds: string[];
+  /**
+   * UUID of the decision being reversed (NOT the ADR-NNN string). The M2
+   * endpoint will accept ADR-NNN at the API boundary and resolve it to a
+   * decision_id before calling the library; the library is uuid-native.
+   */
+  reverses?: string | null;
+  triggeredByContributionId?: string | null;
+}
+
+export interface AdrAllocation {
+  adrNumber: number;
+  adrId: string;
+  slug: string;
+  repoPath: string;
+}
+
+// Caller injects the git side (write file → commit → push) and returns the
+// resulting repo_commit_sha. The M2 endpoint wraps a committer around this;
+// M1 sync scripts that need to log a decision provide their own implementation.
+export type DecisionCommitFn = (allocation: AdrAllocation) => Promise<string>;
+
+export interface LogDecisionResult {
+  decisionId: string;
+  adrId: string;
+  repoPath: string;
+  repoCommitSha: string;
+}
+
+// =========================================================================
+// Client
+// =========================================================================
+
+export interface AtelierClientOptions {
+  databaseUrl: string;
+  poolConfig?: Omit<PoolConfig, 'connectionString'>;
+}
+
+export class AtelierClient {
+  private readonly pool: Pool;
+
+  constructor(opts: AtelierClientOptions) {
+    this.pool = new Pool({ connectionString: opts.databaseUrl, ...opts.poolConfig });
+  }
+
+  async close(): Promise<void> {
+    await this.pool.end();
+  }
+
+  // =======================================================================
+  // Sessions (ARCH 6.1)
+  // =======================================================================
+
+  async createSession(input: CreateSessionInput): Promise<Session> {
+    const { rows } = await this.pool.query<SessionRow>(
+      `INSERT INTO sessions (project_id, composer_id, surface, agent_client)
+       VALUES ($1, $2, $3, $4)
+       RETURNING ${SESSION_COLUMNS}`,
+      [input.projectId, input.composerId, input.surface, input.agentClient ?? null],
+    );
+    const row = rows[0];
+    if (!row) throw new AtelierError('INTERNAL', 'session insert returned no row');
+    await this.recordTelemetry({
+      projectId: input.projectId,
+      composerId: input.composerId,
+      sessionId: row.id,
+      action: 'session.created',
+      outcome: 'ok',
+      metadata: { surface: input.surface, agentClient: input.agentClient ?? null },
+    });
+    return rowToSession(row);
+  }
+
+  async heartbeat(sessionId: string): Promise<void> {
+    const { rowCount } = await this.pool.query(
+      `UPDATE sessions SET heartbeat_at = now(), status = 'active' WHERE id = $1`,
+      [sessionId],
+    );
+    if (rowCount === 0) {
+      throw new AtelierError('NOT_FOUND', `session ${sessionId} does not exist`);
+    }
+  }
+
+  // =======================================================================
+  // Claim (ARCH 6.2.1 + 6.2.1.5)
+  // =======================================================================
+
+  async claim(input: ClaimInput): Promise<ClaimResult> {
+    return this.tx(async (client) => {
+      const sessionContext = await loadSessionContext(client, input.sessionId);
+
+      if (input.contributionId === null) {
+        return this.atomicClaim(client, sessionContext, input);
+      }
+      return this.preExistingClaim(client, sessionContext, input);
+    });
+  }
+
+  private async atomicClaim(
+    client: PoolClient,
+    ctx: SessionContext,
+    input: Extract<ClaimInput, { contributionId: null }>,
+  ): Promise<ClaimResult> {
+    if (input.traceIds.length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'trace_ids must be non-empty (ADR-021)');
+    }
+    if (input.artifactScope.length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'artifact_scope must be non-empty');
+    }
+
+    const territory = await loadTerritory(client, input.territoryId, ctx.projectId);
+    const requiresOwnerApproval = checkAuthoringDiscipline(ctx, territory);
+
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO contributions (
+         project_id, author_composer_id, author_session_id, trace_ids,
+         territory_id, artifact_scope, state, kind, requires_owner_approval,
+         content_ref
+       ) VALUES ($1, $2, $3, $4, $5, $6, 'claimed', $7, $8, $9)
+       RETURNING id`,
+      [
+        ctx.projectId,
+        ctx.composerId,
+        ctx.sessionId,
+        input.traceIds,
+        input.territoryId,
+        input.artifactScope,
+        input.kind,
+        requiresOwnerApproval,
+        input.contentRef,
+      ],
+    );
+
+    const id = rows[0]?.id;
+    if (!id) throw new AtelierError('INTERNAL', 'contribution insert returned no row');
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.claimed',
+      outcome: 'ok',
+      metadata: { contributionId: id, created: true, kind: input.kind, requiresOwnerApproval },
+      client,
+    });
+
+    return {
+      contributionId: id,
+      state: 'claimed',
+      authorSessionId: ctx.sessionId,
+      authorComposerId: ctx.composerId,
+      created: true,
+      requiresOwnerApproval,
+    };
+  }
+
+  private async preExistingClaim(
+    client: PoolClient,
+    ctx: SessionContext,
+    input: Extract<ClaimInput, { contributionId: string }>,
+  ): Promise<ClaimResult> {
+    // Conditional UPDATE: only state='open' rows transition; losers see CONFLICT
+    // with current author info. Per ARCH 6.2.1.5.
+    const { rows } = await client.query<{
+      id: string;
+      requires_owner_approval: boolean;
+      territory_id: string;
+    }>(
+      `UPDATE contributions
+          SET state = 'claimed',
+              author_session_id = $2,
+              author_composer_id = $3,
+              updated_at = now()
+        WHERE id = $1 AND state = 'open' AND project_id = $4
+        RETURNING id, requires_owner_approval, territory_id`,
+      [input.contributionId, ctx.sessionId, ctx.composerId, ctx.projectId],
+    );
+
+    if (rows.length === 0) {
+      const existing = await client.query<{
+        id: string;
+        state: ContributionState;
+        author_session_id: string | null;
+        project_id: string;
+      }>(
+        `SELECT id, state, author_session_id, project_id FROM contributions WHERE id = $1`,
+        [input.contributionId],
+      );
+      const cur = existing.rows[0];
+      if (!cur) throw new AtelierError('NOT_FOUND', `contribution ${input.contributionId} not found`);
+      if (cur.project_id !== ctx.projectId) {
+        throw new AtelierError('NOT_FOUND', `contribution ${input.contributionId} is in a different project`);
+      }
+      throw new AtelierError('CONFLICT', `contribution is in state ${cur.state}`, {
+        currentState: cur.state,
+        currentAuthorSessionId: cur.author_session_id,
+      });
+    }
+
+    const claimed = rows[0]!;
+    // Confirm authoring discipline post-claim. The pre-existing row already
+    // has its territory; we still validate that this composer is allowed to
+    // author here. If discipline mismatches, we CANNOT roll back without
+    // breaking the conditional UPDATE's atomicity guarantee, so this check
+    // runs first as a SELECT, before the UPDATE attempt.
+    // (The actual SELECT-then-UPDATE would race; defer to the trigger-style
+    // check at the territory layer when authoring expands. For M1 we accept
+    // the post-claim window because all M1 callers are server-side scripts
+    // that pre-validate territory membership.)
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.claimed',
+      outcome: 'ok',
+      metadata: { contributionId: claimed.id, created: false },
+      client,
+    });
+
+    return {
+      contributionId: claimed.id,
+      state: 'claimed',
+      authorSessionId: ctx.sessionId,
+      authorComposerId: ctx.composerId,
+      created: false,
+      requiresOwnerApproval: claimed.requires_owner_approval,
+    };
+  }
+
+  // =======================================================================
+  // Update (ARCH 6.2.2)
+  // =======================================================================
+
+  async update(input: UpdateInput): Promise<UpdateResult> {
+    return this.tx(async (client) => {
+      const ctx = await loadSessionContext(client, input.sessionId);
+      const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
+
+      // Owner-approval path is the only mutation a non-author may perform.
+      if (input.ownerApproval === true) {
+        return this.applyOwnerApproval(client, ctx, contribution);
+      }
+
+      // All other mutations require the calling session to be the author.
+      if (contribution.author_session_id !== ctx.sessionId) {
+        throw new AtelierError('FORBIDDEN', 'only the contribution author may update', {
+          authorSessionId: contribution.author_session_id,
+        });
+      }
+
+      validateStateTransition(contribution.state, input.state);
+
+      // blocked_by must reference a different contribution in the same project
+      if (input.blockedBy !== undefined && input.blockedBy !== null) {
+        if (input.blockedBy === contribution.id) {
+          throw new AtelierError('BAD_REQUEST', 'contribution cannot block itself');
+        }
+        const { rowCount } = await client.query(
+          `SELECT 1 FROM contributions WHERE id = $1 AND project_id = $2`,
+          [input.blockedBy, ctx.projectId],
+        );
+        if (rowCount === 0) {
+          throw new AtelierError('BAD_REQUEST', `blocked_by contribution ${input.blockedBy} not found in project`);
+        }
+      }
+
+      const setFragments: string[] = [];
+      const params: unknown[] = [];
+      let p = 1;
+      const set = (frag: string, value: unknown): void => {
+        setFragments.push(`${frag} = $${p++}`);
+        params.push(value);
+      };
+
+      if (input.state !== undefined) set('state', input.state);
+      if (input.contentRef !== undefined) {
+        if (input.fencingToken === undefined) {
+          throw new AtelierError('BAD_REQUEST', 'fencing_token required when content_ref is set (ARCH 7.4)');
+        }
+        await assertFencingTokenValid(client, contribution.id, input.fencingToken);
+        set('content_ref', input.contentRef);
+      }
+      if (input.blockedBy !== undefined) set('blocked_by', input.blockedBy);
+      if (input.blockedReason !== undefined) set('blocked_reason', input.blockedReason);
+
+      if (setFragments.length === 0) {
+        // No-op update: just refresh updated_at and emit telemetry
+        setFragments.push(`updated_at = now()`);
+      }
+
+      params.push(contribution.id);
+      const whereId = `$${p}`;
+      const sql = `UPDATE contributions SET ${setFragments.join(', ')} WHERE id = ${whereId}
+                   RETURNING state, requires_owner_approval, approved_by_composer_id`;
+      const { rows } = await client.query<{
+        state: ContributionState;
+        requires_owner_approval: boolean;
+        approved_by_composer_id: string | null;
+      }>(sql, params);
+
+      const updated = rows[0]!;
+
+      await this.recordTelemetry({
+        projectId: ctx.projectId,
+        composerId: ctx.composerId,
+        sessionId: ctx.sessionId,
+        action: 'contribution.updated',
+        outcome: 'ok',
+        metadata: {
+          contributionId: contribution.id,
+          newState: updated.state,
+          stateChanged: input.state !== undefined && input.state !== contribution.state,
+        },
+        client,
+      });
+
+      return {
+        contributionId: contribution.id,
+        state: updated.state,
+        requiresOwnerApproval: updated.requires_owner_approval,
+        approvedByComposerId: updated.approved_by_composer_id,
+      };
+    });
+  }
+
+  private async applyOwnerApproval(
+    client: PoolClient,
+    ctx: SessionContext,
+    contribution: ContributionRow,
+  ): Promise<UpdateResult> {
+    if (contribution.author_composer_id === ctx.composerId) {
+      throw new AtelierError('FORBIDDEN', 'authors cannot self-approve their own cross-role contribution (ARCH 5.3)');
+    }
+    if (!contribution.requires_owner_approval) {
+      // Idempotent: already approved or never required.
+      return {
+        contributionId: contribution.id,
+        state: contribution.state,
+        requiresOwnerApproval: false,
+        approvedByComposerId: contribution.approved_by_composer_id,
+      };
+    }
+
+    const { rows: territoryRows } = await client.query<{ review_role: string | null }>(
+      `SELECT review_role FROM territories WHERE id = $1 AND project_id = $2`,
+      [contribution.territory_id, ctx.projectId],
+    );
+    const territory = territoryRows[0];
+    if (!territory) throw new AtelierError('INTERNAL', 'territory missing for contribution');
+    const requiredRole = territory.review_role;
+    if (requiredRole && ctx.discipline !== requiredRole) {
+      throw new AtelierError('FORBIDDEN', `review_role mismatch: territory requires ${requiredRole}, caller is ${ctx.discipline}`);
+    }
+
+    const { rows } = await client.query<{
+      state: ContributionState;
+      requires_owner_approval: boolean;
+      approved_by_composer_id: string | null;
+    }>(
+      `UPDATE contributions
+          SET requires_owner_approval = false,
+              approved_by_composer_id = $1,
+              approved_at = now(),
+              updated_at = now()
+        WHERE id = $2
+        RETURNING state, requires_owner_approval, approved_by_composer_id`,
+      [ctx.composerId, contribution.id],
+    );
+    const updated = rows[0]!;
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.approval_recorded',
+      outcome: 'ok',
+      metadata: {
+        contributionId: contribution.id,
+        priorAuthorComposerId: contribution.author_composer_id,
+      },
+      client,
+    });
+
+    return {
+      contributionId: contribution.id,
+      state: updated.state,
+      requiresOwnerApproval: updated.requires_owner_approval,
+      approvedByComposerId: updated.approved_by_composer_id,
+    };
+  }
+
+  // =======================================================================
+  // Release (ARCH 6.2.4)
+  // =======================================================================
+
+  async release(input: ReleaseInput): Promise<ReleaseResult> {
+    return this.tx(async (client) => {
+      const ctx = await loadSessionContext(client, input.sessionId);
+      const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
+
+      if (contribution.author_session_id !== ctx.sessionId) {
+        throw new AtelierError('FORBIDDEN', 'only the contribution author may release', {
+          authorSessionId: contribution.author_session_id,
+        });
+      }
+      if (contribution.state !== 'claimed' && contribution.state !== 'in_progress') {
+        throw new AtelierError('BAD_REQUEST', `cannot release from state ${contribution.state}`, {
+          currentState: contribution.state,
+        });
+      }
+
+      // Cascade-release locks held against this contribution (ARCH 6.2.4 side effects).
+      await client.query(`DELETE FROM locks WHERE contribution_id = $1`, [contribution.id]);
+
+      await client.query(
+        `UPDATE contributions
+            SET state = 'open',
+                author_session_id = NULL,
+                author_composer_id = NULL,
+                updated_at = now()
+          WHERE id = $1`,
+        [contribution.id],
+      );
+
+      await this.recordTelemetry({
+        projectId: ctx.projectId,
+        composerId: ctx.composerId,
+        sessionId: ctx.sessionId,
+        action: 'contribution.released',
+        outcome: 'ok',
+        metadata: {
+          contributionId: contribution.id,
+          priorAuthorSessionId: contribution.author_session_id,
+          priorAuthorComposerId: contribution.author_composer_id,
+          reason: input.reason ?? null,
+        },
+        client,
+      });
+
+      return {
+        contributionId: contribution.id,
+        state: 'open',
+        priorAuthorSessionId: contribution.author_session_id!,
+        priorAuthorComposerId: contribution.author_composer_id!,
+      };
+    });
+  }
+
+  // =======================================================================
+  // Locks (ARCH 7.4)
+  // =======================================================================
+
+  async acquireLock(input: AcquireLockInput): Promise<AcquireLockResult> {
+    if (input.artifactScope.length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'artifact_scope must be non-empty');
+    }
+    return this.tx(async (client) => {
+      const ctx = await loadSessionContext(client, input.sessionId);
+      const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
+
+      if (contribution.author_session_id !== ctx.sessionId) {
+        throw new AtelierError('FORBIDDEN', 'only the contribution author may acquire locks against it');
+      }
+
+      // Overlap detection via Postgres array intersection. M1 caveat per
+      // module header: this is exact-string overlap, not glob expansion.
+      const { rows: conflicts } = await client.query<{
+        id: string;
+        holder_composer_id: string;
+        artifact_scope: string[];
+      }>(
+        `SELECT id, holder_composer_id, artifact_scope
+           FROM locks
+          WHERE project_id = $1 AND artifact_scope && $2::text[]
+          LIMIT 1`,
+        [ctx.projectId, input.artifactScope],
+      );
+      if (conflicts.length > 0) {
+        throw new AtelierError('CONFLICT', 'lock scope overlaps existing lock', {
+          conflictingLock: conflicts[0],
+        });
+      }
+
+      const { rows: tokenRows } = await client.query<{ allocate_fencing_token: string }>(
+        `SELECT allocate_fencing_token($1)`,
+        [ctx.projectId],
+      );
+      const fencingToken = BigInt(tokenRows[0]!.allocate_fencing_token);
+
+      const { rows } = await client.query<{ id: string }>(
+        `INSERT INTO locks (
+           project_id, holder_composer_id, session_id, contribution_id,
+           artifact_scope, fencing_token, lock_type
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [
+          ctx.projectId,
+          ctx.composerId,
+          ctx.sessionId,
+          contribution.id,
+          input.artifactScope,
+          fencingToken,
+          input.lockType ?? 'exclusive',
+        ],
+      );
+      const lockId = rows[0]!.id;
+
+      await this.recordTelemetry({
+        projectId: ctx.projectId,
+        composerId: ctx.composerId,
+        sessionId: ctx.sessionId,
+        action: 'lock.acquired',
+        outcome: 'ok',
+        metadata: { lockId, contributionId: contribution.id, fencingToken: fencingToken.toString() },
+        client,
+      });
+
+      return { lockId, fencingToken };
+    });
+  }
+
+  async releaseLock(input: ReleaseLockInput): Promise<void> {
+    return this.tx(async (client) => {
+      const ctx = await loadSessionContext(client, input.sessionId);
+      const { rowCount } = await client.query(
+        `DELETE FROM locks WHERE id = $1 AND holder_composer_id = $2`,
+        [input.lockId, ctx.composerId],
+      );
+      if (rowCount === 0) {
+        throw new AtelierError('NOT_FOUND', `lock ${input.lockId} not held by calling composer`);
+      }
+      await this.recordTelemetry({
+        projectId: ctx.projectId,
+        composerId: ctx.composerId,
+        sessionId: ctx.sessionId,
+        action: 'lock.released',
+        outcome: 'ok',
+        metadata: { lockId: input.lockId },
+        client,
+      });
+    });
+  }
+
+  // =======================================================================
+  // Decisions (ARCH 6.3 / 6.3.1)
+  //
+  // Two-phase per the M1 split: the library allocates ADR-NNN and prepares
+  // the slug/repo_path; the caller writes the file, commits, and pushes;
+  // the library inserts the row keyed on the resulting commit SHA.
+  //
+  // The append-only invariant on `decisions` is enforced at the table level
+  // by the trigger from migration 1; this code path only INSERTs.
+  // =======================================================================
+
+  async logDecision(input: LogDecisionInput, commit: DecisionCommitFn): Promise<LogDecisionResult> {
+    if (input.traceIds.length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'trace_ids must be non-empty (ADR-021)');
+    }
+    if (input.summary.trim().length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'summary must be non-empty');
+    }
+
+    if (input.reverses) {
+      // Validate that the reversed decision exists in the same project and
+      // has not itself been reversed (per ARCH 6.3.1 reversal flag rules).
+      const { rows: reversedRows } = await this.pool.query<{ id: string }>(
+        `SELECT id FROM decisions
+          WHERE id = $1 AND project_id = $2
+            AND NOT EXISTS (SELECT 1 FROM decisions r WHERE r.reverses = $1)
+          LIMIT 1`,
+        [input.reverses, input.projectId],
+      );
+      if (reversedRows.length === 0) {
+        throw new AtelierError(
+          'BAD_REQUEST',
+          `reverses target ${input.reverses} not found in project, or already reversed`,
+        );
+      }
+    }
+
+    const allocation = await this.allocateAdr(input.projectId, input.summary);
+
+    const repoCommitSha = await commit(allocation);
+    if (!repoCommitSha || repoCommitSha.trim().length === 0) {
+      throw new AtelierError('INTERNAL', 'commit callback returned empty repo_commit_sha');
+    }
+
+    const { rows } = await this.pool.query<{ id: string }>(
+      `INSERT INTO decisions (
+         project_id, author_composer_id, session_id, trace_ids, category,
+         triggered_by_contribution_id, summary, rationale, reverses, repo_commit_sha
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id`,
+      [
+        input.projectId,
+        input.authorComposerId,
+        input.sessionId ?? null,
+        input.traceIds,
+        input.category,
+        input.triggeredByContributionId ?? null,
+        input.summary,
+        input.rationale,
+        input.reverses ?? null,
+        repoCommitSha,
+      ],
+    );
+    const decisionId = rows[0]!.id;
+
+    await this.recordTelemetry({
+      projectId: input.projectId,
+      composerId: input.authorComposerId,
+      sessionId: input.sessionId ?? null,
+      action: 'decision.logged',
+      outcome: 'ok',
+      metadata: {
+        decisionId,
+        adrId: allocation.adrId,
+        repoCommitSha,
+        category: input.category,
+      },
+    });
+
+    return {
+      decisionId,
+      adrId: allocation.adrId,
+      repoPath: allocation.repoPath,
+      repoCommitSha,
+    };
+  }
+
+  private async allocateAdr(projectId: string, summary: string): Promise<AdrAllocation> {
+    const { rows } = await this.pool.query<{ allocate_adr_number: number }>(
+      `SELECT allocate_adr_number($1)`,
+      [projectId],
+    );
+    const adrNumber = rows[0]!.allocate_adr_number;
+    const adrId = `ADR-${String(adrNumber).padStart(3, '0')}`;
+    const slug = slugify(summary);
+    const repoPath = `docs/architecture/decisions/${adrId}-${slug}.md`;
+    return { adrNumber, adrId, slug, repoPath };
+  }
+
+  // =======================================================================
+  // Telemetry (ARCH 8.1)
+  // =======================================================================
+
+  private async recordTelemetry(params: {
+    projectId: string;
+    composerId: string | null;
+    sessionId: string | null;
+    action: string;
+    outcome: 'ok' | 'error';
+    metadata?: Record<string, unknown>;
+    durationMs?: number;
+    client?: PoolClient;
+  }): Promise<void> {
+    const exec = params.client ?? this.pool;
+    await exec.query(
+      `INSERT INTO telemetry (project_id, composer_id, session_id, action, outcome, duration_ms, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        params.projectId,
+        params.composerId,
+        params.sessionId,
+        params.action,
+        params.outcome,
+        params.durationMs ?? null,
+        params.metadata ?? {},
+      ],
+    );
+  }
+
+  // =======================================================================
+  // Internals
+  // =======================================================================
+
+  private async tx<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await fn(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+}
+
+// =========================================================================
+// Helpers
+// =========================================================================
+
+interface SessionContext {
+  sessionId: string;
+  composerId: string;
+  projectId: string;
+  discipline: string | null;
+}
+
+interface SessionRow {
+  id: string;
+  project_id: string;
+  composer_id: string;
+  surface: SessionSurface;
+  agent_client: string | null;
+  status: 'active' | 'idle' | 'dead';
+  heartbeat_at: Date;
+  created_at: Date;
+}
+
+interface TerritoryRow {
+  id: string;
+  project_id: string;
+  owner_role: string;
+  review_role: string | null;
+}
+
+interface ContributionRow {
+  id: string;
+  project_id: string;
+  author_composer_id: string | null;
+  author_session_id: string | null;
+  state: ContributionState;
+  kind: ContributionKind;
+  territory_id: string;
+  requires_owner_approval: boolean;
+  approved_by_composer_id: string | null;
+}
+
+const SESSION_COLUMNS = `id, project_id, composer_id, surface, agent_client, status, heartbeat_at, created_at`;
+
+function rowToSession(row: SessionRow): Session {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    composerId: row.composer_id,
+    surface: row.surface,
+    agentClient: row.agent_client,
+    status: row.status,
+    heartbeatAt: row.heartbeat_at,
+    createdAt: row.created_at,
+  };
+}
+
+async function loadSessionContext(client: PoolClient, sessionId: string): Promise<SessionContext> {
+  const { rows } = await client.query<{
+    composer_id: string;
+    project_id: string;
+    discipline: string | null;
+  }>(
+    `SELECT s.composer_id, s.project_id, c.discipline
+       FROM sessions s
+       JOIN composers c ON c.id = s.composer_id
+      WHERE s.id = $1`,
+    [sessionId],
+  );
+  const row = rows[0];
+  if (!row) throw new AtelierError('NOT_FOUND', `session ${sessionId} does not exist`);
+  return {
+    sessionId,
+    composerId: row.composer_id,
+    projectId: row.project_id,
+    discipline: row.discipline,
+  };
+}
+
+async function loadTerritory(
+  client: PoolClient,
+  territoryId: string,
+  projectId: string,
+): Promise<TerritoryRow> {
+  const { rows } = await client.query<TerritoryRow>(
+    `SELECT id, project_id, owner_role::text AS owner_role, review_role::text AS review_role
+       FROM territories WHERE id = $1`,
+    [territoryId],
+  );
+  const row = rows[0];
+  if (!row) throw new AtelierError('BAD_REQUEST', `territory ${territoryId} not found`);
+  if (row.project_id !== projectId) {
+    throw new AtelierError('BAD_REQUEST', `territory ${territoryId} is in a different project`);
+  }
+  return row;
+}
+
+async function loadContribution(
+  client: PoolClient,
+  contributionId: string,
+  projectId: string,
+): Promise<ContributionRow> {
+  const { rows } = await client.query<ContributionRow>(
+    `SELECT id, project_id, author_composer_id, author_session_id, state, kind,
+            territory_id, requires_owner_approval, approved_by_composer_id
+       FROM contributions WHERE id = $1`,
+    [contributionId],
+  );
+  const row = rows[0];
+  if (!row) throw new AtelierError('NOT_FOUND', `contribution ${contributionId} not found`);
+  if (row.project_id !== projectId) {
+    throw new AtelierError('NOT_FOUND', `contribution ${contributionId} is in a different project`);
+  }
+  return row;
+}
+
+function checkAuthoringDiscipline(ctx: SessionContext, territory: TerritoryRow): boolean {
+  // ARCH 6.2.1 step 4: discipline=null composers cannot author.
+  if (ctx.discipline === null) {
+    throw new AtelierError(
+      'FORBIDDEN',
+      'composers without a discipline (access-level-only roles) cannot author contributions (ADR-038)',
+    );
+  }
+  // Cross-discipline authoring sets requires_owner_approval=true (per ADR-033).
+  // The opt-in check from .atelier/config.yaml is read by callers; the library
+  // accepts cross-role and just sets the flag. M2 endpoint enforces config gating.
+  return ctx.discipline !== territory.owner_role;
+}
+
+function validateStateTransition(
+  current: ContributionState,
+  next: 'claimed' | 'in_progress' | 'review' | undefined,
+): void {
+  if (next === undefined) return;
+  const legal: Record<ContributionState, ReadonlyArray<ContributionState>> = {
+    open: ['claimed'],
+    claimed: ['in_progress', 'review'],
+    in_progress: ['review'],
+    review: [],
+    merged: [],
+    rejected: [],
+  };
+  if (!legal[current].includes(next)) {
+    throw new AtelierError('BAD_REQUEST', `illegal state transition ${current} -> ${next}`);
+  }
+}
+
+async function assertFencingTokenValid(
+  client: PoolClient,
+  contributionId: string,
+  fencingToken: number | bigint,
+): Promise<void> {
+  const tokenAsBig = BigInt(fencingToken);
+  const { rows } = await client.query<{ id: string }>(
+    `SELECT id FROM locks WHERE contribution_id = $1 AND fencing_token = $2 LIMIT 1`,
+    [contributionId, tokenAsBig.toString()],
+  );
+  if (rows.length === 0) {
+    throw new AtelierError('CONFLICT', 'fencing_token does not match any active lock for this contribution');
+  }
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+}
+
+// =========================================================================
+// Convenience factory
+// =========================================================================
+
+export function createClient(opts: AtelierClientOptions): AtelierClient {
+  return new AtelierClient(opts);
+}

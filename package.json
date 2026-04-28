@@ -1,0 +1,22 @@
+{
+  "name": "atelier",
+  "version": "0.1.0-m1",
+  "private": true,
+  "description": "Atelier reference implementation. Self-hostable OSS template for mixed teams of humans + agents to concurrently author one canonical artifact across IDE, browser, and terminal surfaces.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

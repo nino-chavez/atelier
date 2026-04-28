@@ -6,9 +6,9 @@
   "template_version": "1.0",
   "counts": {
     "brd-epics": 16,
-    "brd-stories": 98,
+    "brd-stories": 99,
     "decisions": 41,
-    "open-questions": 20,
+    "open-questions": 23,
     "sections": 0,
     "prototype-slices": 0,
     "adrs": 38

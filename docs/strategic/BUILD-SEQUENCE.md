@@ -276,7 +276,7 @@ This repo is **hand-bootstrapped** — it is the artifact that `atelier init` wi
 
 | Command | Group | Raw form (functional, hand-invokable) | Polished form (exit-code-tested, `--help`, end-to-end tested) |
 |---|---|---|---|
-| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) | M7 |
+| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8 -- the credential-handover surface that lets AI-driven setup proceed past third-party browser-only flows; surfaced by 2026-04-28 AI-speed pivot) | M7 |
 | `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | M7 |
 | `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | M7 |
 | `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | M7 |

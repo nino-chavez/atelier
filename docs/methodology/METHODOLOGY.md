@@ -497,3 +497,33 @@ Per the three-tier consumer model (ADR-031), this process lives in three places:
 **Tier 3 (Specification)** -- this section (METHODOLOGY 11). Teams adopting just the methodology without the reference impl can implement equivalent gates against their own tooling.
 
 A team that runs `atelier init` gets the discipline by default. A team that wants to customize tunes the config. A team that opts out by removing the workflow files accepts the consequences (faster initial pace, more drift over time). Atelier doesn't enforce -- it makes the disciplined path the easy path.
+
+### 11.10 Execution model: human-executed vs. AI-executed vs. AI-with-human-triage
+
+In an AI-first reality where agents do most implementation AND increasingly most first-pass review, the methodology gates above need an explicit executor model. Without one, every gate defaults to "the architect runs it personally," which collapses under AI-speed throughput (per the 2026-04-28 AI-speed red-team pivot: AI implements in 2 min, human approves in 4 hrs = 120x drag).
+
+Each review surface in section 11.1 has an executor profile:
+
+| Surface | v1 default executor | v1.x target executor | Notes |
+|---|---|---|---|
+| Per-PR review (11.2) | Human (territory's `review_role`) | AI-with-human-triage: AI runs spec-match + style + linter checks; human reviews only flagged conflicts | Pre-AI, every PR comment was human; post-AI, AI handles 80% routine review and surfaces only the cases needing judgment |
+| Milestone-entry data-model audit (11.5) | Human (architect role) | AI-with-human-triage: AI runs the 5 checks against schema, generates findings doc, architect reviews findings | The 5 checks are mechanical enough for AI to apply; the judgment is in fix prioritization |
+| Milestone-exit drift sweep (11.3) | Human (architect role) | AI-executed for the 12 check classes with cross-doc-reference shape; human-executed for the architectural-judgment classes (epic-coverage, ADR re-evaluation triggers) | Mixed: validator runs the syntactic checks; architect interprets the semantic ones |
+| Quarterly destination check (11.4) | Human (architect + pm jointly) | Human (unchanged) | This is a strategic-judgment surface; AI scans of adjacent research can feed into it but the call stays human |
+| Spec-to-implementation gate (11.6) | Human + AI validator | AI-with-human-triage: validator parses citation block, AI reads cited ARCH section + PR diff, flags only mismatches | The validator is mechanical (citation block parse); the section-vs-diff comparison wants AI semantic analysis |
+| Walk re-walking (11.7) | Human (walk authors) | AI-executed first pass: AI re-walks the script against current ARCH and flags any step whose Status row no longer holds; human reviews flags | Walks are validation-instruments-as-test-cases; AI can re-run them like tests |
+| Post-milestone retrospective (11.8) | Human (architect + team) | Human (unchanged) | This is a learning surface; reducing the human attention defeats the purpose |
+
+**The architect's job shifts.** Pre-AI, the architect ran the audits personally. Post-AI, the architect's job is:
+- Configure the AI checkers (which models, which thresholds, which rules)
+- Triage flagged findings (the AI says X is a problem; is it?)
+- Override AI judgment when wrong (an AI auto-rejection that was actually fine; an AI auto-approval that should have been gated)
+- Maintain the rules themselves (when a new pattern emerges, codify it as a check)
+
+This is higher leverage than running every audit personally, but requires the human to develop new judgment surfaces (calibrating AI checkers, recognizing AI failure modes).
+
+**Implementation timing.** v1 ships the human-executed defaults; AI-executed paths land at v1.x as the auto-reviewer mechanism (per BRD-OPEN-QUESTIONS section 21) is built. The configuration surface is reserved at v1 in `.atelier/config.yaml: review.executor_profiles` so teams can opt into AI-executed gates as they're built without re-scaffolding.
+
+**Why explicit at v1 even though implementation is v1.x.** Without naming this design intent, future implementers will assume every gate is human-only by default and bake that assumption into APIs. Naming the executor model up front means the AI-executor paths are first-class hook points, not bolted-on retrofits.
+
+**Surfaced by:** 2026-04-28 AI-speed red-team pivot (Coordination Paradox + Hallucinated Decision Debt findings).

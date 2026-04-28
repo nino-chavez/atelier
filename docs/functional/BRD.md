@@ -131,6 +131,19 @@ As a dev principal, I want `atelier upgrade` so that existing projects can adopt
 
 Acceptance:
 - Given a project on template vN, when I upgrade to vN+1, then migrations run and new files are added without overwriting authored content.
+
+**US-1.8 — Guided handshake for credentials AI cannot self-provision**
+As an agent or human running `atelier init`, I want a guided handshake protocol so that credentials requiring browser-based human action (Supabase OAuth consent, GitHub App authorization, Vercel project linking, identity-provider client registration) are obtained without breaking the implementer's flow.
+
+Surfaced by the 2026-04-28 AI-speed red-team pivot: AI implementation collapses most of the setup timeline, but third-party UI-only security flows remain a hard handover boundary. Without a structured handshake, agents either stall waiting for credentials or write brittle "TODO: paste token here" comments.
+
+Acceptance:
+- Given `atelier init` running in interactive mode, when a credential cannot be obtained programmatically, then the CLI prints a structured prompt: the exact URL the human should visit, the action they should take (e.g., "create a service role token with these scopes"), and a clear paste-back affordance with format validation.
+- Given a non-interactive mode (`--non-interactive`, e.g., when invoked by an agent that lacks human channel), when a credential is missing, then the CLI exits with code 78 (EX_CONFIG) and writes a structured `init.handshake.json` listing each missing credential with the same prompt metadata, so the agent can route the request through its own human-handover channel.
+- Given a partial setup state (some credentials provided, others missing), when re-run, then the handshake resumes from the first missing item rather than re-prompting for completed steps; state persists in `.atelier/.init-state.json` (gitignored).
+- Given a successful handshake, when complete, then `.atelier/config.yaml` is populated with the resolved credentials' references (typically env-var names or secret-manager paths, never literal secrets), and the next CLI command (`atelier datastore init`) can run without re-prompting.
+
+NFR: the structured prompt format is itself a contract -- documented under `docs/architecture/protocol/init-handshake.md` so alternative-stack implementations can honor the same prompt shape.
 - Given conflicting edits, when upgrade runs, then conflicts are reported for manual resolution.
 
 ---

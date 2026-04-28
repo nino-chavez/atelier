@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (section 20 RESOLVED as ADR-038 same-day per expert-review prompt; sections 3, 7, 19 are the genuinely-open list)
+**Last updated:** 2026-04-28 (sections 21/22/23 added per AI-speed red-team pivot covering auto-reviewers / semantic contradiction check / contribution annotations; sections 3, 7, 19, 21, 22, 23 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Three entries remain genuinely open after section 20 resolved as ADR-038 on 2026-04-28. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on whether to add a new contribution-lifecycle state. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work lands.
+Six entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on adding a new contribution-lifecycle state; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work; sections 21-23 want resolution before M5/M6 to inform the auto-reviewer + semantic-check + annotation-surface implementations.
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -79,6 +79,77 @@ This addresses the "should we build it" alignment bottleneck at the right point 
 Split into `composers.discipline` (5 values including newly-added `architect`) + `composers.access_level` (3 values).
 
 **Status.** RESOLVED 2026-04-28. See [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md). Resolved same-day per expert-review prompt that surfaced this should land before M1 schema implementation, not v1.x. The fix also closed a previously-undetected drift: `architect` was used as `owner_role` across 4 territories but missing from the composers enum -- now first-class as `discipline=architect`.
+
+---
+
+### 21 - AI auto-reviewers as a `review_role` type
+
+**Scenario.** Per ADR-025, `territories.review_role` keys to a composer role (architect, dev, pm, designer). Every `state=review` transition routes to a human in that role. In an AI-speed reality (per the 2026-04-28 AI-speed red-team pivot), this is the dominant bottleneck: AI implements in 2 min, human approves in 4 hrs. On a 1-human-N-agent team, the human cannot keep up even with engaged attention.
+
+The 2026-04-28 expert review's Opportunities table explicitly named "Auto-Reviewers: Using AI to perform the review_role for 90% of tasks" as the highest-leverage opportunity.
+
+**Open questions:**
+- Should `territories.review_role` accept non-human values (e.g., `review_role: ai-validator`)? Or should the existing role values gain an "AI delegate" sub-config (e.g., `review_role: dev` with `dev.ai_auto_approve: <criteria>`)?
+- What criteria gate AI auto-approval? Likely a configurable mix of: (a) contribution kind (implementation/research/design), (b) requires_owner_approval flag (always defer to human if set), (c) territory sensitivity tier (low / medium / high), (d) PR diff size, (e) test-pass status, (f) find_similar exclusion (no >0.85 matches).
+- What's the AI reviewer's specific check surface? Spec-match (does the PR implement the cited ARCH section?), test-pass, lint-pass, no contradiction with prior ADRs, no overlap with active locks?
+- What's the audit trail? Every AI auto-approval needs to be revocable (a human reviewer can later override + re-trigger review with reasoning recorded).
+- How does this interact with `requires_owner_approval=true` (from ADR-033 cross-role authoring + triage)? Likely: AI may NOT clear this flag; only human reviewers can. AI auto-approves only when `requires_owner_approval=false`.
+
+**Recommendation.** Extend the territory schema with an optional `ai_review_policy` block (off by default). When enabled, the AI reviewer runs its check surface and either auto-approves (recording an audit-trail entry) or escalates to the human in `review_role`. Human reviewers can override AI approvals retroactively via a new tool or an `update(state="review", reopen=true)` semantic. Cross-role contributions (`requires_owner_approval=true`) are excluded from AI auto-approval per the merge-gate logic in ADR-033.
+
+This is the single highest-leverage v1.x feature. Worth landing at M6 (alongside remote-principal composers + triage, which are the other AI-coordination concentrations) as ADR-039 + ARCH 6.2.3 extension + territory schema addition.
+
+**Status.** OPEN. Strategic call: does this land at v1 or v1.x? Recommendation is v1.x (M6) because the find_similar precision data (M5) informs the auto-approve thresholds. v1 reserves the config surface (`territories.<name>.ai_review_policy: null`) so adoption doesn't require a schema migration. Surfaced by 2026-04-28 AI-speed red-team pivot.
+
+---
+
+### 22 - Semantic contradiction check in the validator
+
+**Scenario.** The `scripts/traceability/validate-refs.mjs` validator (per scripts/README.md "Extended cross-doc consistency") catches syntactic drift: trace IDs resolve, ADR sections exist, frontmatter valid. It does NOT catch semantic drift: "this new ADR contradicts the NORTH-STAR" or "this new contribution implements the opposite of what the cited BRD story specifies."
+
+In an AI-speed reality, agents may generate ADRs at scale that pass syntactic checks but contain subtle contradictions with the canonical state. The 2026-04-28 AI-speed red-team pivot named this "Hallucinated Decision Debt" / "Audit Exhaustion" -- the human architect drowns in 80%-correct rationale.
+
+**Open questions:**
+- Should the validator gain a semantic contradiction check class? If yes, when does it run (per-PR? milestone-entry? both?)?
+- What's the implementation? Likely an LLM-based check that compares the new ADR/contribution against canonical state (NORTH-STAR + relevant ARCH sections + recent ADRs) and flags potential contradictions for human review.
+- What's the cost? An LLM call per PR adds latency + token spend. Worth it on PRs touching `docs/architecture/decisions/` and `docs/functional/BRD.md`; probably not on every code PR.
+- What's the failure mode? False positives (the AI flags non-contradictions) waste human time. False negatives (the AI misses real contradictions) defeat the purpose. Need a calibration mechanism.
+- How does this interact with section 21 (AI auto-reviewers)? They share the AI-judgment surface. Likely the same `review.ai_judgment` config block governs both: enable, disable, model selection, threshold tuning.
+
+**Recommendation.** Add `semantic_contradiction_check` as an optional check class in scripts/README.md "Extended cross-doc consistency" (off by default). Implementation lands at M5 alongside find_similar productionization (similar LLM-based reasoning surface; can share infrastructure). Default scope: PRs touching `docs/architecture/decisions/`, `docs/functional/BRD.md`, `docs/strategic/NORTH-STAR.md`. Output: per-PR comment listing potential contradictions with citations to the prior canonical content.
+
+The check is advisory at v1.x (warns, never blocks). Promoting to blocking is a per-project policy decision based on observed false-positive rate.
+
+**Status.** OPEN. Strategic call: does the cost (LLM calls per PR + calibration overhead) justify the catch (catching subtle AI-generated drift that syntactic checks miss)? Recommendation is yes for ADR-touching PRs at M5, no for code PRs at v1. Surfaced by 2026-04-28 AI-speed red-team pivot.
+
+---
+
+### 23 - Lightweight annotations on contributions (`comment_on_contribution`)
+
+**Scenario.** Decisions and rationale are currently captured via:
+- ADR rationale field (for log_decision-shaped decisions)
+- contribution.content_ref (the artifact body)
+- contribution.transcript_ref (agent session transcript per ADR-024)
+- PR comments (in git, not in datastore)
+
+What's missing: lightweight inline rationale on a contribution that does NOT justify a full ADR. Example: a Slack-equivalent "I rejected this proposal because the territory's contracts forbid X -- see contract Y". Currently this rationale either becomes an ad-hoc PR comment (visible in GitHub but not in `/atelier`) or vanishes into chat (Slack/Teams).
+
+The 2026-04-28 red team's Gap A named this "Slack dark matter": decisions still happen in chat, the canonical state captures only the post-hoc summary. ADR-010 explicitly excludes building a chat app, but lightweight annotations on coordination objects are NOT a chat app.
+
+GitHub ACE (per 2026-04-28 strategy addendum on AI-speed coordination) is making the opposite bet: building chat directly into the tool. Atelier's bet remains that chat lives elsewhere (Slack/Teams) but COORDINATION-OBJECT annotations live in the datastore for canonical-state durability.
+
+**Open questions:**
+- Add an `annotations` field to `contributions` (and `decisions`?) -- a list of `{author_composer_id, body, created_at}` records?
+- Or add a new `annotations` table referencing contributions/decisions, with its own RLS?
+- What's the API? A new tool `annotate(target_kind, target_id, body)` would add a 13th MCP tool (per ADR-013); alternatively, reuse `update()` with an optional `annotation` parameter.
+- What's the rendering surface? `/atelier` contribution-detail and decision-detail panels show the annotation thread. PR comments still flow through GitHub natively; the annotation surface is for non-PR-shaped rationale.
+- How does this interact with the audit trail? Annotations are append-only? Editable by their author within a window? Soft-deletable by admins?
+
+**Recommendation.** Add `annotations` as a new table (cleaner RLS than embedded list; better query patterns). New tool `annotate(target_kind, target_id, body)` -- accepts `target_kind in (contribution, decision)` plus the target's UUID. Append-only at v1 (no edits, no deletes -- soft-flag spam via admin tool). Render in `/atelier` contribution + decision panels. Bumps the MCP tool count to 13; document in ADR-013 as a v1.x extension that fits within the protocol's design.
+
+**Status.** OPEN. Strategic call: does adding a 13th MCP tool + a new schema table for annotations cross the line into "Atelier becomes a wiki" (which ADR-010 excludes)? Recommendation is no -- annotations are coordination-object metadata, not standalone content. But the boundary is worth being explicit about. If accepted, lands at v1.x (M6 alongside other coordination-surface enhancements) as ADR-040.
+
+Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing market interest in tool-resident chat.
 
 ---
 

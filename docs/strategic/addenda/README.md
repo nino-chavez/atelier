@@ -18,3 +18,4 @@ The pattern matches `docs/architecture/audits/` (point-in-time milestone audits)
 | Date | Topic | Triggered by | Status |
 |---|---|---|---|
 | 2026-04-28 | [Multi-agent coordination landscape](2026-04-28-multi-agent-coordination-landscape.md) | Maggie Appleton talk + GitHub Next project survey | Recommendations pending action (see addendum section 7) |
+| 2026-04-28 | [AI-speed coordination + GitHub ACE](2026-04-28-ai-speed-coordination-and-ace.md) | Red-team AI-speed pivot + GitHub ACE competitive intel | Spec changes folded same day; 3 strategic open questions filed (BRD-OPEN-QUESTIONS sections 21/22/23) |

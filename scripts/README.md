@@ -139,6 +139,22 @@ The contract is the source of truth -- the test reads from this table at run tim
 
 **Implementation pattern: internal event bus from M1 onward.** To make the cutover claim above actually one-line rather than "small refactor": M1's polling implementation publishes detected state changes to an in-memory event bus (`scripts/sync/lib/event-bus.ts`), and `publish-delivery` is registered as a subscriber. At M2, the endpoint's post-commit hook publishes to the same bus. At M4, `BroadcastService` events (per ARCH 6.8) are bridged into the same bus by a thin `subscribe -> bus.publish` adapter. The `publish-delivery` subscriber code does not change across milestones; only the bus's source-of-events changes. This is what the "one-line cutover" actually requires under the hood, and M1 must establish this pattern up front to honor the claim.
 
+---
+
+## Throwaway-branches convention (per-contribution branch lifecycle)
+
+In an AI-speed reality where agents may try N variants of an implementation before settling on one, the per-contribution branch in the remote repo can become a flood of discarded iterations. To keep `git log` and the contribution branch readable:
+
+**Convention.** Agents work in **ephemeral local branches** (e.g., `<contribution_kind>/<trace>-<short>--draft-<n>`) when iterating on multiple variants. Only the accepted variant is force-pushed to the canonical contribution branch (`<contribution_kind>/<trace>-<short>` per ARCH 6.2.2.1) at the moment the agent calls `update(state="review")`.
+
+**Why force-push, not merge.** Merging N draft branches into one canonical branch produces a noisy history with abandoned iterations interleaved. Force-pushing the accepted variant to the contribution branch produces clean history that reads as the agent's final intent. The **forensic record** of the iteration process lives in `transcript_ref` (per ADR-024) -- transcripts capture every variant the agent tried plus its reasoning, in append-only sidecar files that survive force-push.
+
+**Endpoint enforcement.** The push-handler in ARCH 6.2.2.1 only updates `commit_count` and `last_observed_commit_sha` on the canonical contribution branch; pushes to draft-suffix branches are ignored (the endpoint sees them but does not record them in `contributions`). This prevents "ghost commits" from appearing in observability.
+
+**Squash-on-merge to main.** When the contribution merges via PR (per ARCH 6.2.3), the merging admin chooses squash by convention (no enforcement at the protocol layer; teams that prefer merge-commits can override). The squash combines the agent's final iteration into one commit on `main`, attributed via Co-Authored-By per section 7.8 attribution rules. The contribution branch is deleted post-merge.
+
+**Surfaced by:** 2026-04-28 AI-speed red-team pivot (Ghost Implementation Surge gap).
+
 **Invariants across milestones.**
 - `last_synced_at` on the contribution row is updated atomically with the external upsert; replay on retry is idempotent on `(contribution_id, external_issue_url)`.
 - Adapter calls are bounded by `adapter.timeout_seconds` (default 30); adapter failures are logged but do not block subsequent contributions.

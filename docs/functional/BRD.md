@@ -551,9 +551,9 @@ Acceptance:
 
 See `PRD.md` §4.11 for the full surface. CLI commands ship at v1 across milestones per `BUILD-SEQUENCE.md` Epic 1 sequencing table.
 
-**Cross-reference note (2026-04-28):** `BUILD-SEQUENCE.md` §9 Epic 1 sequencing table has expanded since this BRD section was authored, adding `atelier audit` and `atelier review` (commands that operationalize the METHODOLOGY §11 review process, see `audits/milestone-M0-exit.md` for context). Stories below cover the original 9 commands; reconciling Epic 11 to include audit/review/upgrade is a follow-up captured under D4 of the M0 exit audit.
-
 NFR for all stories below: each command has `--help`, documented exit codes, and a corresponding end-to-end test.
+
+The canonical CLI surface is **12 commands** at v1 (per NORTH-STAR §10): the 9 enumerated below plus `atelier upgrade` (US-1.7 covers the lifecycle framing; US-11.10 below covers the CLI surface), `atelier audit` (US-11.11), and `atelier review` (US-11.12). Reconciliation of the three originally-divergent lists landed 2026-04-28.
 
 **US-11.1 — atelier init**
 As a team starting a new project, I want `atelier init <project>` so that I get the scaffolded directory structure, config templates, and charter files in one command.
@@ -608,6 +608,29 @@ As any composer, I want `atelier doctor` so that I get a single command that dia
 
 Acceptance:
 - Given any project state, when `atelier doctor` runs, then it reports status for: datastore reachability, endpoint reachability, identity-provider reachability, configured integrations, sync-script lag, and any drift detected; suggests remediation for each non-OK item.
+
+**US-11.10 — atelier upgrade (CLI surface)**
+As a team running an existing project, I want `atelier upgrade` so that I can adopt new template features without re-scaffolding. (Lifecycle framing per US-1.7; this story covers the CLI invocation surface.)
+
+Acceptance:
+- Given a project on template_version N, when `atelier upgrade` runs, then it identifies template-version delta, runs additive-preferred migrations per ARCH 9.7, halts with a report on any conflict, and updates `projects.template_version` on success.
+- Given the upgrade requires a destructive change (per ARCH 9.7), when `atelier upgrade` runs, then it refuses to proceed without `--allow-destructive` AND a co-shipped reversal ADR reference.
+
+**US-11.11 — atelier audit**
+As an architect, I want `atelier audit` so that I can run cross-doc consistency and data-model audits on demand or via CI per METHODOLOGY 11.3 and 11.5.
+
+Acceptance:
+- Given the `--per-pr` flag, when `atelier audit` runs against a PR diff, then it executes the per-PR check classes from `scripts/README.md` "Extended cross-doc consistency".
+- Given the `--milestone-exit` flag, when run, then it executes the milestone-exit drift sweep per METHODOLOGY 11.3 and writes `docs/architecture/audits/milestone-<id>-exit.md`.
+- Given the `--milestone-entry` flag, when run, then it executes the data-model + contract audit per METHODOLOGY 11.5 and writes `docs/architecture/audits/pre-<id>-data-model-audit.md`.
+- Given the `--quarterly` flag, when run, then it executes the quarterly destination check per METHODOLOGY 11.4.
+
+**US-11.12 — atelier review**
+As any composer, I want `atelier review` so that I can compute the required reviewers for a contribution or PR based on the territory it touches.
+
+Acceptance:
+- Given a contribution_id or a PR-changed-files list, when `atelier review` runs, then it computes the required reviewers from `.atelier/territories.yaml` review_role + `.atelier/config.yaml` reviewer-matrix overrides per METHODOLOGY 11.2.
+- Given multiple territories touched, when run, then the response lists the union of required reviewers per territory with the routing logic explained.
 
 ---
 

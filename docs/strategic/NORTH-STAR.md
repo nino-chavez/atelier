@@ -207,18 +207,26 @@ Every system remains canonical for its thing. Atelier is the spine that makes th
 ## 10. CLI — the complete surface
 
 ```
-atelier init <name>               # scaffold repo + .atelier + prototype + agent endpoint
-atelier datastore init            # provision coordination datastore
-atelier deploy                    # ship prototype + agent endpoint
-atelier invite <email> --role <r> # create composer invite + scoped token
-atelier territory add <name>      # declare new territory
-atelier sync <target>             # run one sync script
-atelier reconcile                 # drift report
-atelier eval find_similar            # run eval set, report precision/recall
-atelier doctor                    # diagnose health: sessions, locks, drift, find_similar status
+# Lifecycle (Epic 1 -- raw form ships across M0/M2/M3/M6, polished at M7 per BUILD-SEQUENCE 9)
+atelier init <name>                  # scaffold repo + .atelier + prototype + agent endpoint
+atelier datastore init               # provision coordination datastore
+atelier deploy                       # ship prototype + agent endpoint
+atelier invite <email> --role <r>    # create composer invite + scoped token
+atelier territory add <name>         # declare new territory
+atelier doctor                       # diagnose health: sessions, locks, drift, find_similar status
+atelier upgrade                      # apply template upgrades to existing project per ARCH 9.7
+
+# Sync substrate (Epic 9 -- ships at M1 alongside the underlying scripts)
+atelier sync <target>                # run one sync script (publish-docs, publish-delivery, mirror-delivery, reconcile, triage)
+atelier reconcile                    # drift report
+atelier eval find_similar            # run eval set, report precision/recall (raw at M5, polished at M7)
+
+# Process (operationalizes METHODOLOGY 11 -- raw form at M1, polished at M7)
+atelier audit                        # run cross-doc consistency + data-model audits per METHODOLOGY 11.3 / 11.5; supports --per-pr, --milestone-entry, --milestone-exit, --quarterly
+atelier review                       # compute required reviewers from territories.yaml + config.yaml per METHODOLOGY 11.2
 ```
 
-All present at v1.
+All 12 present at v1. See `BUILD-SEQUENCE.md §9` for the per-command raw-vs-polished sequencing.
 
 ---
 

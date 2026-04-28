@@ -225,7 +225,7 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 **Status:** Planned
 
-**Produces.** Resolution to D24 (embedding model default) landed as a new ADR — D22 already resolved as ADR-026 and D23 as ADR-028. Observability stack (telemetry table populated, `/atelier/observability` route, alerting). Full Epic 1 CLI polish: `atelier init`, `atelier datastore init`, `atelier deploy`, `atelier invite`, `atelier territory add`, `atelier doctor`, `atelier upgrade`. Reference-implementation technology choices documented (per ADR-027). `docs/migration-to-gcp.md` runbook finalized per ADR-029. Lint rule banning proprietary imports outside named adapters (per ADR-029).
+**Produces.** Resolution to D24 (embedding model default) landed as a new ADR — D22 already resolved as ADR-026 and D23 as ADR-028. Observability stack (telemetry table populated, `/atelier/observability` route, alerting). Full CLI polish for all 12 v1 commands per NORTH-STAR §10 (lifecycle: `atelier init`, `datastore init`, `deploy`, `invite`, `territory add`, `doctor`, `upgrade`; sync substrate: `sync`, `reconcile`, `eval find_similar`; process: `audit`, `review`) -- the per-command raw-vs-polished split is in §9 below. Reference-implementation technology choices documented (per ADR-027). `docs/migration-to-gcp.md` runbook finalized per ADR-029. Lint rule banning proprietary imports outside named adapters (per ADR-029).
 
 **Operationalizes.** New ADR for D24. ADR-012 (capability-level architecture) reaffirmed by labeling all reference choices as "one valid implementation." ADR-029 hardened with lint discipline.
 
@@ -270,22 +270,25 @@ The 8-milestone shape was derived from a "destination-first build sequencing" ex
 
 ---
 
-## 9. Epic 1 (CLI lifecycle) sequencing convention
+## 9. CLI surface sequencing convention
 
-This repo is **hand-bootstrapped** — it is the artifact that `atelier init` will eventually produce. That means Epic 1's CLI surface ships across milestones in two phases:
+This repo is **hand-bootstrapped** — it is the artifact that `atelier init` will eventually produce. The full v1 CLI surface (12 commands per NORTH-STAR §10) ships across milestones in two phases per command -- raw form (the underlying capability works) and polished form (CLI wrapper with `--help`, exit codes, end-to-end test).
 
-| Command | Raw form (functional, hand-invokable) | Polished form (exit-code-tested, `--help`, end-to-end tested) |
-|---|---|---|
-| `atelier init` | M0 (this repo's structure) | M7 |
-| `atelier datastore init` | M2 (raw SQL migration scripts) | M7 |
-| `atelier deploy` | M3 (raw deploy script for prototype + endpoint) | M7 |
-| `atelier invite` | M6 (token issuance for remote-principal composers) | M7 |
-| `atelier territory add` | M2 (manual `.atelier/territories.yaml` edit pattern) | M7 |
-| `atelier audit` | M1 (raw script invocations of the extended validator per scripts/README.md; supports --per-pr, --milestone-exit, --quarterly modes) | M7 |
-| `atelier review` | M1 (raw script computing required reviewers from territories.yaml + config.yaml) | M7 |
-| `atelier doctor` | -- | M7 |
-| `atelier upgrade` | -- | M7 |
+| Command | Group | Raw form (functional, hand-invokable) | Polished form (exit-code-tested, `--help`, end-to-end tested) |
+|---|---|---|---|
+| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) | M7 |
+| `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | M7 |
+| `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | M7 |
+| `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | M7 |
+| `atelier territory add` | Lifecycle (Epic 1) | M2 (manual `.atelier/territories.yaml` edit pattern) | M7 |
+| `atelier doctor` | Lifecycle (Epic 1) | -- | M7 |
+| `atelier upgrade` | Lifecycle (Epic 1) | -- | M7 |
+| `atelier sync` | Sync substrate (Epic 9) | M1 (direct invocation of underlying script per scripts/README.md) | M7 |
+| `atelier reconcile` | Sync substrate (Epic 9) | M1 (direct invocation of `scripts/sync/reconcile.mjs`) | M7 |
+| `atelier eval find_similar` | Eval (Epic 6) | M5 (direct invocation of eval harness per ADR-006) | M7 |
+| `atelier audit` | Process (Epic 11) | M1 (raw script invocations of the extended validator per scripts/README.md; supports --per-pr, --milestone-entry, --milestone-exit, --quarterly modes) | M7 |
+| `atelier review` | Process (Epic 11) | M1 (raw script computing required reviewers from territories.yaml + config.yaml) | M7 |
 
 **Why split:** the destination-first rule (ADR-011) governs feature scope, not packaging. Ergonomics polish (CLI commands, `--help` text, exit-code contracts, end-to-end tests) is correctly batched into M7 once all the underlying capabilities exist. The earlier milestones use the underlying scripts directly; M7 wraps them.
 
-**Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation. Acceptance for "polished form": US-1.1 through US-1.7 all pass.
+**Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation. Acceptance for "polished form": all of US-1.1 through US-1.7 (lifecycle), US-9.1 through US-9.7 (sync), US-6.x (eval), and US-11.1 through US-11.12 (CLI surface stories) pass.

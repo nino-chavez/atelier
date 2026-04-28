@@ -124,6 +124,8 @@ The traceability validator (`scripts/traceability/validate-refs.mjs`) catches cr
 
 The validator runs in three modes via flags:
 
+- **`--diff`** / **`--staged`** (run by the author during writing, before commit, via `atelier audit --diff` or `--staged`): same check classes as `--per-pr` but scoped to uncommitted (`--diff`) or staged (`--staged`) changes only. Designed to complete in under 2 seconds against a typical diff. Intent: fast feedback while authoring, not just at PR boundary. Catches the AI-speed drift class where new content cites trace IDs / ARCH sections / ADR ids that don't exist before the commit lands. Output identical to `--per-pr`. Optional but recommended as a pre-commit hook.
+
 - **`--per-pr`** (run on every PR via `.github/workflows/atelier-audit.yml`): trace_id_resolution + arch_section_resolution + adr_id_resolution + walk_fold_resolution + markdown_link_integrity + frontmatter_validation. Fast (under 10 seconds for typical projects). Hard-fails the PR on any check failure.
 
 - **`--milestone-exit`** (run by the architect at milestone-status-to-Done transition via `atelier audit --milestone-exit`): all checks plus contract_name_resolution + open_questions_hygiene + traceability_coverage + adr_reeval_trigger_check + operational_completeness. Produces the audit report at `docs/architecture/audits/milestone-<id>-exit.md` per METHODOLOGY 11.3.

@@ -318,6 +318,51 @@ Composer → deregister(session_token)
    → Endpoint releases resources, deletes session row
 ```
 
+#### 6.1.1 Self-verification flow (smoke test)
+
+A deterministic smoke-test sequence verifies that a client + endpoint + identity-provider + datastore stack is wired correctly end-to-end. The same sequence is invoked by `atelier doctor` (US-11.9), by client-facing setup runbooks under `docs/user/connectors/`, and by CI integration tests at M2 endpoint sign-off.
+
+**Sequence.**
+
+```
+1. register(project_id=<self-discovered or env>, surface=<from caller>, composer_token=<bearer>)
+   Expected: 200; response carries session_token + initial context payload
+   Validates: bearer-token validation, session insertion, RLS scope
+
+2. heartbeat(session_token)
+   Expected: 200 within 500ms p95
+   Validates: session-token recognition, heartbeat-write path
+
+3. get_context(trace_id=null)   // unscoped form
+   Expected: 200; response carries non-empty charter.paths array, recent_decisions, territories.owned/consumed, contributions_summary
+   Validates: get_context implementation, RLS-filtered reads, project-scoping
+
+4. deregister(session_token)
+   Expected: 200; subsequent heartbeat with the same token returns 401
+   Validates: session cleanup, token invalidation
+```
+
+**Pass criteria.** All four steps return 200 with the documented response shapes. Any non-200 or missing field fails the smoke test with a step-specific error.
+
+**Failure-to-cause mapping (canonical):**
+
+| Symptom | Likely cause | Where to look |
+|---|---|---|
+| Step 1 returns 401 | Bearer token invalid, expired, or AS metadata misconfigured | ARCH section 7.9; identity-provider config |
+| Step 1 returns 403 | composer_id from token does not match a valid composers row for the project | atelier invite history; `composers` table |
+| Step 1 returns 500 | Datastore connection failure or schema not migrated | atelier datastore init; ATELIER_DATASTORE_URL |
+| Step 2 returns 401 | session_token invalidated by reaper before heartbeat fired | session_ttl_seconds policy; clock skew |
+| Step 3 returns empty charter.paths | Charter files not committed; ATELIER_REPO not pointed at a real repo | repo configuration; webhook setup |
+| Step 4 succeeds but step-2-replay also succeeds | deregister did not actually delete the session row | endpoint implementation bug |
+
+**Invocation paths.**
+
+- **`atelier doctor`** runs the sequence as a project-scoped self-check against a configured composer token (typically the admin's). Reports per-step status with the symptom-to-cause mapping above.
+- **Client-side smoke test** is documented per-client under `docs/user/connectors/<client>.md` using the bearer token from `atelier invite`. Composers run it once after first connector setup to confirm their setup before authoring real work.
+- **CI integration test** at M2 endpoint sign-off runs the sequence against a deployed staging endpoint and gates promotion.
+
+**Why deterministic.** The sequence intentionally avoids any tool that depends on project state (no `claim`, no `find_similar`, no `log_decision`). It exercises the auth + session + read paths only. A fresh project with no contributions / no decisions / no contracts still passes.
+
 ### 6.2 Contribution lifecycle
 
 ```

@@ -15,12 +15,18 @@ This layer follows the [Diátaxis framework](https://diataxis.fr/): four quadran
 
 ## Status
 
-**Pre-v1 launch.** Empty placeholder. End-user docs land here at v1 per [`../strategic/BUILD-SEQUENCE.md`](../strategic/BUILD-SEQUENCE.md).
+**Pre-v1 launch.** Most contents are placeholders. End-user docs land here at v1 per [`../strategic/BUILD-SEQUENCE.md`](../strategic/BUILD-SEQUENCE.md).
 
-## Contents (planned at v1)
+**Exception: `connectors/` is populated as design drafts now** rather than waiting for v1, because the connector setup runbooks are referenced by the composer-surface walks (analyst, designer) as their pre-condition. Authoring them as design drafts now lets the walks point at concrete artifacts even while the screenshots and verified-status entries remain pending M2 endpoint deployment.
+
+## Contents (planned at v1; connectors/ is a design-draft head-start)
 
 ```
 user/
+├── connectors/                     # Design drafts now; verified-status pending M2
+│   ├── README.md                   # Compatibility matrix
+│   ├── claude-ai.md                # claude.ai Connectors setup
+│   └── (more per-client runbooks land as each is verified)
 ├── tutorials/
 │   ├── getting-started.md          # atelier init → first deploy → first session
 │   ├── first-multi-composer.md     # Two principals working concurrently

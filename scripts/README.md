@@ -118,6 +118,7 @@ The traceability validator (`scripts/traceability/validate-refs.mjs`) catches cr
 | `open_questions_hygiene` | Each OPEN entry in BRD-OPEN-QUESTIONS is examined: is the recommendation a spec? If yes, the entry is flagged for fold-in (per the spec-gap-vs-real-question test in METHODOLOGY 6.1) | An OPEN entry has a clear "Recommendation" with three concrete bullets but no genuine alternative -- flagged |
 | `traceability_coverage` | Every BRD story has at least one resolution path: an ADR cites it, a contribution carries it, or implementation code cites it (M2+) | US-2.7 has no ADR, no contribution, and no code citation -- flagged for either work or scope removal |
 | `frontmatter_validation` | ADRs and other frontmatter-bearing files have required fields (`id`, `trace_id`, `category`, etc.) and well-formed values | An ADR is missing the `composer` field |
+| `operational_completeness` | For each spec'd capability with a user-facing surface, a corresponding user-docs runbook exists under `docs/user/`. The mapping is declared in `.atelier/config.yaml: review.validator.operational_completeness_map`. | A new external integration adapter ships at M1.5 but no `docs/user/integrations/<provider>.md` runbook exists for it; or a new MCP client appears in BRD/ARCH but no `docs/user/connectors/<client>.md` |
 
 ### CI integration
 
@@ -125,7 +126,7 @@ The validator runs in three modes via flags:
 
 - **`--per-pr`** (run on every PR via `.github/workflows/atelier-audit.yml`): trace_id_resolution + arch_section_resolution + adr_id_resolution + walk_fold_resolution + markdown_link_integrity + frontmatter_validation. Fast (under 10 seconds for typical projects). Hard-fails the PR on any check failure.
 
-- **`--milestone-exit`** (run by the architect at milestone-status-to-Done transition via `atelier audit --milestone-exit`): all checks plus contract_name_resolution + open_questions_hygiene + traceability_coverage + adr_reeval_trigger_check. Produces the audit report at `docs/architecture/audits/milestone-<id>-exit.md` per METHODOLOGY 11.3.
+- **`--milestone-exit`** (run by the architect at milestone-status-to-Done transition via `atelier audit --milestone-exit`): all checks plus contract_name_resolution + open_questions_hygiene + traceability_coverage + adr_reeval_trigger_check + operational_completeness. Produces the audit report at `docs/architecture/audits/milestone-<id>-exit.md` per METHODOLOGY 11.3.
 
 - **`--quarterly`** (run by cron via `.github/workflows/atelier-quarterly.yml`): adr_reeval_trigger_check + a fresh traceability_coverage report. Posts the result to the configured messaging adapter (Slack/Teams/Discord per `.atelier/config.yaml: integrations.messaging`) for the architect + pm to discuss.
 

@@ -397,6 +397,7 @@ At each milestone status transition to Done, the `atelier audit --milestone-exit
 4. **BRD-OPEN-QUESTIONS hygiene.** Each OPEN entry is examined under the spec-gap-vs-real-question test (METHODOLOGY 6.1). Entries that are spec gaps wearing question costumes get folded into spec; the BRD-OPEN-QUESTIONS list stays tight.
 5. **Schema consistency.** Tables in ARCH 5.1 match the implemented schema (post-M2). Indexes in ARCH 5.2 exist. RLS policies match ARCH 5.3.
 6. **Traceability coverage.** Every BRD story has at least one resolution path (ADR, contribution, or implementation reference). Coverage threshold defaults to 95 percent (configurable).
+7. **Operational completeness.** For each spec'd capability with a user-facing surface (MCP client connectors, external integration adapters, CLI commands), a corresponding user-docs runbook exists under `docs/user/`. Caught by the `operational_completeness` check class per scripts/README.md. This check distinguishes "internally consistent spec" (the other 6 checks) from "actually-usable spec" -- a spec can be perfectly consistent and still leave real users with no setup path. The M0 exit audit on 2026-04-28 added this check after surfacing that the analyst-week-1 walk's Step 1 pre-condition ("composer has configured their MCP client") had no operational runbook.
 
 **Output.** A sweep report (`docs/architecture/audits/milestone-<id>-exit.md`) listing checks, status, and any drift found. Each drift item becomes a PR. The architect role signs off on the milestone by approving the audit PR.
 

@@ -158,7 +158,16 @@ review:
       - traceability_validation
       - schema_consistency    # post-M2: implemented schema matches ARCH 5.1
       - traceability_coverage_threshold
+      - operational_completeness  # for each capability with a user-facing surface, a docs/user/ runbook exists
     traceability_coverage_threshold: 0.95
+    operational_completeness_map:
+      # Maps capability classes to expected user-docs runbook locations.
+      # The validator checks that each enumerated artifact in the source
+      # (e.g., each adapter under integrations.*.kind) has a corresponding
+      # runbook file under the listed docs/user/ subdirectory.
+      mcp_clients: docs/user/connectors/
+      external_integrations: docs/user/integrations/
+      cli_commands: docs/user/reference/cli/
 
   quarterly:
     # Destination check (METHODOLOGY 11.4). Architect + PM re-read NORTH-STAR.

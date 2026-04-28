@@ -1372,6 +1372,16 @@ Every endpoint call, every state transition, every sync run emits a telemetry ev
 - `duration_ms`
 - `metadata` — action-specific payload (e.g., for find_similar: query, match_count, top_similarity)
 
+**Token-usage telemetry (per BRD-OPEN-QUESTIONS section 8 v1 commitment).** For actions that consume LLM tokens against an external model (find_similar embedding generation, transcript classification, triage drafting), the metadata payload includes:
+
+- `model` -- the model identifier (e.g., `text-embedding-3-small`, `gpt-4o-mini`)
+- `tokens_input` -- prompt tokens consumed
+- `tokens_output` -- completion tokens produced (zero for embedding-only operations)
+- `cost_usd` -- best-effort cost estimate computed from a configurable per-model price table (`.atelier/config.yaml: telemetry.model_prices`)
+- `attribution` -- one of `composer` (caller-attributable, e.g., interactive find_similar) or `project` (amortized to the project, e.g., webhook-triggered embed pipeline)
+
+Cost is attributed per the find_similar embedding policy (project-amortized for indexing; composer-attributable for interactive queries) so retrospective cost reporting at section 8.2 can break down by composer or by project as needed. Active cost-governance (per-composer budgets, hard limits) is v1.x scope; v1 ships visibility, not enforcement.
+
 ### 8.2 Admin observability route
 
 `/atelier/observability` (admin-gated):
@@ -1382,6 +1392,7 @@ Every endpoint call, every state transition, every sync run emits a telemetry ev
 - **Triage** — classifier confidence distribution, human accept/reject rate
 - **Sync** — per-script lag p95, error rate, last successful run
 - **Vector index** — row count, index health, query p95
+- **Cost** — token-usage and cost-estimate breakdown per composer / per project / per action class, drawn from the token-usage telemetry payload in section 8.1; lookback windows of 24h / 7d / 30d (per BRD-OPEN-QUESTIONS section 8 v1 commitment)
 
 ### 8.3 Alerting
 
@@ -1409,6 +1420,8 @@ No Atelier service, no tenant database, no central auth.
 A "guild" is a team and the shared Atelier instance they coordinate through (one datastore + one endpoint, plus deployed prototype(s) — see §9.3 for prototype topology). A guild hosts multiple projects, each with its own `project_id`, repo, and configuration.
 
 Schema supports plural projects from v1 (see §5.1). No retrofit later.
+
+**One repo per project at v1** (per BRD-OPEN-QUESTIONS section 9). A project's `repo_url` (per ARCH 5.1 `projects` table) points at exactly one versioned-file-store repository. The traceability registry, the territory `scope_pattern` globs, the per-project endpoint committer (section 7.8), and the round-trip integrity contract (scripts/README.md) all assume one-repo-per-project. Cross-repo projects (e.g., a frontend repo + a backend repo + shared design tokens repo, all owned by one logical "product") are explicit v1.x scope. The v1.x extension hook is sketched as `.atelier/repos.yaml` listing additional repos with repo-qualified scope paths (`repo://name/path`); the schema and migration are not specified at v1 and will be designed when the v1.x epic is written. Teams with cross-repo needs at v1 either pick the primary repo and treat others as external (less integration) or run separate Atelier projects per repo (loses cross-repo coordination).
 
 ### 9.3 Infrastructure requirements
 

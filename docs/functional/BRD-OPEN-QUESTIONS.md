@@ -2,13 +2,15 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (restructure: Open at top, Resolved compressed to redirect-only entries; numbering preserved for external citations)
+**Last updated:** 2026-04-28 (sections 8 and 9 moved to Resolved; v1 commitments landed in ARCH 8.1 / 8.2 / 9.2; only sections 3 and 7 remain genuinely open, both with research plans)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
 ---
 
 ## Open
+
+Two entries remain genuinely open. Both require benchmark data; both have research plans drafted under `docs/testing/`. Neither blocks M1 or M2.
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -23,7 +25,7 @@
 
 **Recommendation.** Benchmark ≥3 candidates on the seed eval set. Default to a self-hostable model for regulated-team viability. Document swappability as a first-class config knob with a documented re-index procedure.
 
-**Status.** OPEN. Pending benchmark.
+**Status.** OPEN. Pending benchmark per `../testing/embedding-model-benchmark-plan.md`. Resolution gates M5 entry per BUILD-SEQUENCE section 7 question 3.
 
 ---
 
@@ -38,37 +40,23 @@
 
 **Recommendation.** Document supported scale envelope (e.g., up to 10 projects × 20 composers × 10K contributions per project = 2M rows). Beyond that, recommend multiple guilds per team.
 
-**Status.** OPEN. Benchmark required.
+**Status.** OPEN. Benchmark required per `../testing/scale-ceiling-benchmark-plan.md`. v1 envelope hypothesis committed; benchmark validates incrementally across M2 / M4 / M5 / M6. Two architectural side-deliverables surfaced by the planning analysis already landed (ARCH 6.1.2 session row cleanup, ARCH 6.8 broadcast topology).
 
 ---
 
-### 8 · Cross-composer cost accounting
+### 8 - Cross-composer cost accounting
 
-**Scenario.** Each composer's agent consumes LLM tokens (for their own agent usage and for Atelier-side operations like find_similar embedding). How does a team manage aggregate spend?
+Manage aggregate LLM-token spend across a team's composers + Atelier-side operations.
 
-**Open questions:**
-- Is there a composer-level budget or project-level budget?
-- Is find_similar embedding cost charged per call (borne by the caller) or amortized (borne by the project)?
-- How does the admin see cost breakdown? Is this v1 scope?
-
-**Recommendation.** Out of v1 scope for most categories. Find_similar embedding cost is amortized to the project. Observability includes token-usage telemetry so teams can see cost retrospectively. Active cost-governance is a v1.x addition if demand surfaces.
-
-**Status.** OPEN (scoped OUT of v1 unless demand flips).
+**Status.** RESOLVED at v1 design level 2026-04-28. v1 ships visibility (token-usage telemetry per ARCH 8.1, Cost lens in /atelier/observability per ARCH 8.2). Active cost-governance (budgets, hard limits) explicitly DEFERRED to v1.x with trigger "if demand surfaces"; v1 telemetry is the substrate any future governance work builds on.
 
 ---
 
-### 9 · Cross-repo projects
+### 9 - Cross-repo projects
 
-**Scenario.** A project spans multiple repositories (e.g., frontend + backend in separate git repos).
+Atelier projects spanning multiple git repositories.
 
-**Open questions:**
-- Can one Atelier project reference multiple repos?
-- How does the traceability registry work across repos?
-- Do file-based artifact_scope patterns work across repo boundaries?
-
-**Recommendation.** v1 supports one-repo-per-project. Multi-repo is a v1.x addition with `.atelier/repos.yaml` listing additional repos and scope patterns with repo-qualified paths (`repo://name/path`).
-
-**Status.** DEFERRED to v1.x.
+**Status.** RESOLVED as deferral 2026-04-28. v1 commitment "one repo per project" landed in ARCH 9.2 with rationale and workarounds. v1.x extension hook (`.atelier/repos.yaml` with `repo://name/path` scope qualifier) sketched; designed when the v1.x epic is authored.
 
 ---
 

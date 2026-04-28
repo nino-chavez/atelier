@@ -547,10 +547,65 @@ Acceptance:
 
 ### Epic 11 — CLI tooling
 
-See `PRD.md` §4.11 for the full surface. All 9 commands ship at v1:
-`atelier init`, `datastore init`, `deploy`, `invite`, `territory add`, `sync <target>`, `reconcile`, `eval find_similar`, `doctor`.
+See `PRD.md` §4.11 for the full surface. CLI commands ship at v1 across milestones per `BUILD-SEQUENCE.md` Epic 1 sequencing table.
 
-US-11.1 through US-11.9 map 1:1 to the commands. Acceptance: each command has `--help`, documented exit codes, and a corresponding end-to-end test.
+**Cross-reference note (2026-04-28):** `BUILD-SEQUENCE.md` §9 Epic 1 sequencing table has expanded since this BRD section was authored, adding `atelier audit` and `atelier review` (commands that operationalize the METHODOLOGY §11 review process, see `audits/milestone-M0-exit.md` for context). Stories below cover the original 9 commands; reconciling Epic 11 to include audit/review/upgrade is a follow-up captured under D4 of the M0 exit audit.
+
+NFR for all stories below: each command has `--help`, documented exit codes, and a corresponding end-to-end test.
+
+**US-11.1 — atelier init**
+As a team starting a new project, I want `atelier init <project>` so that I get the scaffolded directory structure, config templates, and charter files in one command.
+
+Acceptance:
+- Given an empty directory, when `atelier init <project>` runs, then the directory contains `docs/`, `prototype/`, `research/`, `scripts/`, `.atelier/`, `CLAUDE.md`, `AGENTS.md`, `traceability.json`, and `.github/workflows/atelier-audit.yml` per the bundled template.
+
+**US-11.2 — atelier datastore init**
+As a team standing up a guild, I want `atelier datastore init` so that the coordination datastore tables, indexes, and RLS policies exist.
+
+Acceptance:
+- Given valid `ATELIER_DATASTORE_URL`, when `atelier datastore init` runs, then the schema from ARCH §5.1 is applied, indexes from §5.2 exist, RLS policies from §5.3 are enforced; re-running is idempotent.
+
+**US-11.3 — atelier deploy**
+As a team, I want `atelier deploy` so that the prototype web app and agent endpoint go live on the configured hosting.
+
+Acceptance:
+- Given valid `ATELIER_PROTOTYPE_DEPLOY_URL` and `ATELIER_ENDPOINT_URL`, when `atelier deploy` runs, then both surfaces are reachable and the endpoint passes a synthetic register/heartbeat/deregister check.
+
+**US-11.4 — atelier invite**
+As an admin, I want `atelier invite <email> --role <r>` so that a composer gets a usable bearer token (OAuth setup link or static API token per ARCH §7.9).
+
+Acceptance:
+- Given the configured identity provider is reachable, when `atelier invite <email> --role <r>` runs, then the response carries both an OAuth setup link and a static API token; the composer's first `register` call with that token succeeds.
+
+**US-11.5 — atelier territory add**
+As an architect, I want `atelier territory add` so that a new territory definition lands in `.atelier/territories.yaml` with validated fields.
+
+Acceptance:
+- Given an interactive prompt for name/owner_role/scope_kind/scope_pattern/contracts, when the prompts complete, then a new territory entry appears in `.atelier/territories.yaml` validated against the schema, the change is committed via the standard PR flow per `.atelier/territories.yaml` header governance rule.
+
+**US-11.6 — atelier sync `<target>`**
+As an operator, I want `atelier sync <target>` so that I can manually trigger any of the sync substrate scripts (publish-docs, publish-delivery, mirror-delivery, reconcile, triage) outside the normal cron/webhook cadence.
+
+Acceptance:
+- Given a valid target name, when `atelier sync <target>` runs, then the target script executes once with the project's configured adapter and exits with status reflecting success/partial/failure.
+
+**US-11.7 — atelier reconcile**
+As a dev, I want `atelier reconcile` so that I can see all drift between repo canonical state and external systems on demand.
+
+Acceptance:
+- Given external integrations configured, when `atelier reconcile` runs, then a divergence report is produced (per ARCH §6.5 reconcile flow) listing repo-says-X / external-says-Y for each tracked field; the script never writes.
+
+**US-11.8 — atelier eval find_similar**
+As a dev, I want `atelier eval find_similar` so that I can run the precision/recall eval harness against the labeled seed set on demand.
+
+Acceptance:
+- Given the eval set exists at the configured path, when `atelier eval find_similar` runs, then precision and recall are computed against the seed set and reported against the `ci_precision_gate`/`ci_recall_gate` thresholds from `.atelier/config.yaml`.
+
+**US-11.9 — atelier doctor**
+As any composer, I want `atelier doctor` so that I get a single command that diagnoses common configuration and connectivity issues.
+
+Acceptance:
+- Given any project state, when `atelier doctor` runs, then it reports status for: datastore reachability, endpoint reachability, identity-provider reachability, configured integrations, sync-script lag, and any drift detected; suggests remediation for each non-OK item.
 
 ---
 

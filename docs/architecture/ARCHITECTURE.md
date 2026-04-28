@@ -811,7 +811,7 @@ The triage script per section 6.5 handles inbound comments from Figma (US-9.5/9.
 
 **Frame-to-contribution mapping.** Atelier needs to map a Figma frame back to a contribution to know what the comment is about. The mapping happens at projection time via embedded metadata:
 
-- When a designer manually projects a component to Figma (per section 6.5.1), they paste a small JSON metadata block as a comment on the frame, in the format `{"atelier": {"contribution_id": "<uuid>", "trace_ids": ["NF-12"], "component_path": "prototype/src/components/Button.tsx"}}`. This is part of the manual projection convention, not enforced by Atelier.
+- When a designer manually projects a component to Figma (per section 6.5.1), they paste a small JSON metadata block as a comment on the frame, in the format `{"atelier": {"contribution_id": "<uuid>", "trace_ids": ["US-3.3"], "component_path": "prototype/src/components/Button.tsx"}}`. This is part of the manual projection convention, not enforced by Atelier.
 - The triage script reads this metadata comment when ingesting other comments on the same frame to attribute them.
 - If no metadata comment exists on the frame, the triage script falls back to filename-based heuristic matching (frame name vs. component file name) and flags low-confidence matches for human routing.
 

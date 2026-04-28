@@ -108,7 +108,7 @@ The traceability validator (`scripts/traceability/validate-refs.mjs`) catches cr
 
 | Check | What it verifies | Failure example |
 |---|---|---|
-| `trace_id_resolution` | Every trace ID referenced anywhere in `docs/`, `prototype/`, `research/`, `.atelier/` resolves to an entry in `traceability.json` | A doc cites `US-99.1` that doesn't exist |
+| `trace_id_resolution` | Every trace ID referenced anywhere in `docs/`, `prototype/`, `research/`, `.atelier/` resolves to an entry in `traceability.json` | A doc cites a trace ID like `US-XX.YY` (where XX.YY is a placeholder) that does not resolve to a real BRD story |
 | `arch_section_resolution` | Every reference in the form `ARCH section X.Y[.Z]`, `ARCHITECTURE.md section X.Y[.Z]`, or `section X.Y[.Z]` (in a context that names ARCH) resolves to a real heading in `docs/architecture/ARCHITECTURE.md` | A walk references `section 6.4.5` that was never written |
 | `adr_id_resolution` | Every reference in the form `ADR-NNN` resolves to a real file under `docs/architecture/decisions/` | CLAUDE.md cites `ADR-040` that doesn't exist |
 | `contract_name_resolution` | Every name listed in `.atelier/territories.yaml: contracts_published` or `contracts_consumed` is defined in `docs/architecture/schema/contracts/<name>-v*.yaml` (post-M2 when the schema dir populates) | A territory consumes `feature_scope` but no contract file defines it |

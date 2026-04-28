@@ -157,3 +157,16 @@ D1 and D2 should land before any further work that exercises the validator. D3 s
 | 16 | Remote composer support | 2 (ADR-009, ADR-023) | Well covered |
 
 **No epic is fully unaddressed in design.** The 0-citation epics are either implementation-heavy (3, 11, 12) or have implicit coverage by an ADR tagged to an adjacent epic (14 by ADR-009). The trace-tagging precision issue is real but not actionable retroactively due to the append-only convention. Future ADRs touching these epics should tag the appropriate trace_ids.
+
+---
+
+## Resolutions
+
+| Drift | Status | Resolved by |
+|---|---|---|
+| D1 (CRITICAL) -- NF-12 fictional | RESOLVED 2026-04-28 | ARCH section 6.5.2 metadata example uses `US-3.3`; designer-week-1 walk Step 4 + Step 6 branch name updated to `US-3.3`; walk prose reframed to say `US-3.3` is illustrative and to note teams may introduce a dedicated NF category by adding stories to BRD if their workflow benefits |
+| D2 (MINOR) -- US-99.1 example | RESOLVED 2026-04-28 | scripts/README.md trace_id_resolution example now reads `US-XX.YY` (placeholder format that does not match the validator's `[0-9]+\.[0-9]+` pattern) |
+| D3 (REVIEW) -- Epic-coverage gaps | RESOLVED in audit appendix 2026-04-28 | Per-epic assessment in this report's appendix concludes none are spec-correctness failures; trace-tagging precision is not retroactively actionable due to ADR append-only convention |
+| D4 (FORMAT) -- Epic 11 not enumerated | RESOLVED 2026-04-28 | BRD Epic 11 now enumerates US-11.1 through US-11.9 with the standard story format. **Follow-up surfaced:** BUILD-SEQUENCE Epic 1 sequencing has expanded since the original BRD Epic 11 to include `atelier audit` and `atelier review` (added 2026-04-28 per METHODOLOGY section 11), creating a BRD-vs-BUILD-SEQUENCE drift on the canonical CLI command list. Tracked as a follow-up to fold audit/review/upgrade into BRD Epic 11 (or to formally split CLI tooling into multiple epics). Not blocking M0 sign-off. |
+
+**Architect sign-off on M0 exit: APPROVED 2026-04-28** subject to the BRD Epic 11 follow-up landing at the next opportunity (no specific deadline; not a blocker for M1 implementation start).

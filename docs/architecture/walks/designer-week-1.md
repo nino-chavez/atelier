@@ -71,7 +71,7 @@ Pre-conditions assumed in place:
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `claim(contribution_id=null, kind="design", trace_ids=["NF-12"], territory_id=<prototype-design-id>, content_stub=null, idempotency_key=<uuid>)` per ARCH section 6.2.1. Note: `NF-12` here represents a hypothetical non-functional requirement about button accessibility -- design work often traces to NFRs more than to BRD stories. |
+| **Tool** | `claim(contribution_id=null, kind="design", trace_ids=["US-3.3"], territory_id=<prototype-design-id>, content_stub=null, idempotency_key=<uuid>)` per ARCH section 6.2.1. The trace_id `US-3.3` (Design route) is illustrative -- design work for prototype components typically traces to the Design route or to specific component-related stories; teams may also introduce a dedicated NF-X (non-functional requirement) trace category by adding stories to BRD if their workflow benefits from a separate NF dimension. |
 | **Schema** | INSERT contributions (state=open) + UPDATE to claimed in one transaction per section 6.2.1. Validation: kind=design is in enum; trace_ids non-empty; territory_id valid; designer role may author into prototype-design. |
 | **Prototype** | `/atelier` designer lens shows new claimed contribution. similar_warnings panel surfaces the matches from Step 3 if any cross 0.80 threshold. |
 | **Status** | Clean. Specified by section 6.2.1. |
@@ -89,7 +89,7 @@ Pre-conditions assumed in place:
 
 | Layer | Detail |
 |---|---|
-| **Tool** | `update(contribution_id, state="in_progress", content_ref="prototype/src/components/Button.tsx", payload=<updated TSX>, payload_format="full", fencing_token=<from lock>)`. Web-surface composers go through the per-project endpoint committer per ADR-023 and section 7.8 -- the endpoint commits on Maya's behalf to a per-contribution branch (`design/NF-12-<short-id>`). Multiple update calls produce multiple commits (Button.tsx commit, then buttons.css commit). |
+| **Tool** | `update(contribution_id, state="in_progress", content_ref="prototype/src/components/Button.tsx", payload=<updated TSX>, payload_format="full", fencing_token=<from lock>)`. Web-surface composers go through the per-project endpoint committer per ADR-023 and section 7.8 -- the endpoint commits on Maya's behalf to a per-contribution branch (`design/US-3.3-<short-id>`). Multiple update calls produce multiple commits (Button.tsx commit, then buttons.css commit). |
 | **Schema** | UPDATE contributions SET state, content_ref. Per-project committer commits + pushes to the contribution branch. Fencing token validated server-side per section 7.4.2 (web-surface = hard validation in endpoint write path). |
 | **Prototype** | `/atelier` designer lens shows in-progress contribution + commit count. Components don't render in `/atelier` directly; designers preview via the prototype web app's `/design` route. |
 | **Status** | Clean. Specified by sections 6.2.2 + 7.4.2 + 7.8. |

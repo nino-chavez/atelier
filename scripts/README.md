@@ -19,7 +19,7 @@ scripts/
     └── triage/
         ├── classifier.mjs    # external comment → category
         ├── drafter.mjs       # classified comment → proposal draft
-        └── route-proposal.mjs # drafted proposal → kind=proposal contribution
+        └── route-proposal.mjs # drafted proposal → contribution with kind=<discipline> + requires_owner_approval=true (per ADR-033)
 ```
 
 ## Status

@@ -113,8 +113,13 @@ If you find yourself designing a feature that belongs to one of the above catego
 - **ADR-030:** Per-ADR file split — `DECISIONS.md` becomes `docs/architecture/decisions/ADR-NNN-<slug>.md` directory.
 - **ADR-031:** Three-tier consumer model — Specification / Reference Implementation / Reference Deployment, all first-class at v1.
 - **ADR-032:** Adopt extended documentation structure (claude-docs-toolkit seven layers + Atelier-specific extensions for `methodology/`, `architecture/protocol/`, `architecture/schema/`).
+- **ADR-033:** Contribution.kind scoped to output discipline — drop `proposal` (was conflating provenance) and `decision` (was unreachable; decisions flow via `log_decision`). Enum becomes `implementation | research | design`. Cross-role authoring surfaces via `requires_owner_approval=true`.
+- **ADR-034:** Contribution lifecycle state separated from blocked status flag. `state` enum drops `blocked`; blocked is now `blocked_by IS NOT NULL` orthogonal to lifecycle position.
+- **ADR-035:** Contract metadata covers ARCH 6.6.1 classifier surface. `contracts.breaking_change` bool replaced with `classifier_decision`, `classifier_reasons`, `override_decision`, `override_justification`, and a generated `effective_decision`.
+- **ADR-036:** Immortal author identity via composer_id; session_id is operational only. Tables (`contributions`, `decisions`, `locks`, `telemetry`) gain `*_composer_id` (immortal) alongside existing `*_session_id` (operational, ON DELETE SET NULL).
+- **ADR-037:** Decisions table cleanup — drop vestigial `convention` category, add `triggered_by_contribution_id` link.
 
-Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR).
+Note: ADR-013 covers MCP as the v1 reference protocol (no separate ADR). ADR-001 covers the `/atelier` route as part of "prototype is canonical artifact AND coordination dashboard" (no separate ADR). ADR-033 through ADR-037 surfaced by the pre-M1 data-model + contract audit (`docs/architecture/audits/pre-M1-data-model-audit.md`).
 
 ---
 

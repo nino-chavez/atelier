@@ -288,13 +288,15 @@ Acceptance:
 As any composer, I want contributions to subsume tasks/decisions/proposals/PRs in one schema so that coordination primitives apply uniformly.
 
 Acceptance:
-- Given a contribution record, then it has: id, project_id, author_session_id, trace_id, territory, artifact_scope, state (one of 7), kind (one of 5), content_ref, fencing_token, created_at, updated_at.
+- Given a contribution record, then it has: id, project_id, author_composer_id (per ADR-036), author_session_id (operational, may dangle on session reap), trace_ids, territory_id, artifact_scope, state (one of 6 per ADR-034), kind (one of 3 per ADR-033), requires_owner_approval, blocked_by, blocked_reason, content_ref, transcript_ref, fencing_token, repo_branch, commit_count, last_observed_commit_sha, created_at, updated_at.
 
 **US-4.3 — Contribution state machine**
 As any composer, I want valid state transitions so that lifecycle rules are enforced.
 
 Acceptance:
-- Given a contribution, valid transitions are: open ↔ claimed, claimed → in_progress, in_progress → review, review → merged or rejected or in_progress, any → blocked, blocked → open.
+- Given a contribution, valid transitions are: open <-> claimed, claimed -> in_progress, in_progress -> review, review -> merged or rejected or in_progress.
+- Given any active state (claimed, in_progress, review), `blocked_by` may be set to a non-null contribution_id (per ADR-034); the lifecycle position is preserved -- blocked is a status flag, not a state.
+- Given a blocked contribution, clearing `blocked_by` to null returns it to active work in the same lifecycle position it paused at.
 - Given an invalid transition, when attempted, then the call fails with allowed-transitions.
 
 **US-4.4 — Artifact_scope kinds**
@@ -308,7 +310,7 @@ Acceptance:
 As any composer, I want to propose a contribution in a territory I don't own so that cross-territory work is possible via proposals.
 
 Acceptance:
-- Given a composer outside the owning role, when they create a contribution in another territory, then it's created with kind=proposal and requires owner approval to transition past `review`.
+- Given a composer outside the owning role (with `territories.allow_cross_role_authoring=true`), when they create a contribution in another territory, then it's created with `requires_owner_approval=true` per ADR-033 and cannot transition to `merged` without explicit owner approval recorded per ARCH 7.5.
 
 **US-4.6 — Contribution filtering**
 As any composer, I want to filter contributions by territory/state/kind/assignee so that I can focus.
@@ -495,7 +497,7 @@ Acceptance:
 As a dev principal, I want classified comments to be drafted into proposal contributions so that accept/reject is one human action.
 
 Acceptance:
-- Given a classified comment with sufficient confidence, when drafted, then a `kind:proposal` contribution is created citing the source with the drafted change as content.
+- Given a classified comment with sufficient confidence, when drafted, then a contribution is created citing the source with the drafted change as content; the contribution's `kind` matches the discipline of the proposed change (implementation/research/design per ADR-033) and `requires_owner_approval=true`.
 
 **US-9.7 — triage never auto-merges**
 As a safety principle, I want triage drafts to require human merge so that unsanitized external content never lands in canonical state.
@@ -673,7 +675,7 @@ Acceptance:
 As a security principle, I want triage-drafted proposals to never auto-merge so that external content doesn't land unsanitized.
 
 Acceptance:
-- Given a proposal with kind=proposal from triage, when merge is attempted without explicit human approval recorded in the datastore, then merge is blocked.
+- Given a contribution with `requires_owner_approval=true` (whether from triage or cross-role authoring per ADR-033), when merge is attempted without explicit human approval recorded in the datastore, then merge is blocked.
 
 **US-13.6 — Token rotation**
 As an admin, I want to rotate a composer's token so that lost devices don't become ongoing risks.

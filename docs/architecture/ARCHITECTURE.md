@@ -202,25 +202,33 @@ territories
 contributions
   id (uuid, pk)
   project_id (fk)
-  author_session_id (fk, nullable when open)
-  trace_ids (text[])                              -- ADR-021
+  author_composer_id (fk to composers, NOT NULL when state > 'open')   -- ADR-036 (immortal attribution)
+  author_session_id (fk to sessions, nullable, ON DELETE SET NULL)     -- ADR-036 (operational; may dangle)
+  trace_ids (text[], CHECK cardinality(trace_ids) > 0)                 -- ADR-021; non-empty enforced at DB level
   territory_id (fk)
   artifact_scope (text[], interpreted per territory.scope_kind)
-  state (open | claimed | in_progress | review | merged | rejected | blocked)
-  kind (implementation | decision | research | design | proposal)
+  state (open | claimed | in_progress | review | merged | rejected)    -- ADR-034 (blocked moved to blocked_by)
+  kind (implementation | research | design)                             -- ADR-033 (proposal + decision dropped)
+  requires_owner_approval (bool, default false)                         -- ADR-033 (set when author role != territory owner_role; gates merge per ARCH 7.5)
+  blocked_by (fk to contributions, nullable)                            -- ADR-034 (non-null implies blocked, regardless of state)
+  blocked_reason (text, nullable)                                       -- ADR-034 (optional human-readable, e.g., "waiting on auth contract")
   content_ref (path or URL)
-  transcript_ref (text, nullable)                 -- ADR-024 (sidecar transcript path/URL)
+  transcript_ref (text, nullable, CHECK matches path-or-url pattern)    -- ADR-024 + audit F8 (repo path under transcripts/** OR fully-qualified URL)
   fencing_token (bigint, nullable)
-  blocked_by (fk, nullable)
+  repo_branch (text, nullable)                                          -- audit F11 (set on first IDE update; per ARCH 6.2.2.1)
+  commit_count (integer, default 0)                                     -- audit F11 (incremented by push handler)
+  last_observed_commit_sha (text, nullable)                             -- audit F11 (updated by push handler)
   created_at
   updated_at
 
 decisions
   id (uuid, pk)
   project_id (fk)
-  session_id (fk)
-  trace_ids (text[])                              -- ADR-021
-  category (architecture | product | design | research | convention)
+  author_composer_id (fk to composers, NOT NULL)                        -- ADR-036 (immortal attribution)
+  session_id (fk to sessions, nullable, ON DELETE SET NULL)             -- ADR-036 (operational; may dangle)
+  trace_ids (text[], CHECK cardinality(trace_ids) > 0)                  -- ADR-021 + audit F16
+  category (architecture | product | design | research)                  -- ADR-037 (convention dropped)
+  triggered_by_contribution_id (fk to contributions, nullable)           -- ADR-037 (link back to the contribution that prompted this ADR, when applicable)
   summary
   rationale
   reverses (fk, nullable)
@@ -231,12 +239,14 @@ decisions
 locks
   id (uuid, pk)
   project_id (fk)
-  session_id (fk)
+  holder_composer_id (fk to composers, NOT NULL)                        -- ADR-036 (immortal attribution)
+  session_id (fk to sessions, nullable, ON DELETE SET NULL)             -- ADR-036 (operational; defense-in-depth -- reaper releases first per ARCH 6.1)
+  contribution_id (fk to contributions)                                 -- audit F11 (per ARCH 7.4.1; multiple locks per contribution permitted)
   artifact_scope (text[])
   fencing_token (bigint, monotonic per project)
   lock_type (exclusive | shared)
   acquired_at
-  expires_at
+  expires_at                                                            -- audit F17 (soft hint; release happens at session-reap, explicit release_lock, or contribution merge/release; not auto-enforced)
 
 contracts
   id (uuid, pk)
@@ -244,14 +254,20 @@ contracts
   territory_id (fk)
   name
   schema (jsonb)
-  version (integer)
+  version (integer)                                                     -- semver-encoded as major*1000+minor per ARCH 6.6.1
   published_at
-  breaking_change (bool)
+  classifier_decision (breaking | additive)                             -- ADR-035 (the classifier's reading per ARCH 6.6.1)
+  classifier_reasons (jsonb)                                            -- ADR-035 (the criteria triggered, e.g., ["field_removed:foo"])
+  override_decision (breaking | additive | null)                        -- ADR-035 (publisher override; null when none)
+  override_justification (text)                                         -- ADR-035 (required when override_decision is non-null)
+  effective_decision (breaking | additive)                              -- ADR-035 GENERATED: COALESCE(override_decision, classifier_decision)
+  CHECK (override_decision IS NULL OR (override_justification IS NOT NULL AND length(trim(override_justification)) > 0))
 
 telemetry
   id (uuid, pk)
   project_id (fk)
-  session_id (fk, nullable)
+  composer_id (fk to composers, nullable)                               -- ADR-036 (durable attribution; nullable because some events are system-emitted)
+  session_id (fk to sessions, nullable, ON DELETE SET NULL)             -- ADR-036
   action
   outcome
   duration_ms
@@ -407,7 +423,7 @@ Per ADR-022, `claim(contribution_id=null, ...)` is the create-and-claim path. Th
 ```
 claim(
   contribution_id:   uuid | null,
-  kind:              "implementation" | "decision" | "research" | "design" | "proposal",   // required when contribution_id=null
+  kind:              "implementation" | "research" | "design",   // required when contribution_id=null; per ADR-033 (decision routes via log_decision; proposal removed -- gate is the role check below)
   trace_ids:         string[],                   // required when contribution_id=null; non-empty
   territory_id:      uuid,                       // required when contribution_id=null
   content_stub:      string | null,              // optional
@@ -432,10 +448,10 @@ claim(
 
 **Validation order on atomic-create.** Each check returns `BAD_REQUEST` with the specific failure on first match:
 
-1. `kind` is in the enum.
+1. `kind` is in the three-value enum (per ADR-033).
 2. `trace_ids` is non-empty and every entry matches the project's `trace_id_pattern` from `.atelier/config.yaml`. Trace IDs need not yet exist in `traceability.json` (the registry catches up via the M1 traceability sync); the pattern check prevents typos.
 3. `territory_id` references a row in `territories` for this project.
-4. The calling session's composer holds a role that may author into this territory. By default, only `territories.owner_role` may author; `.atelier/config.yaml: territories.allow_cross_role_authoring` can opt-in to broader authoring.
+4. The calling session's composer holds a role that may author into this territory. By default, only `territories.owner_role` may author; `.atelier/config.yaml: territories.allow_cross_role_authoring` can opt-in to broader authoring. When the calling composer's role does NOT match `territories.owner_role` (and cross-role authoring is opted-in), the contribution is created with `requires_owner_approval=true` per ADR-033 -- the merge gate per ARCH 7.5 reads this flag.
 5. `content_stub`, if provided, fits within a configurable size cap (default 8 KiB).
 
 **Implicit find_similar gate.** On atomic-create, the endpoint synchronously runs `find_similar(description=<derived>, trace_id=<first trace_id>)` where `<derived>` is `content_stub` if provided, otherwise a synthesized string from `kind + trace_ids + territory.name`. Results are returned in `similar_warnings` (primary band only; weak suggestions excluded to keep the response compact). The gate never blocks claim -- it warns. Composers can choose to release the new contribution immediately if a strong match exists.
@@ -491,12 +507,13 @@ claim(
 ```
 update(
   contribution_id:   uuid,                                   // required
-  state:             "claimed" | "in_progress" | "review" | "blocked" | null,   // optional; null means no state change
+  state:             "claimed" | "in_progress" | "review" | null,   // optional; null means no state change; per ADR-034 blocked is no longer a state value
   content_ref:       string | null,                          // optional; sets the artifact path on first call
   payload:           string | null,                          // optional; the artifact body
   payload_format:    "full" | "patch",                       // optional; defaults to "full"
   fencing_token:     bigint,                                 // required when payload is provided
-  blocked_by:        uuid | null,                            // optional; required when state="blocked"
+  blocked_by:        uuid | null,                            // optional; non-null sets the contribution as blocked on the named contribution (per ADR-034); null clears
+  blocked_reason:    string | null,                          // optional; human-readable when blocked_by is non-null
   commit_message:    string | null                           // optional; remote-surface only; defaults to convention below
 ) -> UpdateResponse
 ```
@@ -626,12 +643,13 @@ Agent → log_decision(category, summary, rationale, trace_ids, reverses?, idemp
 
 ```
 log_decision(
-  category:        "architecture" | "product" | "design" | "research" | "convention",
-  summary:         string,                                   // becomes the ADR title
-  rationale:       string,                                   // becomes the body's Rationale section
-  trace_ids:       string[],                                 // per ADR-021; non-empty
-  reverses:        string | null,                            // optional; an existing ADR id like "ADR-014"
-  idempotency_key: string | null                             // optional but recommended; same semantics as claim per section 6.2.1
+  category:                     "architecture" | "product" | "design" | "research",   // per ADR-037 (convention dropped)
+  summary:                      string,                                   // becomes the ADR title
+  rationale:                    string,                                   // becomes the body's Rationale section
+  trace_ids:                    string[],                                 // per ADR-021; non-empty
+  reverses:                     string | null,                            // optional; an existing ADR id like "ADR-014"
+  triggered_by_contribution_id: string | null,                            // optional; per ADR-037 -- links the ADR back to the contribution that prompted it, when applicable
+  idempotency_key:              string | null                             // optional but recommended; same semantics as claim per section 6.2.1
 ) -> LogDecisionResponse
 
 LogDecisionResponse {
@@ -844,7 +862,8 @@ Trigger: webhook from published-doc or delivery tracker or design tool
     1. Classifier: category (scope | typo | question | pushback | off-topic), confidence
     2. If confidence > threshold:
        Drafter: generates proposed change as patch/diff
-       Creates contribution with kind=proposal, citing origin
+       Creates contribution with kind matching the change's discipline (implementation/research/design),
+         author_session_id pointing at the triage-system session, requires_owner_approval=true (per ADR-033)
     3. If confidence < threshold:
        Routes to human-only queue for manual classification
     4. Never auto-merges
@@ -1023,31 +1042,31 @@ get_context:
       charter_excerpts: false
       recent_decisions_per_band_limit: 15        # weight recent design context heavily
       contributions_active_limit: 10              # fewer code-kind contributions in active list
-      contributions_kind_weights: {research: 3, decision: 2, proposal: 2, implementation: 1, design: 1}
+      contributions_kind_weights: {research: 3, implementation: 1, design: 1}   // per ADR-033 (decision + proposal removed from kind enum)
       traceability_entries_limit: 60              # broader trace context for cross-cutting research
     dev:
       charter_excerpts: false
       recent_decisions_per_band_limit: 10
       contributions_active_limit: 30              # more in-flight code-kind contributions
-      contributions_kind_weights: {implementation: 3, decision: 2, proposal: 1, research: 1, design: 1}
+      contributions_kind_weights: {implementation: 3, research: 1, design: 1}   // per ADR-033
       traceability_entries_limit: 30
     pm:
       charter_excerpts: true                      # PMs often need full charter context
       recent_decisions_per_band_limit: 10
       contributions_active_limit: 40              # PMs see across territories for capacity tracking
-      contributions_kind_weights: {implementation: 1, research: 1, decision: 1, proposal: 1, design: 1}
+      contributions_kind_weights: {implementation: 1, research: 1, design: 1}   // per ADR-033
       traceability_entries_limit: 80
     designer:
       charter_excerpts: false
       recent_decisions_per_band_limit: 10
       contributions_active_limit: 15
-      contributions_kind_weights: {design: 3, decision: 2, research: 1, implementation: 1, proposal: 1}
+      contributions_kind_weights: {design: 3, research: 1, implementation: 1}   // per ADR-033
       traceability_entries_limit: 30
     stakeholder:
       charter_excerpts: true                      # stakeholders read for context, not action
       recent_decisions_per_band_limit: 10
       contributions_active_limit: 10
-      contributions_kind_weights: {decision: 2, design: 1, research: 1, implementation: 1, proposal: 1}
+      contributions_kind_weights: {design: 1, research: 1, implementation: 1}   // per ADR-033 (stakeholders previously favored decision-kind contributions; with decision routed via log_decision and visible in the recent_decisions section, kind weighting is uniform across remaining disciplines)
       traceability_entries_limit: 50
 ```
 

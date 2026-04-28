@@ -80,6 +80,13 @@ These decisions landed as ADRs. Full rationale, alternatives, and consequences l
 | D33 | Per-ADR file split — DECISIONS.md becomes a directory | [ADR-030](../architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md) |
 | D34 | Three-tier consumer model | [ADR-031](../architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md) |
 | D35 | Adopt extended documentation structure (toolkit-derived, Atelier-extended) | [ADR-032](../architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md) |
+| D36 | Contribution.kind scoped to output discipline (drop proposal, drop decision) | [ADR-033](../architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md) |
+| D37 | Contribution lifecycle state separated from blocked status flag | [ADR-034](../architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md) |
+| D38 | Contract metadata covers ARCH 6.6.1 classifier surface | [ADR-035](../architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md) |
+| D39 | Immortal author identity via composer_id; session_id is operational only | [ADR-036](../architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md) |
+| D40 | Decisions table cleanup: drop "convention" category, add triggering-contribution link | [ADR-037](../architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md) |
+
+D36–D40 surfaced by the pre-M1 data-model audit (`../architecture/audits/pre-M1-data-model-audit.md`).
 
 D26–D30 were surfaced by the analyst-week-1 walk (`../architecture/walks/analyst-week-1.md`).
 

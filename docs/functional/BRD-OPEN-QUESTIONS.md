@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (sections 8 and 9 moved to Resolved; v1 commitments landed in ARCH 8.1 / 8.2 / 9.2; section 19 added per strategy addendum 2026-04-28 multi-agent-coordination-landscape; sections 3, 7, 19 are the genuinely-open list)
+**Last updated:** 2026-04-28 (section 20 added per pre-M1 data-model audit F12; sections 3, 7, 19, 20 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Three entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on whether to add a new contribution-lifecycle state. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work lands.
+Four entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on whether to add a new contribution-lifecycle state; section 20 requires a strategic call on splitting the composer role enum (surfaced by the pre-M1 data-model audit). None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work lands; section 20 wants resolution before deployment exposes the conflation in real teams.
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -69,6 +69,26 @@ Three independent projects converge on the same pattern: agent generates plan ->
 This addresses the "should we build it" alignment bottleneck at the right point -- before code, not at PR. Per-territory opt-in means territories with established patterns (e.g., trivial config edits) don't pay the latency cost; territories with high-stakes work (e.g., architecture changes, design tokens) do.
 
 **Status.** OPEN. Wants resolution before M2 contribution-lifecycle endpoint work lands. If accepted, becomes an ADR + ARCH addition (likely a new section 6.2.1.7 between 6.2.1.5 pre-existing claim path and 6.2.2 update operation semantics). If rejected, document the rejection rationale (e.g., "plan-as-checkpoint adds latency disproportionate to alignment value at Atelier's target team scale") and revisit if v1 deployment surfaces the gap.
+
+---
+
+### 20 - Composer role enum mixes work-discipline with access-level
+
+**Scenario.** `composers.default_role` is currently a single enum: `analyst | dev | pm | designer | admin | stakeholder`. Four values are work disciplines (analyst, dev, pm, designer). Two are access levels (admin = platform privileges; stakeholder = read-only). Two axes in one field.
+
+A pm is naturally also a stakeholder for work outside their territories. A designer might also need admin privileges. The current model handles this via "secondary roles per `.atelier/config.yaml`" but the primary role conflates the two. ADR-017 lenses (analyst/dev/pm/designer/stakeholder) further muddy the water -- stakeholder is a lens (a viewing mode) AND a role-permission. Two different concepts share the name.
+
+Surfaced by `../architecture/audits/pre-M1-data-model-audit.md` finding F12.
+
+**Open questions:**
+- Does the enum need splitting into `discipline` (analyst | dev | pm | designer) + `access_level` (member | admin | stakeholder)? Or rename to acknowledge it's a fuzzy classifier?
+- If split, what is the migration path for existing `default_role=admin` and `default_role=stakeholder` composers (they have no discipline)?
+- Does the lens model in ADR-017 stay a 5-lens model with stakeholder-as-lens, or split lens-stakeholder from access-level-stakeholder?
+- Does territories.yaml `owner_role` and `review_role` continue to reference the discipline values only (cleaner), or remain ambiguous?
+
+**Recommendation.** Split into two columns: `composers.discipline (analyst | dev | pm | designer)` + `composers.access_level (member | admin | stakeholder)`. Cleanest semantically; matches how teams actually think about people ("Sarah is a designer who is also an admin"). Migration: existing `default_role=admin` composers default to `discipline=null, access_level=admin`; existing `default_role=stakeholder` composers default to `discipline=null, access_level=stakeholder`; the four discipline values map to `discipline=<value>, access_level=member`. ADR-017 lens model keeps the same five viewing modes; the stakeholder lens applies whenever `access_level=stakeholder` OR a discipline composer chooses to view-as-stakeholder.
+
+**Status.** OPEN. Does not block M1 -- current enum works for the schema's first migration. The right resolution touches `.atelier/territories.yaml` owner_role/review_role values, BRD acceptance criteria referencing roles, and the lens-vocabulary in ADR-017. Wants resolution before deployment surfaces the conflation in real teams. Likely lands as ADR-038 + a coordinated migration commit.
 
 ---
 

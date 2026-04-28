@@ -16,17 +16,21 @@ This file is a **pre-M2 stand-in for `get_context`**. Once the 12-tool endpoint 
 
 - **Phase:** Design complete. M1/M1.5/M2 scoped. Pre-implementation. Implementation-grade ARCH spec landed across all three composer surfaces (analyst/dev/designer).
 - **Last milestone done:** M0 per `../../docs/strategic/BUILD-SEQUENCE.md`.
-- **Most recent work (2026-04-27 session, multiple sub-sessions):**
-  - M1/M2 redistribution: four schema tables move into M1 with the five sync scripts. Sequencing tightening per BUILD-SEQUENCE section 6, not an ADR.
-  - M1.5 added as a named milestone between M1 and M2 -- ships the four non-GitHub adapters (Jira, Linear, Confluence, Notion, Figma). Section 16 RESOLVED.
-  - publish-delivery trigger model RESOLVED (section 18): polling at M1, post-commit hooks at M2, broadcast at M4. Cutover discipline + invariants documented in scripts/README.md.
-  - BRD-OPEN-QUESTIONS hygiene sweep: 9 entries folded into spec (sections 4, 6, 10, 11, 12, 14, 16, 17, 18). Genuine open list now: section 3 (embedding model benchmark), section 7 (scale ceiling benchmark), section 8 (cost accounting -- OUT v1), section 9 (cross-repo -- DEFERRED v1.x).
-  - Three composer-surface walks complete: analyst-week-1.md, dev-week-1.md, designer-week-1.md. Walk authoring discipline established: latent gaps surface concretely per step and fold into ARCH in the same commit.
-  - ARCH expansion: dozens of new subsections across sections 5.4, 6.2.1, 6.2.1.5, 6.2.2, 6.2.2.1, 6.2.3, 6.2.4, 6.3, 6.3.1, 6.4.1, 6.4.2, 6.4.3, 6.5.1, 6.5.2, 6.6.1, 6.6.2, 6.7 + 6.7.1-5, 7.4.1, 7.4.1.1, 7.4.2, 7.8.1, 7.9, 9.5, 9.6, 9.7.
-  - Convention: ASCII in commit messages and new doc content per feedback memory. Pre-existing decorated content not retroactively swept.
+- **Most recent work (2026-04-28 session: pre-M1 data-model + contract audit):**
+  - Pre-M1 data-model + contract audit run (`docs/architecture/audits/pre-M1-data-model-audit.md`). 18 findings: 6 HIGH, 7 MEDIUM, 5 LOW. Five HIGH-finding ADRs landed (ADR-033 through ADR-037); one strategic-call finding filed as BRD-OPEN-QUESTIONS section 20.
+  - ADR-033: contribution.kind reduced from 5 -> 3 values (drop proposal + decision; cross-role authoring surfaces via requires_owner_approval flag).
+  - ADR-034: contribution.state reduced from 7 -> 6 values (drop blocked; blocked is now blocked_by IS NOT NULL orthogonal to lifecycle position).
+  - ADR-035: contracts.breaking_change bool replaced with classifier_decision + classifier_reasons + override_decision + override_justification + generated effective_decision.
+  - ADR-036: tables recording authorship gain *_composer_id (immortal) alongside *_session_id (operational, ON DELETE SET NULL). Resolves dangling-FK risk at session reaping.
+  - ADR-037: decisions.category drops vestigial 'convention' value; new triggered_by_contribution_id link.
+  - METHODOLOGY 11.5 added (data-model + contract audit at milestone-entry); subsequent subsections renumbered to 11.6/11.7/11.8/11.9. Section 11.1 review-surfaces table grew from 4 to 5 cadences.
+  - ARCH 5.1 schema rewritten across contributions, decisions, locks, contracts, telemetry tables. Spec-drift fixes also folded in: repo_branch, commit_count, last_observed_commit_sha added to contributions; locks.contribution_id added; CHECK constraints on transcript_ref + trace_ids cardinality. ARCH 6.2.1 / 6.2.2 / 6.3.1 / 6.5 / 6.7 lens defaults updated for new enums.
+  - BRD acceptance criteria updated where they referenced dropped enum values (US-4.2, US-4.3, US-4.5, US-9.6, US-13.5). NORTH-STAR section 3 updated. designer-week-1.md Step 8 updated.
+  - traceability.json bumped: adrs 32 -> 37, decisions 35 -> 40, open-questions 19 -> 20.
+  - Earlier sessions (2026-04-27, multi-sub-session): M1/M2 schema redistribution, M1.5 added, publish-delivery trigger cutover plan, BRD-OPEN-QUESTIONS sweep, three composer-surface walks, ARCH expansion across sections 5.4/6.2.x/6.3.x/6.4.x/6.5.x/6.6.x/6.7.x/7.4.x/7.8.1/7.9/9.5-9.7, ASCII convention.
 - **Stack locked:** GitHub + Supabase + Vercel + MCP, GCP-portability constrained (ADR-027/028/029).
 - **Three-tier consumer model:** Specification / Reference Implementation / Reference Deployment, all first-class at v1 (ADR-031).
-- **Open ADR-relevant decisions:** D24 (embedding model default -- needed at M5 entry); plan_review checkpoint per BRD-OPEN-QUESTIONS section 19 (wants resolution before M2 contribution-lifecycle endpoint work; surfaced by 2026-04-28 strategy addendum on multi-agent coordination landscape).
+- **Open ADR-relevant decisions:** D24 (embedding model default -- needed at M5 entry); plan_review checkpoint per BRD-OPEN-QUESTIONS section 19 (wants resolution before M2 contribution-lifecycle endpoint work; surfaced by 2026-04-28 strategy addendum on multi-agent coordination landscape); composer-role enum split per BRD-OPEN-QUESTIONS section 20 (surfaced by pre-M1 data-model audit F12; wants resolution before deployment exposes the conflation).
 - **Strategy addenda pattern established** at `../../docs/strategic/addenda/`. First addendum: 2026-04-28-multi-agent-coordination-landscape.md (Maggie Appleton talk + GitHub Next survey).
 - **Nothing blocks M1 design-wise.** Implementation can begin.
 

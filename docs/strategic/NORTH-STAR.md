@@ -2,7 +2,7 @@
 
 **Status:** v1.0 locked
 **Owner:** Nino Chavez
-**Last updated:** 2026-04-24
+**Last updated:** 2026-04-28
 **Related:** `STRATEGY.md` (why), `../functional/PRD.md` (what), `../functional/BRD.md` (stories), `../architecture/ARCHITECTURE.md` (how), `../functional/PRD-COMPANION.md` (decisions), `../architecture/decisions` (log)
 
 ---
@@ -27,7 +27,7 @@ Every Atelier project has exactly:
 - N linked external tools (delivery tracker, published-doc system, design tool, messaging)
 - N composers with M sessions
 
-No project is multi-tenant. No composer spans projects implicitly. Invites are explicit. All infrastructure is self-hosted by the team.
+All infrastructure is self-hosted by the team — one guild = one team's deployment, never SaaS-style shared infra across unrelated teams. Within a guild, multiple projects coexist with strict `project_id` isolation: no project's contributions, locks, contracts, or trace IDs leak into another. A composer can hold membership in multiple projects within the same guild, but every membership is explicit (granted per-project via invite) — there is no implicit cross-project access. A composer authenticates as one principal against the guild's identity service and then carries separate sessions per project (`Session = composer × project × time × surface` per §2).
 
 ---
 
@@ -82,7 +82,7 @@ contributions {
 }
 ```
 
-A task is a contribution in `open`. A decision is a `kind:decision` contribution that writes a new ADR file under `docs/architecture/decisions/` on merge (per ADR-030). A triaged external comment is a `kind:proposal` contribution. One state machine governs all.
+A task is a contribution in `open`. Decisions are recorded via `log_decision` directly to the `decisions` table and a new ADR file under `docs/architecture/decisions/` (per ADR-030 and ADR-033 -- decisions don't flow through the contributions table). A triaged external comment becomes a contribution carrying the discipline of the proposed change (implementation/research/design) with `requires_owner_approval=true` per ADR-033; the merge gate per ARCH 7.5 reads that flag. One state machine governs all contributions.
 
 ---
 
@@ -184,7 +184,7 @@ All five substrate scripts ship together:
 | `reconcile` | bidirectional drift detector | Scheduled | Reports only; never auto-writes |
 | `triage` | external comments → repo | Webhook | Classifier → drafter → proposal contribution (never auto-merge) |
 
-Same contract for all: **publishes are full overwrites with visible banners; pulls are probabilistic and human-gated**. Comments from published-docs, delivery, design systems all flow through `triage` and land as `kind:proposal` contributions, awaiting merge.
+Same contract for all: **publishes are full overwrites with visible banners; pulls are probabilistic and human-gated**. Comments from published-docs, delivery, design systems all flow through `triage` and land as contributions tagged with the discipline of the proposed change and `requires_owner_approval=true` (per ADR-033), awaiting merge.
 
 ---
 
@@ -296,7 +296,7 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 |---|---|
 | **Atelier** | The product. The shared studio. |
 | **Guild** | A team and the shared Atelier instance they coordinate through — composers + one datastore + one endpoint + one prototype deploy. Hosts one or more projects. Per ADR-015. |
-| **Project** | One repo + linked external tools (issue tracker, design tool, etc.), scoped within a guild via `project_id`. Projects share their guild's datastore and endpoint with `project_id` isolation. |
+| **Project** | One repo + linked external tools (issue tracker, design tool, etc.), scoped within a guild via `project_id`. Projects share their guild's datastore and endpoint with `project_id` isolation. A composer is a member of a project only via explicit per-project invite; multi-project composers carry one principal and N project-scoped sessions (per §1, §2). |
 | **Composer** | The role-bearing participant — a human (or their authorized agent) authoring canonical state in coordination contexts. |
 | **Principal** | The security-identity layer — the signed identity a composer authenticates as. A composer participates as a principal. |
 | **Session** | A composer's active connection to a project from a specific surface. |

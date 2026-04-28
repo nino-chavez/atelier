@@ -356,11 +356,12 @@ Different artifacts need different review rhythms. Conflating them produces eith
 | Surface | Cadence | Trigger | Owner | Output |
 |---|---|---|---|---|
 | **Per-PR review** | On every PR touching canonical state | PR open | Territory's `review_role` per `.atelier/territories.yaml` | Approval / requested changes; merge gated |
+| **Milestone-entry data-model audit** | Before implementation begins on any schema-bearing milestone | Milestone status transition to In Flight | `architect` role | Audit report; ADRs + ARCH updates for HIGH findings; doc tightening for MEDIUM/LOW |
 | **Milestone-exit drift sweep** | At each `BUILD-SEQUENCE` milestone exit | Milestone status transition to Done | `architect` role | Sweep report; PRs to fix any drift; sign-off on the milestone |
 | **Quarterly destination check** | Every 90 days | Cron (per `.atelier/config.yaml: review.quarterly.cadence_days`) | `architect` + `pm` roles jointly | Re-affirmation or proposed pivot; updates to NORTH-STAR / BUILD-SEQUENCE if priorities shifted |
 | **Spec-to-implementation gate** | On every M2+ code PR that implements a spec'd capability | PR open with code changes | Territory's `review_role` plus a generic implementation-checker | PR comment confirming or contesting the cited ARCH section match |
 
-The four are independent. A PR can pass per-PR review while the milestone sweep is overdue; the milestone sweep can pass while the quarterly destination check identifies a strategic shift. Decoupling cadences keeps any one surface from becoming a bottleneck for the others.
+The five are independent. A PR can pass per-PR review while the milestone sweep is overdue; the milestone sweep can pass while the quarterly destination check identifies a strategic shift. The milestone-entry audit gates implementation on schema-bearing work; the milestone-exit sweep gates Done-marking. Decoupling cadences keeps any one surface from becoming a bottleneck for the others.
 
 ### 11.2 Per-PR review
 
@@ -417,7 +418,29 @@ Every 90 days (configurable), an architect + pm pair re-reads NORTH-STAR.md and 
 
 **Why quarterly.** Long enough to accumulate signal; short enough to course-correct before too much work goes the wrong direction. Atelier doesn't dictate cadence; the default is 90 days but `review.quarterly.cadence_days` overrides.
 
-### 11.5 Spec-to-implementation gate (M2+)
+### 11.5 Data-model + contract audit (milestone-entry)
+
+A milestone that ships schema, contract surface, or otherwise-encoded design (any milestone where the implementation will create migrations, type definitions, or wire-format contracts) gets a data-model + contract audit BEFORE implementation begins, not after. Encoded schema is materially harder to refactor than spec'd schema; the audit pays for itself by catching semantic conflations and constraint gaps while they're still cheap to fix.
+
+The audit applies five checks to every schema-bearing surface in the milestone's scope:
+
+1. **Field semantic atomicity.** Each column, parameter, or contract field carries exactly one classification axis. Enums whose values mix two axes (e.g., a `kind` enum where some values describe output and others describe origin) are findings.
+2. **Derivable vs stored.** Every denormalized field documents what it's derived from and why it's stored rather than computed. Echoes of other fields without a query-perf or constraint justification are findings.
+3. **Enum coherence.** Every enum's values share one classification axis. "Other" / "misc" / catchall values that smuggle a second axis are findings.
+4. **Constraint surface.** CHECK constraints, FK behaviors (especially ON DELETE semantics), NOT NULL rules, and transition rules are all specified. Invariants enforced only at the API boundary (with no DB-level backstop) are findings.
+5. **Lifecycle invariants.** Per-field mutability, permitted state transitions, and FK durability across row deletions are specified. References that may dangle after a referenced row is reaped or deleted are findings.
+
+**Output.** A new audit doc under `docs/architecture/audits/pre-<milestone-id>-data-model-audit.md` listing each finding with severity (HIGH / MEDIUM / LOW) and recommended fix. Each HIGH finding either lands as an ADR + ARCH update in the same commit as the audit, or files as a BRD-OPEN-QUESTIONS entry when the right answer needs a strategic call. MEDIUM and LOW findings land as ARCH documentation tightening + CHECK-constraint adds.
+
+**Worked example.** `docs/architecture/audits/pre-M1-data-model-audit.md` (run 2026-04-28) is the template. It surfaced 18 findings against the v1 schema before M1 encoded it, landing as ADR-033 through ADR-037 (5 HIGH-severity schema corrections), BRD-OPEN-QUESTIONS section 20 (1 strategic call), and a documentation pass on remaining MEDIUM / LOW items.
+
+**Cadence.** Every schema-bearing milestone gets one audit at entry: M1 (datastore tables), M1.5 (per-adapter contracts), M2 (endpoint surface + per-tool wire format), M5 (vector index schema productionization), M7 (upgrade-tooling schema). Pre-existing schema is re-audited if it changes substantially in scope.
+
+**Why milestone-entry, not milestone-exit.** Milestone-exit (section 11.3) catches drift between spec and built artifact -- a different concern. Milestone-entry catches gaps in the spec itself before the built artifact encodes them. Both gates are needed; they're complementary.
+
+**Why this section was added.** The `kind=proposal` semantic conflation surfaced via conversation in 2026-04-28 rather than from a prior audit -- exact evidence the audit pattern was missing. Codifying this section makes the pattern routine instead of incidental.
+
+### 11.6 Spec-to-implementation gate (M2+)
 
 Once M2 is in flight, every code PR that implements a spec'd capability cites the ARCH section it implements. The citation lives in the PR description in a structured block:
 
@@ -435,13 +458,13 @@ A reviewer subsequently confirms the implementation matches the spec. Mismatches
 
 **Why this matters.** Without a citation gate, code drifts from spec silently. With it, every code change is a small audit point: implementer reads the spec, reviewer verifies the match. This is what closes the loop between design and code that pure documentation discipline cannot.
 
-### 11.6 Walk re-walking cadence
+### 11.7 Walk re-walking cadence
 
-The three composer-surface walks (analyst, dev, designer) are validation instruments, not historical records. Re-walking surfaces drift the way running tests surfaces regressions. Default cadence: re-walk each at every milestone-exit drift sweep (section 11.3 step 2) plus on demand when a substantial spec change lands in the walk's surface area.
+The three composer-surface walks (analyst, dev, designer) are validation instruments, not historical records. Re-walking surfaces drift the way running tests surfaces regressions. Default cadence: re-walk each at every milestone-exit drift sweep (section 11.3 step 2) plus on demand when a substantial spec change lands in the walk's surface area. Schema-bearing changes (the kind that trigger section 11.5 audits) are a particularly common trigger.
 
 Walks are also the right artifact for new composer scenarios. PM week-1, stakeholder week-1, multi-composer concurrent week-1 are all walks waiting to be authored when their scenarios become relevant. Authoring discipline: the latent-gaps approach from the start, not an after-the-fact sweep (the lesson from analyst-week-1.md section 7).
 
-### 11.7 Post-milestone retrospective
+### 11.8 Post-milestone retrospective
 
 At each milestone exit, the architect convenes a retrospective (sync or async). Three questions:
 
@@ -456,7 +479,7 @@ Outputs feed back into:
 
 The retrospective notes land under `docs/architecture/audits/milestone-<id>-retrospective.md` and are searchable through find_similar from M5 onward.
 
-### 11.8 How this is baked into the Atelier template
+### 11.9 How this is baked into the Atelier template
 
 Per the three-tier consumer model (ADR-031), this process lives in three places:
 

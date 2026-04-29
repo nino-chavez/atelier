@@ -1,0 +1,108 @@
+name: atelier-audit
+
+# Per scripts/README.md "CI gate: runs on every PR; blocks merge if any
+# canonical doc fails round-trip." Wires the M1 test suites + the round-trip
+# integrity test + the traceability validator as PR gates against an
+# ephemeral local Supabase.
+#
+# Gates (any failure blocks merge):
+#   - typecheck
+#   - schema migrations apply cleanly
+#   - schema-invariants smoke (ADR-005, RLS, ADR-036, fencing, ADR-035)
+#   - write-library smoke (ARCH 6.x mutation contracts)
+#   - sync-substrate smoke (event bus + 5 scripts + adapter dispatch)
+#   - GitHub-adapter smoke (mocked fetch + delivery_sync_state integration)
+#   - round-trip corpus (6 doc classes, M1 exit gate per scripts/README.md)
+#   - round-trip negative-case smoke (harness rejects synthetic drift)
+#   - traceability validator (--diff mode, scoped to PR-changed files; full
+#     repo failures persist in the M1-exit audit until the build-registry
+#     script lands at M2 entry)
+#
+# Informational (does not block):
+#   - validator --milestone-exit summary (full report; surfaced for review)
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: atelier-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: M1 audit gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history so the validator can diff against base ref
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        run: supabase start --workdir .
+        # `supabase start` applies migrations from supabase/migrations/ as
+        # part of its bring-up sequence; no separate `db reset` needed.
+
+      - name: Confirm DB reachable
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c "SELECT count(*) FROM pg_tables WHERE schemaname='public';"
+
+      - name: Schema-invariants smoke (ADR-005, RLS, ADR-036, fencing, ADR-035)
+        run: npx tsx scripts/test/__smoke__/schema-invariants.smoke.ts
+
+      - name: Write-library smoke (ARCH 6.x mutation contracts)
+        run: npx tsx scripts/sync/lib/__smoke__/write.smoke.ts
+
+      - name: Sync-substrate smoke (event bus + 5 scripts)
+        run: npx tsx scripts/sync/__smoke__/substrate.smoke.ts
+
+      - name: GitHub-adapter smoke (mocked fetch + delivery_sync_state)
+        run: npx tsx scripts/sync/__smoke__/github.smoke.ts
+
+      - name: Round-trip corpus (M1 exit gate; 6 doc classes)
+        run: npx tsx scripts/test/roundtrip.ts
+
+      - name: Round-trip negative-case smoke (harness rejects drift)
+        run: npx tsx scripts/test/__smoke__/roundtrip.smoke.ts
+
+      - name: Traceability validator (PR-scoped; --diff against base)
+        if: github.event_name == 'pull_request'
+        run: |
+          npx tsx scripts/traceability/validate-refs.ts \
+            --diff --base origin/${{ github.base_ref }}
+
+      - name: Traceability validator (full repo; informational on push to main)
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: npx tsx scripts/traceability/validate-refs.ts --milestone-exit
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --workdir . || true

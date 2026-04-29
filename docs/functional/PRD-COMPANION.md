@@ -72,7 +72,7 @@ These decisions landed as ADRs. Full rationale, alternatives, and consequences l
 | D25 | Naming: Atelier | [ADR-020](../architecture/decisions/ADR-020-naming-atelier.md) |
 | D26 | Multi-trace-ID support on contributions and decisions | [ADR-021](../architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md) |
 | D27 | `claim` atomic-creates open contributions | [ADR-022](../architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md) |
-| D28 | Remote-surface commits via per-project endpoint git committer | [ADR-023](../architecture/decisions/ADR-023-remote-surface-commits-via-per-project-endpoint-committer.md) |
+| D28 | Remote-surface commits via per-project endpoint git committer | [ADR-023](../architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md) |
 | D29 | Transcripts as repo-sidecar files, opt-in by config | [ADR-024](../architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md) |
 | D30 | Review routing keyed by `territory.review_role` | [ADR-025](../architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md) |
 | D31 | Reference implementation stack: GitHub + Supabase + Vercel + MCP | [ADR-027](../architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md) |

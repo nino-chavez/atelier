@@ -502,6 +502,72 @@
       "adr": "ADR-032",
       "source": "doc-org-cleanup-2026-04-25",
       "status": "DECIDED"
+    },
+    {
+      "id": "D36",
+      "label": "Contribution.kind scoped to output discipline (drop proposal + decision)",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-033",
+      "source": "pre-M1-data-model-audit-2026-04-28",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D37",
+      "label": "Contribution lifecycle state separated from blocked status flag",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-034",
+      "source": "pre-M1-data-model-audit-2026-04-28",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D38",
+      "label": "Contract metadata covers ARCH 6.6.1 classifier surface",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-035",
+      "source": "pre-M1-data-model-audit-2026-04-28",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D39",
+      "label": "Immortal author identity via composer_id; session_id is operational only",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-036",
+      "source": "pre-M1-data-model-audit-2026-04-28",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D40",
+      "label": "Decisions table cleanup -- drop convention, add triggered_by_contribution_id",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-037",
+      "source": "pre-M1-data-model-audit-2026-04-28",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D41",
+      "label": "Composer role split into discipline + access_level",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-038",
+      "source": "expert-review-2026-04-28",
+      "status": "DECIDED"
     }
   ]
 }

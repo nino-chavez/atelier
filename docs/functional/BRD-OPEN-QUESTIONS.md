@@ -74,14 +74,6 @@ This addresses the "should we build it" alignment bottleneck at the right point 
 
 ---
 
-### 20 - Composer role enum mixes work-discipline with access-level
-
-Split into `composers.discipline` (5 values including newly-added `architect`) + `composers.access_level` (3 values).
-
-**Status.** RESOLVED 2026-04-28. See [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md). Resolved same-day per expert-review prompt that surfaced this should land before M1 schema implementation, not v1.x. The fix also closed a previously-undetected drift: `architect` was used as `owner_role` across 4 territories but missing from the composers enum -- now first-class as `discipline=architect`.
-
----
-
 ### 21 - AI auto-reviewers as a `review_role` type
 
 **Scenario.** Per ADR-025, `territories.review_role` keys to a composer role (architect, dev, pm, designer). Every `state=review` transition routes to a human in that role. In an AI-speed reality (per the 2026-04-28 AI-speed red-team pivot), this is the dominant bottleneck: AI implements in 2 min, human approves in 4 hrs. On a 1-human-N-agent team, the human cannot keep up even with engaged attention.
@@ -97,7 +89,7 @@ The 2026-04-28 expert review's Opportunities table explicitly named "Auto-Review
 
 **Recommendation.** Extend the territory schema with an optional `ai_review_policy` block (off by default). When enabled, the AI reviewer runs its check surface and either auto-approves (recording an audit-trail entry) or escalates to the human in `review_role`. Human reviewers can override AI approvals retroactively via a new tool or an `update(state="review", reopen=true)` semantic. Cross-role contributions (`requires_owner_approval=true`) are excluded from AI auto-approval per the merge-gate logic in ADR-033.
 
-This is the single highest-leverage v1.x feature. Worth landing at M6 (alongside remote-principal composers + triage, which are the other AI-coordination concentrations) as ADR-039 + ARCH 6.2.3 extension + territory schema addition.
+This is the single highest-leverage v1.x feature. Worth landing at M6 (alongside remote-principal composers + triage, which are the other AI-coordination concentrations) as a future ADR + ARCH 6.2.3 extension + territory schema addition.
 
 **Status.** OPEN. Strategic call: does this land at v1 or v1.x? Recommendation is v1.x (M6) because the find_similar precision data (M5) informs the auto-approve thresholds. v1 reserves the config surface (`territories.<name>.ai_review_policy: null`) so adoption doesn't require a schema migration. Surfaced by 2026-04-28 AI-speed red-team pivot.
 
@@ -147,19 +139,11 @@ GitHub ACE (per 2026-04-28 strategy addendum on AI-speed coordination) is making
 
 **Recommendation.** Add `annotations` as a new table (cleaner RLS than embedded list; better query patterns). New tool `annotate(target_kind, target_id, body)` -- accepts `target_kind in (contribution, decision)` plus the target's UUID. Append-only at v1 (no edits, no deletes -- soft-flag spam via admin tool). Render in `/atelier` contribution + decision panels. Bumps the MCP tool count to 13; document in ADR-013 as a v1.x extension that fits within the protocol's design.
 
-**Status.** OPEN. Strategic call: does adding a 13th MCP tool + a new schema table for annotations cross the line into "Atelier becomes a wiki" (which ADR-010 excludes)? Recommendation is no -- annotations are coordination-object metadata, not standalone content. But the boundary is worth being explicit about. If accepted, lands at v1.x (M6 alongside other coordination-surface enhancements) as ADR-040.
+**Status.** OPEN. Strategic call: does adding a 13th MCP tool + a new schema table for annotations cross the line into "Atelier becomes a wiki" (which ADR-010 excludes)? Recommendation is no -- annotations are coordination-object metadata, not standalone content. But the boundary is worth being explicit about. If accepted, lands at v1.x (M6 alongside other coordination-surface enhancements) as a future ADR.
 
 Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing market interest in tool-resident chat.
 
 **Update 2026-04-28 (post-chatbot-pattern landing).** The chatbot-as-MCP-client pattern (per `../user/connectors/chatbot-pattern.md`) covers much of this motivation: lightweight rationale flows through the chat surface where humans already are, and gets canonicalized via `log_decision` (with `transcript_ref` capturing the conversation under ADR-024). Annotations remain a separable concern only for non-chat contexts (e.g., a designer in `/atelier` wanting to attach a note to a contribution without opening chat). The strategic call now narrows to: is the non-chat annotation use case load-bearing enough for a 13th tool, or does the chatbot pattern + existing PR comment surface cover the practical need? Recommendation softens: defer to v1.x M6 with a higher bar to land (concrete pre-M6 user request needed, not speculative coordination-surface gap).
-
----
-
-### 24 - Branch reaping in `reconcile.ts` for AI-speed contribution churn
-
-Recommendation confirmed: ship the branch-reaping pass in `reconcile.ts` present-but-default-off. No new script, no new ADR.
-
-**Status.** RESOLVED 2026-04-28. See `../../scripts/sync/reconcile.ts` (M1 step 4.iii implementation; `reapBranches` pass guarded by `ATELIER_RECONCILE_BRANCH_REAPING_ENABLED` env var, default false; `--reap-branches --apply` CLI override) and `../../scripts/README.md` reconcile section. Recommendation confirmed during M1 step 4.iii; strategic-call gate from SESSION.md closed by execution.
 
 ---
 
@@ -292,3 +276,19 @@ Define what counts as permissible normalization vs drift in the M1 round-trip in
 Pick the trigger mechanism for publish-delivery before the broadcast substrate exists.
 
 **Status.** RESOLVED 2026-04-27. See `../../scripts/README.md` "publish-delivery trigger model". Polling at M1, post-commit hooks at M2, broadcast subscription at M4 -- non-destructive cutover at each milestone.
+
+---
+
+### 20 - Composer role enum mixes work-discipline with access-level
+
+Split into `composers.discipline` (5 values including newly-added `architect`) + `composers.access_level` (3 values).
+
+**Status.** RESOLVED 2026-04-28. See [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md). Resolved same-day per expert-review prompt that surfaced this should land before M1 schema implementation, not v1.x. The fix also closed a previously-undetected drift: `architect` was used as `owner_role` across 4 territories but missing from the composers enum -- now first-class as `discipline=architect`.
+
+---
+
+### 24 - Branch reaping in `reconcile.ts` for AI-speed contribution churn
+
+Extend `reconcile.ts` with a branch-reaping pass guarded by a config flag; default off at v1.
+
+**Status.** RESOLVED 2026-04-28. See `../../scripts/sync/reconcile.ts` M1 step 4.iii implementation (`reapBranches` pass guarded by `ATELIER_RECONCILE_BRANCH_REAPING_ENABLED`, default false; `--reap-branches --apply` CLI override) and `../../scripts/README.md` reconcile section. Recommendation confirmed during M1 step 4.iii; strategic-call gate from SESSION.md closed by execution.

@@ -113,7 +113,7 @@ Concrete edit recommendations (NOT executed in this addendum -- file as future s
 
 - BRD-OPEN-QUESTIONS section 21: AI auto-reviewers as a `review_role` type (recommendation: v1.x at M6)
 - BRD-OPEN-QUESTIONS section 22: semantic contradiction check in validator (recommendation: v1.x at M5)
-- BRD-OPEN-QUESTIONS section 23: lightweight `comment_on_contribution` annotations (recommendation: v1.x at M6 if accepted; ADR-040)
+- BRD-OPEN-QUESTIONS section 23: lightweight `comment_on_contribution` annotations (recommendation: v1.x at M6 if accepted; future ADR)
 
 **Future strategy work surfaced (not yet filed):**
 

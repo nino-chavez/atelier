@@ -474,34 +474,34 @@
       "id": "D33",
       "label": "Per-ADR file split — DECISIONS.md becomes a directory",
       "kind": "decision",
-      "status": "DECIDED",
       "docPath": "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md",
       "docUrl": "",
+      "prototypePages": [],
       "adr": "ADR-030",
       "source": "doc-org-cleanup-2026-04-25",
-      "prototypePages": []
+      "status": "DECIDED"
     },
     {
       "id": "D34",
       "label": "Three-tier consumer model — Specification / Reference Implementation / Reference Deployment",
       "kind": "decision",
-      "status": "DECIDED",
       "docPath": "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md",
       "docUrl": "",
+      "prototypePages": [],
       "adr": "ADR-031",
       "source": "doc-org-cleanup-2026-04-25",
-      "prototypePages": []
+      "status": "DECIDED"
     },
     {
       "id": "D35",
       "label": "Adopt extended documentation structure (toolkit-derived, Atelier-extended)",
       "kind": "decision",
-      "status": "DECIDED",
       "docPath": "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md",
       "docUrl": "",
+      "prototypePages": [],
       "adr": "ADR-032",
       "source": "doc-org-cleanup-2026-04-25",
-      "prototypePages": []
+      "status": "DECIDED"
     }
   ]
 }

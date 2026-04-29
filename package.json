@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "pg": "^8.13.1"
+    "gray-matter": "^4.0.3",
+    "pg": "^8.13.1",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

@@ -55,26 +55,17 @@ async function pullForProject(opts: {
   const { db, projectId, adapterName, dryRun } = opts;
   const adapter = resolveDeliveryAdapter(adapterName);
 
-  // M1: contribution<->external mapping isn't yet stored on a column or in
-  // a sync-state table. Until step 4.iv adds delivery_sync_state, we read
-  // the most recent `delivery.synced` telemetry event per contribution to
-  // discover the external_id. This is a deliberately weak lookup; the
-  // sync-state table replaces it with a direct join.
+  // M1 step 4.iv: read directly from delivery_sync_state (replaces the
+  // telemetry-derived lookup that step 4.iii used as a deliberate seam).
   const { rows: synced } = await db.query<{
     contribution_id: string;
     external_id: string;
     external_url: string;
   }>(
-    `SELECT DISTINCT ON ((metadata->>'contributionId'))
-            (metadata->>'contributionId') AS contribution_id,
-            (metadata->>'externalId')     AS external_id,
-            (metadata->>'externalUrl')    AS external_url
-       FROM telemetry
-      WHERE project_id = $1
-        AND action = 'delivery.synced'
-        AND metadata ? 'externalId'
-      ORDER BY (metadata->>'contributionId'), created_at DESC`,
-    [projectId],
+    `SELECT contribution_id, external_id, external_url
+       FROM delivery_sync_state
+      WHERE project_id = $1 AND adapter = $2`,
+    [projectId, adapter.name],
   );
 
   let pulled = 0;
@@ -85,6 +76,25 @@ async function pullForProject(opts: {
       if (result === null) continue;
       pulled += 1;
       if (!dryRun) {
+        await db.query(
+          `UPDATE delivery_sync_state
+             SET external_state = $1,
+                 external_url   = $2,
+                 metadata       = metadata || $3::jsonb
+           WHERE contribution_id = $4 AND adapter = $5`,
+          [
+            result.externalState,
+            result.externalUrl,
+            JSON.stringify({
+              assignee: result.assignee,
+              sprint: result.sprint,
+              points: result.points,
+              observedAt: result.observedAt,
+            }),
+            row.contribution_id,
+            adapter.name,
+          ],
+        );
         await db.query(
           `INSERT INTO telemetry (project_id, action, outcome, metadata)
            VALUES ($1, 'delivery.mirrored', 'ok', $2::jsonb)`,

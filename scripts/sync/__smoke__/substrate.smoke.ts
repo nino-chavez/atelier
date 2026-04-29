@@ -128,7 +128,7 @@ async function main(): Promise<void> {
   const bus2 = getEventBus();
   const adapter = resolveDeliveryAdapter('noop');
   registerSubscriber(bus2, db, adapter, false);
-  const pollResult = await pollOnce({ db, bus: bus2, since: sinceCursor, dryRun: true });
+  const pollResult = await pollOnce({ db, bus: bus2, since: sinceCursor, dryRun: true, projectId: PROJECT_ID });
   await bus2.drain();
   check('polling detected the seeded contribution', pollResult.detected >= 1);
 

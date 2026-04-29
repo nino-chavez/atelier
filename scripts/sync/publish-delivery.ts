@@ -38,6 +38,7 @@ interface Args {
   adapter: string;
   since: string | null;
   dryRun: boolean;
+  projectId: string | null;
 }
 
 const CURSOR_PATH = '.atelier/state/publish-delivery-cursor.json';
@@ -50,6 +51,7 @@ function parseArgs(argv: string[]): Args {
     adapter: process.env.ATELIER_DELIVERY_ADAPTER ?? 'noop',
     since: null,
     dryRun: false,
+    projectId: process.env.ATELIER_PROJECT_ID ?? null,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -58,8 +60,9 @@ function parseArgs(argv: string[]): Args {
     else if (a === '--interval') args.interval = Number(argv[++i]);
     else if (a === '--adapter') args.adapter = argv[++i]!;
     else if (a === '--since') args.since = argv[++i]!;
+    else if (a === '--project') args.projectId = argv[++i]!;
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: publish-delivery [--once] [--interval N] [--adapter NAME] [--since ISO] [--dry-run]');
+      console.log('Usage: publish-delivery [--once] [--interval N] [--adapter NAME] [--since ISO] [--project UUID] [--dry-run]');
       process.exit(0);
     }
   }
@@ -92,15 +95,25 @@ interface ContributionRow {
   content_ref: string;
 }
 
-async function pollOnce(opts: { db: Client; bus: EventBus; since: Date; dryRun: boolean }): Promise<{ detected: number; cursor: Date }> {
-  const { db, bus, since, dryRun } = opts;
+async function pollOnce(opts: { db: Client; bus: EventBus; since: Date; dryRun: boolean; projectId?: string | null }): Promise<{ detected: number; cursor: Date }> {
+  const { db, bus, since, dryRun, projectId } = opts;
+  // Project scoping per ARCH 9.2 ("one guild, many projects"): when a
+  // projectId is supplied, the poll only sees that project. Omitting it
+  // is permitted at M1 for single-project deployments but logged so
+  // operators see when their substrate is implicitly multi-project.
+  const params: unknown[] = [since.toISOString(), STATES_OF_INTEREST];
+  let projectFilter = '';
+  if (projectId) {
+    params.push(projectId);
+    projectFilter = ` AND project_id = $${params.length}`;
+  }
   const { rows } = await db.query<ContributionRow>(
     `SELECT id, project_id, state, kind, trace_ids, updated_at, content_ref
        FROM contributions
       WHERE updated_at > $1
-        AND state = ANY($2::contribution_state[])
+        AND state = ANY($2::contribution_state[])${projectFilter}
       ORDER BY updated_at ASC`,
-    [since.toISOString(), STATES_OF_INTEREST],
+    params,
   );
 
   for (const row of rows) {
@@ -139,6 +152,14 @@ function registerSubscriber(bus: EventBus, db: Client, adapter: DeliveryAdapter,
     if (!row) return;
 
     try {
+      // Look up prior external mapping so the adapter knows update vs create.
+      const { rows: priorRows } = await db.query<{ external_id: string; external_url: string }>(
+        `SELECT external_id, external_url FROM delivery_sync_state
+          WHERE contribution_id = $1 AND adapter = $2`,
+        [row.id, adapter.name],
+      );
+      const prior = priorRows[0];
+
       const result = await adapter.upsertIssue({
         contributionId: row.id,
         projectId: row.project_id,
@@ -147,9 +168,30 @@ function registerSubscriber(bus: EventBus, db: Client, adapter: DeliveryAdapter,
         traceIds: row.trace_ids,
         summary: `Atelier ${row.kind}: ${row.trace_ids.join(', ')}`,
         bodyMarkdown: `Contribution ${row.id} (state=${row.state})\nContent ref: ${row.content_ref}`,
+        externalId: prior?.external_id ?? null,
+        externalUrl: prior?.external_url ?? null,
       });
 
       if (!dryRun) {
+        await db.query(
+          `INSERT INTO delivery_sync_state
+             (project_id, contribution_id, adapter, external_id, external_url, external_state, metadata)
+           VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+           ON CONFLICT (contribution_id, adapter) DO UPDATE
+             SET external_id    = EXCLUDED.external_id,
+                 external_url   = EXCLUDED.external_url,
+                 external_state = EXCLUDED.external_state,
+                 metadata       = EXCLUDED.metadata`,
+          [
+            projectId,
+            row.id,
+            adapter.name,
+            result.externalId,
+            result.externalUrl,
+            row.state,
+            JSON.stringify({ source: envelope.payload.source }),
+          ],
+        );
         await db.query(
           `INSERT INTO telemetry (project_id, action, outcome, metadata)
            VALUES ($1, 'delivery.synced', 'ok', $2::jsonb)`,
@@ -192,13 +234,17 @@ async function main(): Promise<void> {
   const adapter = resolveDeliveryAdapter(args.adapter);
   registerSubscriber(bus, db, adapter, args.dryRun);
 
+  if (!args.projectId) {
+    console.warn(`[publish-delivery] no --project / ATELIER_PROJECT_ID; polling across ALL projects in the datastore. This is allowed for single-project deployments but should be set explicitly per ARCH 9.2.`);
+  }
+
   const runCycle = async (): Promise<void> => {
     const cursor = args.since ? new Date(args.since) : await readCursor();
-    const result = await pollOnce({ db, bus, since: cursor, dryRun: args.dryRun });
+    const result = await pollOnce({ db, bus, since: cursor, dryRun: args.dryRun, projectId: args.projectId });
     await bus.drain();
     // eslint-disable-next-line no-console
     console.log(
-      `[publish-delivery] cursor=${cursor.toISOString()} -> ${result.cursor.toISOString()} detected=${result.detected} adapter=${adapter.name}${args.dryRun ? ' (dry-run)' : ''}`,
+      `[publish-delivery] cursor=${cursor.toISOString()} -> ${result.cursor.toISOString()} detected=${result.detected} adapter=${adapter.name} project=${args.projectId ?? '*'}${args.dryRun ? ' (dry-run)' : ''}`,
     );
   };
 

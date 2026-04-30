@@ -56,9 +56,9 @@ async function seed(): Promise<void> {
       [PROJECT_ID],
     );
     await c.query(
-      `INSERT INTO composers (id, project_id, email, display_name, discipline)
-       VALUES ($1, $2, 'dev@substrate.invalid', 'Dev', 'dev'),
-              ($3, $2, 'triage@substrate.invalid', 'Triage System', 'pm')`,
+      `INSERT INTO composers (id, project_id, email, display_name, discipline, identity_subject)
+       VALUES ($1, $2, 'dev@substrate.invalid', 'Dev', 'dev', 'sub-substrate-dev'),
+              ($3, $2, 'triage@substrate.invalid', 'Triage System', 'pm', 'sub-substrate-triage')`,
       [DEV_COMPOSER_ID, PROJECT_ID, TRIAGE_COMPOSER_ID],
     );
     await c.query(

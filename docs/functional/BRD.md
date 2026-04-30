@@ -225,12 +225,12 @@ Acceptance:
 - Given a decision (category, summary, rationale, trace_id), when log_decision is called, then a new ADR file is created at `../architecture/decisions/ADR-NNN-<slug>.md` (per ADR-005, ADR-030), mirrored to the datastore, indexed in the vector index, and broadcast via pub/sub — all within the same call.
 - Given the datastore is unavailable, when log_decision is called, then the repo write still succeeds; the mirror is retried on the next healthy call.
 
-**US-2.12 — Publish + get contracts**
-As a dev principal (via agent), I want `publish_contract` and `get_contracts` so that territories have typed interfaces.
+**US-2.12 — Propose contract change + read contracts**
+As a dev principal (via agent), I want `propose_contract_change` and contract reads via `get_context` so that territories have typed interfaces. Per ADR-040 (12-tool surface consolidation): `propose_contract_change` is the publish path (the endpoint decides additive-publish vs proposal-creation via the ARCH 6.6.1 classifier); contract reads collapse onto `get_context`.
 
 Acceptance:
-- Given a territory owner + contract name + schema, when publish is called, then the contract is stored and subscribers are notified.
-- Given a territory consumer, when get_contracts is called, then current contracts for subscribed territories are returned.
+- Given a territory owner + contract name + schema, when `propose_contract_change` is called, then the endpoint runs the classifier; on additive (or override-additive) it stores the contract and notifies subscribers; on breaking it creates a contribution with `requires_owner_approval=true` for cross-territory approval per ARCH 6.6.
+- Given a territory consumer with active session, when `get_context` is called with `with_contract_schemas: true` (or under `lens=designer`/`dev`), then current contracts for subscribed territories are returned with full schemas under `territories.consumed[].contracts_consumed[]`.
 
 ---
 
@@ -448,17 +448,17 @@ Acceptance:
 
 ### Epic 8 — Territory contracts
 
-**US-8.1 — Publish contract**
-As a dev principal, I want `publish_contract` so that my territory's interface is queryable.
+**US-8.1 — Propose contract change**
+As a dev principal, I want `propose_contract_change` so that my territory's interface is queryable and breaking changes go through cross-territory approval. Per ADR-040: this single tool replaces the prior `publish_contract` name; the endpoint decides additive-publish vs proposal-creation based on the ARCH 6.6.1 classifier.
 
 Acceptance:
-- Given a territory I own, when I publish a contract (name + schema), then it's stored in the datastore and broadcast.
+- Given a territory I own + contract name + schema, when I call `propose_contract_change`, then the classifier runs; on `effective_decision=additive` it stores at minor-bumped version and broadcasts; on `effective_decision=breaking` it creates a contribution with `requires_owner_approval=true` for cross-territory approval and the major-bumped version lands only on approval.
 
-**US-8.2 — Consume contracts**
-As any composer (via agent), I want `get_contracts` filtered by consumed-list so that I can query only relevant contracts.
+**US-8.2 — Consume contracts via `get_context`**
+As any composer (via agent), I want contract reads filtered by my territories' consumed-list via `get_context` so that I can query only relevant contracts. Per ADR-040 the prior `get_contracts` tool collapses into `get_context`.
 
 Acceptance:
-- Given my territory's contracts_consumed list, when I call get_contracts, then only those contracts are returned with current schema + version.
+- Given my territory's `contracts_consumed` list, when I call `get_context` with `with_contract_schemas: true` (or under `lens=designer`/`dev`), then only contracts from my consumed-list are returned with current schema + version under `territories.consumed[].contracts_consumed[]`.
 
 **US-8.3 — Contract-change notification**
 As a downstream consumer, I want pub/sub broadcasts on contract changes so that I see breaking changes immediately.

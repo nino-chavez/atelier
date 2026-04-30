@@ -55,10 +55,10 @@ async function seed(): Promise<Fixture> {
     );
     const projectId = rows[0]!.id;
     const { rows: composerRows } = await c.query<{ id: string }>(
-      `INSERT INTO composers (project_id, email, display_name, discipline)
-       VALUES ($1, $2, 'SI Composer', 'dev')
+      `INSERT INTO composers (project_id, email, display_name, discipline, identity_subject)
+       VALUES ($1, $2, 'SI Composer', 'dev', $3)
        RETURNING id`,
-      [projectId, `si-${projectId.slice(0, 8)}@invalid.test`],
+      [projectId, `si-${projectId.slice(0, 8)}@invalid.test`, `sub-si-${projectId.slice(0, 8)}`],
     );
     const composerId = composerRows[0]!.id;
     const { rows: terrRows } = await c.query<{ id: string }>(

@@ -274,8 +274,8 @@ async function setupProject(): Promise<{ contributionId: string }> {
       [PROJECT_ID],
     );
     await seed.query(
-      `INSERT INTO composers (id, project_id, email, display_name, discipline)
-       VALUES ($1, $2, 'gh-dev@smoke.invalid', 'GH Dev', 'dev')`,
+      `INSERT INTO composers (id, project_id, email, display_name, discipline, identity_subject)
+       VALUES ($1, $2, 'gh-dev@smoke.invalid', 'GH Dev', 'dev', 'sub-gh-dev-smoke')`,
       [COMPOSER_ID, PROJECT_ID],
     );
     await seed.query(

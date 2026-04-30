@@ -1,17 +1,17 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-04-29T00:00:00Z",
+  "generated_at": "2026-04-30T13:22:29.949Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
   "counts": {
     "brd-epics": 16,
-    "brd-stories": 99,
-    "decisions": 42,
+    "brd-stories": 105,
+    "decisions": 43,
     "open-questions": 24,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 39
+    "adrs": 40
   },
   "entries": [
     {
@@ -19,7 +19,7 @@
       "label": "Project scaffolding & lifecycle",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-1--project-scaffolding--lifecycle",
+      "docUrl": "#epic-1-project-scaffolding-lifecycle",
       "prototypePages": []
     },
     {
@@ -27,7 +27,7 @@
       "label": "Agent interop endpoint",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-2--agent-interop-endpoint",
+      "docUrl": "#epic-2-agent-interop-endpoint",
       "prototypePages": []
     },
     {
@@ -35,7 +35,7 @@
       "label": "Canonical artifact (prototype web app)",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-3--canonical-artifact-prototype-web-app",
+      "docUrl": "#epic-3-canonical-artifact-prototype-web-app",
       "prototypePages": []
     },
     {
@@ -43,7 +43,7 @@
       "label": "Territory + contribution model",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-4--territory--contribution-model",
+      "docUrl": "#epic-4-territory-contribution-model",
       "prototypePages": []
     },
     {
@@ -51,15 +51,15 @@
       "label": "Decision durability",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-5--decision-durability",
+      "docUrl": "#epic-5-decision-durability",
       "prototypePages": []
     },
     {
       "id": "BRD:Epic-6",
-      "label": "fit_check + eval harness",
+      "label": "Find_similar + eval harness",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-6--fit_check--eval-harness",
+      "docUrl": "#epic-6-findsimilar-eval-harness",
       "prototypePages": []
     },
     {
@@ -67,7 +67,7 @@
       "label": "Locks + fencing tokens",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-7--locks--fencing-tokens",
+      "docUrl": "#epic-7-locks-fencing-tokens",
       "prototypePages": []
     },
     {
@@ -75,7 +75,7 @@
       "label": "Territory contracts",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-8--territory-contracts",
+      "docUrl": "#epic-8-territory-contracts",
       "prototypePages": []
     },
     {
@@ -83,7 +83,7 @@
       "label": "Sync substrate (all 5 scripts)",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-9--sync-substrate-all-5-scripts",
+      "docUrl": "#epic-9-sync-substrate-all-5-scripts",
       "prototypePages": []
     },
     {
@@ -91,7 +91,7 @@
       "label": "External system integrations",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-10--external-system-integrations",
+      "docUrl": "#epic-10-external-system-integrations",
       "prototypePages": []
     },
     {
@@ -99,7 +99,7 @@
       "label": "CLI tooling",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-11--cli-tooling",
+      "docUrl": "#epic-11-cli-tooling",
       "prototypePages": []
     },
     {
@@ -107,7 +107,7 @@
       "label": "Observability",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-12--observability",
+      "docUrl": "#epic-12-observability",
       "prototypePages": []
     },
     {
@@ -115,7 +115,7 @@
       "label": "Security model",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-13--security-model",
+      "docUrl": "#epic-13-security-model",
       "prototypePages": []
     },
     {
@@ -123,7 +123,7 @@
       "label": "Composer lifecycle",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-14--composer-lifecycle",
+      "docUrl": "#epic-14-composer-lifecycle",
       "prototypePages": []
     },
     {
@@ -131,7 +131,7 @@
       "label": "Role-aware lenses",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-15--role-aware-lenses",
+      "docUrl": "#epic-15-role-aware-lenses",
       "prototypePages": []
     },
     {
@@ -139,7 +139,847 @@
       "label": "Remote composer support",
       "kind": "brd-epic",
       "docPath": "docs/functional/BRD.md",
-      "docUrl": "#epic-16--remote-composer-support",
+      "docUrl": "#epic-16-remote-composer-support",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.1",
+      "label": "Scaffold new project",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-11-scaffold-new-project",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.2",
+      "label": "Provision coordination datastore",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-12-provision-coordination-datastore",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.3",
+      "label": "Deploy prototype + endpoint",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-13-deploy-prototype-endpoint",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.4",
+      "label": "Composer invite",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-14-composer-invite",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.5",
+      "label": "Territory declaration",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-15-territory-declaration",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.6",
+      "label": "Project health check",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-16-project-health-check",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.7",
+      "label": "Upgrade scaffold to new Atelier version",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-17-upgrade-scaffold-to-new-atelier-version",
+      "prototypePages": []
+    },
+    {
+      "id": "US-1.8",
+      "label": "Guided handshake for credentials AI cannot self-provision",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-18-guided-handshake-for-credentials-ai-cannot-self-provision",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.1",
+      "label": "Register session",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-21-register-session",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.2",
+      "label": "Heartbeat",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-22-heartbeat",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.3",
+      "label": "Deregister session",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-23-deregister-session",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.4",
+      "label": "Get context",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-24-get-context",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.5",
+      "label": "Find_similar",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-25-findsimilar",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.6",
+      "label": "Claim contribution",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-26-claim-contribution",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.7",
+      "label": "Update contribution",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-27-update-contribution",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.8",
+      "label": "Release contribution",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-28-release-contribution",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.9",
+      "label": "Acquire lock",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-29-acquire-lock",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.10",
+      "label": "Release lock",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-210-release-lock",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.11",
+      "label": "Log decision",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-211-log-decision",
+      "prototypePages": []
+    },
+    {
+      "id": "US-2.12",
+      "label": "Propose contract change + read contracts",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-212-propose-contract-change-read-contracts",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.1",
+      "label": "Project home route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-31-project-home-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.2",
+      "label": "Strategy route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-32-strategy-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.3",
+      "label": "Design route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-33-design-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.4",
+      "label": "Slice detail route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-34-slice-detail-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.5",
+      "label": "Atelier coordination route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-35-atelier-coordination-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.6",
+      "label": "Traceability route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-36-traceability-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-3.7",
+      "label": "Scale budget enforcement",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-37-scale-budget-enforcement",
+      "prototypePages": []
+    },
+    {
+      "id": "US-4.1",
+      "label": "Declare territory",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-41-declare-territory",
+      "prototypePages": []
+    },
+    {
+      "id": "US-4.2",
+      "label": "Contribution schema",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-42-contribution-schema",
+      "prototypePages": []
+    },
+    {
+      "id": "US-4.3",
+      "label": "Contribution state machine",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-43-contribution-state-machine",
+      "prototypePages": []
+    },
+    {
+      "id": "US-4.4",
+      "label": "Artifact_scope kinds",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-44-artifactscope-kinds",
+      "prototypePages": []
+    },
+    {
+      "id": "US-4.5",
+      "label": "Cross-territory contribution",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-45-cross-territory-contribution",
+      "prototypePages": []
+    },
+    {
+      "id": "US-4.6",
+      "label": "Contribution filtering",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-46-contribution-filtering",
+      "prototypePages": []
+    },
+    {
+      "id": "US-5.1",
+      "label": "Log decision end-to-end",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-51-log-decision-end-to-end",
+      "prototypePages": []
+    },
+    {
+      "id": "US-5.2",
+      "label": "Per-ADR file structure",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-52-per-adr-file-structure",
+      "prototypePages": []
+    },
+    {
+      "id": "US-5.3",
+      "label": "Repo-datastore sync CI check",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-53-repo-datastore-sync-ci-check",
+      "prototypePages": []
+    },
+    {
+      "id": "US-5.4",
+      "label": "Decision append-only",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-54-decision-append-only",
+      "prototypePages": []
+    },
+    {
+      "id": "US-5.5",
+      "label": "Decision reversal",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-55-decision-reversal",
+      "prototypePages": []
+    },
+    {
+      "id": "US-6.1",
+      "label": "Semantic search implementation",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-61-semantic-search-implementation",
+      "prototypePages": []
+    },
+    {
+      "id": "US-6.2",
+      "label": "Eval set ships with template",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-62-eval-set-ships-with-template",
+      "prototypePages": []
+    },
+    {
+      "id": "US-6.3",
+      "label": "Eval runner CLI",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-63-eval-runner-cli",
+      "prototypePages": []
+    },
+    {
+      "id": "US-6.4",
+      "label": "CI gate",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-64-ci-gate",
+      "prototypePages": []
+    },
+    {
+      "id": "US-6.5",
+      "label": "Keyword fallback with banner",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-65-keyword-fallback-with-banner",
+      "prototypePages": []
+    },
+    {
+      "id": "US-6.6",
+      "label": "Accept/reject feedback loop",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-66-acceptreject-feedback-loop",
+      "prototypePages": []
+    },
+    {
+      "id": "US-7.1",
+      "label": "Acquire lock with fencing",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-71-acquire-lock-with-fencing",
+      "prototypePages": []
+    },
+    {
+      "id": "US-7.2",
+      "label": "Reject stale-token writes",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-72-reject-stale-token-writes",
+      "prototypePages": []
+    },
+    {
+      "id": "US-7.3",
+      "label": "Lock TTL + heartbeat extension",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-73-lock-ttl-heartbeat-extension",
+      "prototypePages": []
+    },
+    {
+      "id": "US-7.4",
+      "label": "Lock conflict reporting",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-74-lock-conflict-reporting",
+      "prototypePages": []
+    },
+    {
+      "id": "US-7.5",
+      "label": "Lock ledger audit",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-75-lock-ledger-audit",
+      "prototypePages": []
+    },
+    {
+      "id": "US-8.1",
+      "label": "Propose contract change",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-81-propose-contract-change",
+      "prototypePages": []
+    },
+    {
+      "id": "US-8.2",
+      "label": "Consume contracts via `get_context`",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-82-consume-contracts-via-getcontext",
+      "prototypePages": []
+    },
+    {
+      "id": "US-8.3",
+      "label": "Contract-change notification",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-83-contract-change-notification",
+      "prototypePages": []
+    },
+    {
+      "id": "US-8.4",
+      "label": "Breaking-change proposal flow",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-84-breaking-change-proposal-flow",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.1",
+      "label": "publish-docs",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-91-publish-docs",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.2",
+      "label": "publish-delivery",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-92-publish-delivery",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.3",
+      "label": "mirror-delivery",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-93-mirror-delivery",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.4",
+      "label": "reconcile",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-94-reconcile",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.5",
+      "label": "triage classifier",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-95-triage-classifier",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.6",
+      "label": "triage drafter",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-96-triage-drafter",
+      "prototypePages": []
+    },
+    {
+      "id": "US-9.7",
+      "label": "triage never auto-merges",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-97-triage-never-auto-merges",
+      "prototypePages": []
+    },
+    {
+      "id": "US-10.1",
+      "label": "Versioned file store integration",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-101-versioned-file-store-integration",
+      "prototypePages": []
+    },
+    {
+      "id": "US-10.2",
+      "label": "Delivery tracker adapter interface",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-102-delivery-tracker-adapter-interface",
+      "prototypePages": []
+    },
+    {
+      "id": "US-10.3",
+      "label": "Jira / Linear adapters shipped",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-103-jira-linear-adapters-shipped",
+      "prototypePages": []
+    },
+    {
+      "id": "US-10.4",
+      "label": "Published-doc system adapters",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-104-published-doc-system-adapters",
+      "prototypePages": []
+    },
+    {
+      "id": "US-10.5",
+      "label": "Design tool adapter",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-105-design-tool-adapter",
+      "prototypePages": []
+    },
+    {
+      "id": "US-10.6",
+      "label": "Messaging adapter",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-106-messaging-adapter",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.1",
+      "label": "atelier init",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-111-atelier-init",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.2",
+      "label": "atelier datastore init",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-112-atelier-datastore-init",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.3",
+      "label": "atelier deploy",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-113-atelier-deploy",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.4",
+      "label": "atelier invite",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-114-atelier-invite",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.5",
+      "label": "atelier territory add",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-115-atelier-territory-add",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.6",
+      "label": "atelier sync `<target>`",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-116-atelier-sync-target",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.7",
+      "label": "atelier reconcile",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-117-atelier-reconcile",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.8",
+      "label": "atelier eval find_similar",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-118-atelier-eval-findsimilar",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.9",
+      "label": "atelier doctor",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-119-atelier-doctor",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.10",
+      "label": "atelier upgrade (CLI surface)",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-1110-atelier-upgrade-cli-surface",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.11",
+      "label": "atelier audit",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-1111-atelier-audit",
+      "prototypePages": []
+    },
+    {
+      "id": "US-11.12",
+      "label": "atelier review",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-1112-atelier-review",
+      "prototypePages": []
+    },
+    {
+      "id": "US-12.1",
+      "label": "Telemetry emission",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-121-telemetry-emission",
+      "prototypePages": []
+    },
+    {
+      "id": "US-12.2",
+      "label": "Admin observability sub-route",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-122-admin-observability-sub-route",
+      "prototypePages": []
+    },
+    {
+      "id": "US-12.3",
+      "label": "Session heartbeat dashboard",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-123-session-heartbeat-dashboard",
+      "prototypePages": []
+    },
+    {
+      "id": "US-12.4",
+      "label": "Find_similar match-rate report",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-124-findsimilar-match-rate-report",
+      "prototypePages": []
+    },
+    {
+      "id": "US-12.5",
+      "label": "Sync lag alerting",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-125-sync-lag-alerting",
+      "prototypePages": []
+    },
+    {
+      "id": "US-13.1",
+      "label": "Per-composer signed tokens",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-131-per-composer-signed-tokens",
+      "prototypePages": []
+    },
+    {
+      "id": "US-13.2",
+      "label": "Row-level authorization",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-132-row-level-authorization",
+      "prototypePages": []
+    },
+    {
+      "id": "US-13.3",
+      "label": "Append-only decisions",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-133-append-only-decisions",
+      "prototypePages": []
+    },
+    {
+      "id": "US-13.4",
+      "label": "Service-role isolation",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-134-service-role-isolation",
+      "prototypePages": []
+    },
+    {
+      "id": "US-13.5",
+      "label": "Triage sandbox",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-135-triage-sandbox",
+      "prototypePages": []
+    },
+    {
+      "id": "US-13.6",
+      "label": "Token rotation",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-136-token-rotation",
+      "prototypePages": []
+    },
+    {
+      "id": "US-14.1",
+      "label": "Invite flow",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-141-invite-flow",
+      "prototypePages": []
+    },
+    {
+      "id": "US-14.2",
+      "label": "Session registration",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-142-session-registration",
+      "prototypePages": []
+    },
+    {
+      "id": "US-14.3",
+      "label": "Heartbeat",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-143-heartbeat",
+      "prototypePages": []
+    },
+    {
+      "id": "US-14.4",
+      "label": "Deregister",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-144-deregister",
+      "prototypePages": []
+    },
+    {
+      "id": "US-14.5",
+      "label": "Reaper",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-145-reaper",
+      "prototypePages": []
+    },
+    {
+      "id": "US-15.1",
+      "label": "Analyst lens",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-151-analyst-lens",
+      "prototypePages": []
+    },
+    {
+      "id": "US-15.2",
+      "label": "Dev lens",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-152-dev-lens",
+      "prototypePages": []
+    },
+    {
+      "id": "US-15.3",
+      "label": "PM lens",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-153-pm-lens",
+      "prototypePages": []
+    },
+    {
+      "id": "US-15.4",
+      "label": "Designer lens",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-154-designer-lens",
+      "prototypePages": []
+    },
+    {
+      "id": "US-15.5",
+      "label": "Stakeholder lens",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-155-stakeholder-lens",
+      "prototypePages": []
+    },
+    {
+      "id": "US-16.1",
+      "label": "Remote protocol transport",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-161-remote-protocol-transport",
+      "prototypePages": []
+    },
+    {
+      "id": "US-16.2",
+      "label": "Non-code territory: doc_region",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-162-non-code-territory-docregion",
+      "prototypePages": []
+    },
+    {
+      "id": "US-16.3",
+      "label": "Non-code territory: research_artifact",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-163-non-code-territory-researchartifact",
+      "prototypePages": []
+    },
+    {
+      "id": "US-16.4",
+      "label": "Knowledge-work artifact durability",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-164-knowledge-work-artifact-durability",
+      "prototypePages": []
+    },
+    {
+      "id": "US-16.5",
+      "label": "Web-composer auth UX",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-165-web-composer-auth-ux",
+      "prototypePages": []
+    },
+    {
+      "id": "US-16.6",
+      "label": "Cross-surface visibility",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-166-cross-surface-visibility",
       "prototypePages": []
     },
     {
@@ -568,6 +1408,446 @@
       "adr": "ADR-038",
       "source": "expert-review-2026-04-28",
       "status": "DECIDED"
+    },
+    {
+      "id": "D42",
+      "label": "Plan-review state added to contribution lifecycle (per-territory opt-in, default off)",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-039",
+      "source": "m2-entry-strategic-call-2026-04-30",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D43",
+      "label": "12-tool surface consolidation: propose_contract_change replaces publish_contract + get_contracts",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-040",
+      "source": "m2-entry-data-model-audit-2026-04-30",
+      "status": "DECIDED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-1",
+      "label": "Territory-model validation on the analyst case",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#1-territory-model-validation-on-the-analyst-case",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-2",
+      "label": "Switchman as dependency vs. own-implementation for file locks",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#2-switchman-as-dependency-vs-own-implementation-for-file-locks",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-3",
+      "label": "Embedding-model default + swappability for find_similar",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#3-embedding-model-default-swappability-for-findsimilar",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-4",
+      "label": "Contract-breaking-change heuristics",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#4-contract-breaking-change-heuristics",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-5",
+      "label": "Identity-service default",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#5-identity-service-default",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-6",
+      "label": "Upgrade path semantics for template versions",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#6-upgrade-path-semantics-for-template-versions",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-7",
+      "label": "Scale ceiling per guild",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#7-scale-ceiling-per-guild",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-8",
+      "label": "Cross-composer cost accounting",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#8-cross-composer-cost-accounting",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-9",
+      "label": "Cross-repo projects",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#9-cross-repo-projects",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-10",
+      "label": "Offline / disconnected mode",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#10-offline-disconnected-mode",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-11",
+      "label": "Solo-to-guild transition",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#11-solo-to-guild-transition",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-12",
+      "label": "Find_similar sensitivity trade-off",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#12-findsimilar-sensitivity-trade-off",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-13",
+      "label": "Decision-log growth and searchability",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#13-decision-log-growth-and-searchability",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-14",
+      "label": "Analyst-proposed territory changes",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#14-analyst-proposed-territory-changes",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-15",
+      "label": "Prototype deployment per environment",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#15-prototype-deployment-per-environment",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-16",
+      "label": "Adapter sequencing within M1",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#16-adapter-sequencing-within-m1",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-17",
+      "label": "Round-trip whitelist surface",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#17-round-trip-whitelist-surface",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-18",
+      "label": "publish-delivery trigger model (pre-broadcast-substrate)",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#18-publish-delivery-trigger-model-pre-broadcast-substrate",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-19",
+      "label": "Plan-review checkpoint between claim and implementation",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#19-plan-review-checkpoint-between-claim-and-implementation",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-20",
+      "label": "Composer role enum mixes work-discipline with access-level",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#20-composer-role-enum-mixes-work-discipline-with-access-level",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-21",
+      "label": "AI auto-reviewers as a `review_role` type",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#21-ai-auto-reviewers-as-a-reviewrole-type",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-22",
+      "label": "Semantic contradiction check in the validator",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#22-semantic-contradiction-check-in-the-validator",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-23",
+      "label": "Lightweight annotations on contributions (`comment_on_contribution`)",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#23-lightweight-annotations-on-contributions-commentoncontribution",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-24",
+      "label": "Branch reaping in `reconcile.ts` for AI-speed contribution churn",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#24-branch-reaping-in-reconcilets-for-ai-speed-contribution-churn",
+      "prototypePages": [],
+      "status": "RESOLVED"
+    }
+  ],
+  "edges": [
+    {
+      "from": "ADR-001",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-002",
+      "to": "BRD:Epic-4",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-003",
+      "to": "BRD:Epic-4",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-004",
+      "to": "BRD:Epic-7",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-005",
+      "to": "BRD:Epic-5",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-006",
+      "to": "BRD:Epic-6",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-007",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-008",
+      "to": "BRD:Epic-9",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-009",
+      "to": "BRD:Epic-16",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-010",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-011",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-012",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-013",
+      "to": "BRD:Epic-2",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-014",
+      "to": "BRD:Epic-8",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-015",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-016",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-017",
+      "to": "BRD:Epic-15",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-018",
+      "to": "BRD:Epic-9",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-019",
+      "to": "BRD:Epic-10",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-020",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-021",
+      "to": "BRD:Epic-4",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-022",
+      "to": "BRD:Epic-2",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-023",
+      "to": "BRD:Epic-16",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-024",
+      "to": "BRD:Epic-4",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-025",
+      "to": "BRD:Epic-15",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-026",
+      "to": "BRD:Epic-7",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-027",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-028",
+      "to": "BRD:Epic-13",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-029",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-030",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-031",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-032",
+      "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-033",
+      "to": "BRD:Epic-2",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-034",
+      "to": "BRD:Epic-2",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-035",
+      "to": "BRD:Epic-6",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-036",
+      "to": "BRD:Epic-2",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-037",
+      "to": "BRD:Epic-4",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-038",
+      "to": "BRD:Epic-14",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-039",
+      "to": "BRD:Epic-4",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-040",
+      "to": "BRD:Epic-2",
+      "rel": "implements"
     }
   ]
 }

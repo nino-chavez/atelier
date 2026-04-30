@@ -965,7 +965,7 @@ Trigger: nightly cron (after mirror-delivery)
     4. Output to /atelier/observability + optional messaging alert
 ```
 
-**triage** (external comments → proposal contributions):
+**triage** (external comments → human-gated contributions; per ADR-033 these carry `kind` matching the change's discipline + `requires_owner_approval=true`, replacing the historical `kind=proposal` mechanism from ADR-018):
 ```
 Trigger: webhook from published-doc or delivery tracker or design tool
   Pipeline:
@@ -1003,7 +1003,7 @@ The triage script per section 6.5 handles inbound comments from Figma (US-9.5/9.
 - The triage script reads this metadata comment when ingesting other comments on the same frame to attribute them.
 - If no metadata comment exists on the frame, the triage script falls back to filename-based heuristic matching (frame name vs. component file name) and flags low-confidence matches for human routing.
 
-**Drafted proposal content shape.** For Figma comments, the proposal contribution's `content_ref` is null (no patch can be auto-generated from a design comment). The proposal's `content` field carries:
+**Drafted contribution content shape (Figma-sourced).** For Figma comments, the drafted contribution's `content_ref` is null (no patch can be auto-generated from a design comment). The drafted contribution's `content` field carries:
 
 ```yaml
 source: figma
@@ -1027,17 +1027,24 @@ The reviewer (the parent contribution's territory.review_role) sees the proposal
 ### 6.6 Territory contract flow
 
 ```
-Territory owner → publish_contract(name, schema)
+Territory owner → propose_contract_change(territory_id, name, schema, override_classification?, override_justification?)
   Endpoint:
-    1. Classify as breaking or additive per §6.6.1
-    2. If additive:
-       Insert contract version N+1 (minor bump), broadcast to consumers
-    3. If breaking:
-       Create a proposal contribution requiring cross-territory approval
-       After approval window with no objections (or explicit approval):
-         Insert contract version N+1 (major bump), broadcast
-       Otherwise: proposal expires, contract unchanged
+    1. Validate caller holds territory.owner_role discipline (per ARCH 5.3)
+    2. Classify as breaking or additive per §6.6.1
+    3. Apply ADR-035 effective_decision = COALESCE(override_decision, classifier_decision)
+    4. If effective_decision = "additive":
+       Insert contract version N+1 (minor bump); broadcast contract.published (post-M4)
+       Return outcome="published"
+    5. If effective_decision = "breaking":
+       Create a contribution with kind=design (or kind matching consumer discipline),
+         requires_owner_approval=true, tagged to the proposed contracts row
+       Consumers approve via update(owner_approval=true) per ARCH 6.2.2
+       On approval: insert contract version N+1 (major bump); broadcast contract.published
+       Return outcome="proposal_created" with contribution_id
+       Otherwise: proposal expires per BRD-OPEN-QUESTIONS section 8 (TODO: window cadence), contract unchanged
 ```
+
+The tool name and signature land per ADR-040 (12-tool surface consolidation, 2026-04-30); the prior `publish_contract` and `get_contracts` names are not part of the v1 surface. Contract reads are served via `get_context` per section 6.7's ContextResponse shape.
 
 #### 6.6.1 Breaking-change classifier
 
@@ -1054,7 +1061,7 @@ A contract change is **breaking** if any of the following hold (conservative def
 | Default value changed | breaking | Consumers depending on a specific default observe behavior change |
 | Field reordered (positional contracts only) | breaking | N/A for JSON-shaped contracts; relevant for tabular or array-positional shapes |
 
-**Publisher override.** A territory owner may classify an otherwise-breaking change as additive by passing `override_classification="additive"` plus a required `override_justification` string. The override is recorded on the `contracts` row and surfaced in `/atelier/observability` for audit. Overrides are reversible by any consumer territory by escalating to a proposal contribution.
+**Publisher override.** A territory owner may classify an otherwise-breaking change as additive by passing `override_classification="additive"` plus a required `override_justification` string. The override is recorded on the `contracts` row and surfaced in `/atelier/observability` for audit. Overrides are reversible by any consumer territory by opening a contribution with `kind=design` (or matching their discipline) and `requires_owner_approval=true` against the publishing territory; the publishing-territory `review_role` then approves or rejects per the ARCH 6.2.2 owner-approval flow.
 
 **Versioning.** Semver-style. Additive changes bump minor (`1.4 → 1.5`); breaking changes bump major (`1.5 → 2.0`). `contracts.version` is an integer pair stored as `major*1000+minor` to preserve sort order; the human-facing string is rendered on read. Consumers pin to a major version; minor upgrades are automatic.
 
@@ -1135,11 +1142,12 @@ Breaking-change classification on `component_variants`: removing a component, re
 
 ```
 get_context(
-  trace_id?:        string | string[],   // optional; scopes recent_decisions, contributions, traceability
-  since_session_id?: string,             // optional; return only what changed since that session
-  lens?:            string,              // optional; analyst | dev | pm | designer | stakeholder
-  kind_filter?:     string[],            // optional; filter contributions by kind (implementation | research | ...)
-  charter_excerpts?: boolean             // optional, default false; include excerpts vs paths only
+  trace_id?:              string | string[],   // optional; scopes recent_decisions, contributions, traceability
+  since_session_id?:      string,              // optional; return only what changed since that session
+  lens?:                  string,              // optional; analyst | dev | pm | designer | stakeholder
+  kind_filter?:           string[],            // optional; filter contributions by kind (implementation | research | ...)
+  charter_excerpts?:      boolean,             // optional, default false; include excerpts vs paths only
+  with_contract_schemas?: boolean              // optional; default false (true when lens=designer or lens=dev). Per ADR-040 contract body inclusion (replacing the former get_contracts tool)
 ) → ContextResponse
 ```
 
@@ -1198,7 +1206,22 @@ When `lens` is omitted, the response uses unweighted defaults from the same conf
   },
   territories: {
     owned: [ { name, scope_kind, scope_pattern, contracts_published }, ... ],   // composer's role owns
-    consumed: [ { name, contracts_consumed }, ... ]                              // composer's role reads contracts from
+    consumed: [
+      {
+        name,
+        contracts_consumed: [
+          {
+            name: "<contract_name>",
+            version: <integer>,                  // semver-encoded major*1000+minor per ARCH 6.6.1
+            schema: <jsonb> | null,              // populated when lens=designer/dev OR with_contract_schemas=true (ADR-040)
+            effective_decision: "breaking" | "additive",
+            last_published_at: <timestamp>
+          },
+          ...
+        ]
+      },
+      ...
+    ]
   },
   contributions_summary: {
     by_state: { open: N, claimed: N, in_progress: N, review: N, blocked: N },
@@ -1241,7 +1264,7 @@ The contract: `get_context` should fit comfortably within ~8K tokens for the def
 
 `get_context` enforces project membership via the session token. No additional role gating beyond what `ARCH §5.3` defines for the underlying tables — every project member sees every project-scoped row. The `lens` parameter shapes depth, not access.
 
-`territories.owned` and `territories.consumed` are computed from `composers.default_role` joined against `territories.owner_role` / `territories.contracts_consumed`. A composer with secondary roles (per `.atelier/config.yaml`) sees the union.
+`territories.owned` and `territories.consumed` are computed from `composers.discipline` (per ADR-038; replaces the prior `composers.default_role` reference) joined against `territories.owner_role` / `territories.contracts_consumed`. Contract bodies under `territories.consumed[].contracts_consumed[].schema` populate by default when `lens` is `designer` or `dev` and on opt-in via the `with_contract_schemas: true` parameter (per ADR-040, which folded the former `get_contracts` tool into this surface). A composer with secondary roles (per `.atelier/config.yaml`) sees the union.
 
 #### 6.7.4 Freshness and caching
 
@@ -1343,7 +1366,7 @@ These constraints intentionally fit both Supabase Realtime (which provides per-c
 - Row-level policies enforce composer membership in project for all reads.
 - Writes constrained to session ownership (contributions, locks).
 - Decision writes are append-only (no UPDATE, no DELETE allowed by policy).
-- Territory-ownership checks gate `publish_contract`.
+- Territory-ownership checks gate `propose_contract_change` (per ADR-040, replacing the prior `publish_contract` name).
 
 ### 7.3 Credential isolation
 
@@ -1416,9 +1439,9 @@ This split keeps the IDE workflow ergonomic (no fencing-token plumbing in every 
 
 ### 7.5 Triage sandboxing
 
-- External comments classified + drafted into proposal contributions.
-- Proposal contributions cannot transition to `merged` without explicit human approval recorded in datastore.
-- CI check on repo mirrors this constraint (catches attempts to merge proposal PRs without approval record).
+- External comments classified + drafted into contributions with `kind` matching the change's discipline and `requires_owner_approval=true` (per ADR-033; replaces the historical `kind=proposal` mechanism from ADR-018).
+- Such contributions cannot transition to `merged` without explicit human approval recorded in datastore (`approved_by_composer_id` populated via `update(owner_approval=true)` per ARCH 6.2.2).
+- CI check on repo mirrors this constraint (catches attempts to merge cross-role contribution PRs without an approval record).
 
 ### 7.6 Append-only decisions
 

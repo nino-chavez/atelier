@@ -44,10 +44,10 @@ async function main() {
     [projectId],
   );
   await seed.query(
-    `INSERT INTO composers (id, project_id, email, display_name, discipline)
-     VALUES ($1, $2, 'dev@smoke.invalid', 'Dev Composer', 'dev'),
-            ($3, $2, 'architect@smoke.invalid', 'Architect Composer', 'architect'),
-            ($4, $2, 'reviewer@smoke.invalid', 'Reviewer Composer', 'architect')`,
+    `INSERT INTO composers (id, project_id, email, display_name, discipline, identity_subject)
+     VALUES ($1, $2, 'dev@smoke.invalid', 'Dev Composer', 'dev', 'sub-dev-smoke'),
+            ($3, $2, 'architect@smoke.invalid', 'Architect Composer', 'architect', 'sub-architect-smoke'),
+            ($4, $2, 'reviewer@smoke.invalid', 'Reviewer Composer', 'architect', 'sub-reviewer-smoke')`,
     [devComposerId, projectId, architectComposerId, reviewerComposerId],
   );
   await seed.query(

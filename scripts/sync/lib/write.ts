@@ -55,11 +55,13 @@ export class AtelierError extends Error {
 // Domain types (mirror the schema from migration 20260428000001)
 // =========================================================================
 
-export type ContributionState = 'open' | 'claimed' | 'in_progress' | 'review' | 'merged' | 'rejected';
+export type ContributionState = 'open' | 'claimed' | 'plan_review' | 'in_progress' | 'review' | 'merged' | 'rejected';
 export type ContributionKind  = 'implementation' | 'research' | 'design';
 export type DecisionCategory  = 'architecture' | 'product' | 'design' | 'research';
 export type SessionSurface    = 'ide' | 'web' | 'terminal' | 'passive';
-export type LockKind          = 'exclusive' | 'shared';
+// LockKind removed per audit M2-entry M3: lock_type column dropped from
+// the locks table; the only legitimate value 'exclusive' was the implicit
+// behavior, and 'shared' was never spec'd.
 
 export interface Session {
   id: string;
@@ -137,12 +139,23 @@ export interface ClaimResult {
 export interface UpdateInput {
   contributionId: string;
   sessionId: string;
-  state?: 'claimed' | 'in_progress' | 'review';
+  state?: 'claimed' | 'plan_review' | 'in_progress' | 'review';
   contentRef?: string;
   fencingToken?: number | bigint;
   blockedBy?: string | null;
   blockedReason?: string | null;
   ownerApproval?: boolean;
+  /**
+   * Free-form markdown plan body. Required when transitioning into
+   * state=plan_review per ARCH 6.2.1.7. The plan IS the working content at
+   * this state; no fencing token applies (no artifact-body lock surface).
+   */
+  planPayload?: string;
+  /**
+   * Free-form rejection reason. Required when transitioning plan_review ->
+   * claimed (reviewer rejects the plan) per ARCH 6.2.1.7.
+   */
+  reason?: string;
 }
 
 export interface UpdateResult {
@@ -150,6 +163,8 @@ export interface UpdateResult {
   state: ContributionState;
   requiresOwnerApproval: boolean;
   approvedByComposerId: string | null;
+  planReviewApprovedByComposerId: string | null;
+  planReviewApprovedAt: Date | null;
 }
 
 export interface ReleaseInput {
@@ -169,7 +184,6 @@ export interface AcquireLockInput {
   contributionId: string;
   sessionId: string;
   artifactScope: string[];
-  lockType?: LockKind;
 }
 
 export interface AcquireLockResult {
@@ -270,6 +284,189 @@ export class AtelierClient {
     if (rowCount === 0) {
       throw new AtelierError('NOT_FOUND', `session ${sessionId} does not exist`);
     }
+  }
+
+  /**
+   * Clean session deregister per ARCH 6.1: releases any locks, returns
+   * claimed/in-progress/plan_review contributions to state=open with
+   * audit-trail clearing per ADR-039 H3, and deletes the session row so
+   * subsequent heartbeats fail with 401.
+   */
+  async deregister(sessionId: string): Promise<void> {
+    return this.tx(async (client) => {
+      const { rows } = await client.query<{
+        id: string;
+        composer_id: string;
+        project_id: string;
+      }>(
+        `SELECT id, composer_id, project_id FROM sessions WHERE id = $1`,
+        [sessionId],
+      );
+      const session = rows[0];
+      if (!session) {
+        throw new AtelierError('NOT_FOUND', `session ${sessionId} does not exist`);
+      }
+
+      // Release locks held by this session.
+      await client.query(`DELETE FROM locks WHERE session_id = $1`, [sessionId]);
+
+      // Return claimed / in_progress / plan_review contributions to open.
+      // Mirrors release() semantics including audit M2-entry H3 clearing.
+      await client.query(
+        `UPDATE contributions
+            SET state = 'open',
+                author_session_id = NULL,
+                author_composer_id = NULL,
+                plan_review_approved_by_composer_id = NULL,
+                plan_review_approved_at = NULL,
+                updated_at = now()
+          WHERE author_session_id = $1
+            AND state IN ('claimed', 'plan_review', 'in_progress')`,
+        [sessionId],
+      );
+
+      await client.query(`DELETE FROM sessions WHERE id = $1`, [sessionId]);
+
+      await this.recordTelemetry({
+        projectId: session.project_id,
+        composerId: session.composer_id,
+        sessionId: null,
+        action: 'session.deregistered',
+        outcome: 'ok',
+        metadata: { sessionId },
+        client,
+      });
+    });
+  }
+
+  /**
+   * get_context per ARCH 6.7. Returns charter paths, recent decisions,
+   * territories owned/consumed, contributions summary, traceability slice.
+   * The session token's project_id implicitly scopes the response.
+   *
+   * Implementation note: at M2 entry the implementation is intentionally
+   * minimal -- it returns the substrate-shaped response that satisfies the
+   * ARCH 6.1.1 self-verification flow + the ContextResponse fields
+   * referenced by smoke. Lens defaults, since_session_id deltas, contract
+   * schema bodies, and the full traceability_slice are M2-mid work.
+   */
+  async getContext(input: { sessionId: string }): Promise<{
+    charter: { paths: string[]; excerpts: null };
+    recent_decisions: {
+      direct: Array<{ id: string; summary: string; trace_ids: string[]; timestamp: Date; repo_path: string | null }>;
+      epic_siblings: never[];
+      contribution_linked: never[];
+      truncated: { direct: boolean; epic_siblings: boolean; contribution_linked: boolean };
+    };
+    territories: {
+      owned: Array<{ name: string; scope_kind: string; scope_pattern: string[]; contracts_published: string[] }>;
+      consumed: Array<{ name: string; contracts_consumed: string[] }>;
+    };
+    contributions_summary: {
+      by_state: Record<string, number>;
+      active: never[];
+      truncated: boolean;
+    };
+    stale_as_of: Date;
+  }> {
+    return this.tx(async (client) => {
+      const ctx = await loadSessionContext(client, input.sessionId);
+
+      // Charter paths -- canonical list per ARCH 6.7
+      const charterPaths = [
+        'CLAUDE.md',
+        'AGENTS.md',
+        'docs/methodology/METHODOLOGY.md',
+        '.atelier/territories.yaml',
+        '.atelier/config.yaml',
+      ];
+
+      // Recent decisions (project-scoped; 10 most recent)
+      const { rows: decisionRows } = await client.query<{
+        id: string;
+        summary: string;
+        trace_ids: string[];
+        created_at: Date;
+        repo_commit_sha: string | null;
+      }>(
+        `SELECT id, summary, trace_ids, created_at, repo_commit_sha
+           FROM decisions WHERE project_id = $1
+           ORDER BY created_at DESC LIMIT 10`,
+        [ctx.projectId],
+      );
+
+      // Territories: owned by this composer's discipline + consumed
+      const { rows: territoryRows } = await client.query<{
+        name: string;
+        owner_role: string;
+        scope_kind: string;
+        scope_pattern: string[];
+        contracts_consumed: string[];
+      }>(
+        `SELECT name, owner_role::text AS owner_role, scope_kind::text AS scope_kind,
+                scope_pattern, contracts_consumed
+           FROM territories WHERE project_id = $1`,
+        [ctx.projectId],
+      );
+
+      // Contracts published per territory (joined for owned territories)
+      const { rows: contractRows } = await client.query<{
+        territory_name: string;
+        contract_name: string;
+      }>(
+        `SELECT t.name AS territory_name, c.name AS contract_name
+           FROM contracts c JOIN territories t ON t.id = c.territory_id
+          WHERE c.project_id = $1`,
+        [ctx.projectId],
+      );
+      const publishedByTerritory = new Map<string, string[]>();
+      for (const r of contractRows) {
+        const list = publishedByTerritory.get(r.territory_name) ?? [];
+        list.push(r.contract_name);
+        publishedByTerritory.set(r.territory_name, list);
+      }
+
+      const owned = territoryRows
+        .filter((t) => ctx.discipline !== null && t.owner_role === ctx.discipline)
+        .map((t) => ({
+          name: t.name,
+          scope_kind: t.scope_kind,
+          scope_pattern: t.scope_pattern,
+          contracts_published: Array.from(new Set(publishedByTerritory.get(t.name) ?? [])),
+        }));
+
+      const consumed = territoryRows
+        .filter((t) => (t.contracts_consumed ?? []).length > 0)
+        .map((t) => ({ name: t.name, contracts_consumed: t.contracts_consumed }));
+
+      // Contributions summary (by state, project-scoped)
+      const { rows: stateRows } = await client.query<{ state: string; n: string }>(
+        `SELECT state::text AS state, COUNT(*)::text AS n
+           FROM contributions WHERE project_id = $1 GROUP BY state`,
+        [ctx.projectId],
+      );
+      const byState: Record<string, number> = {};
+      for (const r of stateRows) byState[r.state] = Number(r.n);
+
+      return {
+        charter: { paths: charterPaths, excerpts: null },
+        recent_decisions: {
+          direct: decisionRows.map((d) => ({
+            id: d.id,
+            summary: d.summary,
+            trace_ids: d.trace_ids,
+            timestamp: d.created_at,
+            repo_path: d.repo_commit_sha,
+          })),
+          epic_siblings: [],
+          contribution_linked: [],
+          truncated: { direct: false, epic_siblings: false, contribution_linked: false },
+        },
+        territories: { owned, consumed },
+        contributions_summary: { by_state: byState, active: [], truncated: false },
+        stale_as_of: new Date(),
+      };
+    });
   }
 
   // =======================================================================
@@ -428,9 +625,32 @@ export class AtelierClient {
       const ctx = await loadSessionContext(client, input.sessionId);
       const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
 
-      // Owner-approval path is the only mutation a non-author may perform.
+      // Owner-approval path is the only mutation a non-author may perform
+      // OUTSIDE of plan-review. Plan-review reviewer transitions also
+      // legitimately come from non-authors -- those route through the
+      // plan-review handlers below.
       if (input.ownerApproval === true) {
         return this.applyOwnerApproval(client, ctx, contribution);
+      }
+
+      // Plan-review transitions per ARCH 6.2.1.7 (ADR-039)
+      if (contribution.state === 'claimed' && input.state === 'plan_review') {
+        return this.applyPlanSubmission(client, ctx, contribution, input);
+      }
+      if (contribution.state === 'plan_review' && input.state === 'plan_review') {
+        // Plan revision (author-only)
+        return this.applyPlanResubmission(client, ctx, contribution, input);
+      }
+      if (contribution.state === 'plan_review' && input.state === 'in_progress') {
+        return this.applyPlanApproval(client, ctx, contribution);
+      }
+      if (contribution.state === 'plan_review' && input.state === 'claimed') {
+        return this.applyPlanRejection(client, ctx, contribution, input);
+      }
+      // Reject claimed -> in_progress when territory requires plan_review
+      // (per ARCH 6.2.1.7 activation rule)
+      if (contribution.state === 'claimed' && input.state === 'in_progress') {
+        await assertPlanReviewNotRequired(client, contribution.territory_id, ctx.projectId);
       }
 
       // All other mutations require the calling session to be the author.
@@ -483,12 +703,9 @@ export class AtelierClient {
       params.push(contribution.id);
       const whereId = `$${p}`;
       const sql = `UPDATE contributions SET ${setFragments.join(', ')} WHERE id = ${whereId}
-                   RETURNING state, requires_owner_approval, approved_by_composer_id`;
-      const { rows } = await client.query<{
-        state: ContributionState;
-        requires_owner_approval: boolean;
-        approved_by_composer_id: string | null;
-      }>(sql, params);
+                   RETURNING state, requires_owner_approval, approved_by_composer_id,
+                             plan_review_approved_by_composer_id, plan_review_approved_at`;
+      const { rows } = await client.query<UpdateRow>(sql, params);
 
       const updated = rows[0]!;
 
@@ -506,13 +723,175 @@ export class AtelierClient {
         client,
       });
 
-      return {
-        contributionId: contribution.id,
-        state: updated.state,
-        requiresOwnerApproval: updated.requires_owner_approval,
-        approvedByComposerId: updated.approved_by_composer_id,
-      };
+      return rowToUpdateResult(contribution.id, updated);
     });
+  }
+
+  // =======================================================================
+  // Plan-review transitions (ARCH 6.2.1.7 / ADR-039)
+  // =======================================================================
+
+  private async applyPlanSubmission(
+    client: PoolClient,
+    ctx: SessionContext,
+    contribution: ContributionRow,
+    input: UpdateInput,
+  ): Promise<UpdateResult> {
+    if (contribution.author_session_id !== ctx.sessionId) {
+      throw new AtelierError('FORBIDDEN', 'only the contribution author may submit a plan');
+    }
+    await assertPlanReviewRequired(client, contribution.territory_id, ctx.projectId);
+    if (!input.planPayload || input.planPayload.trim().length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'plan payload required for state=plan_review (ARCH 6.2.1.7)');
+    }
+
+    const setFragments = ['state = \'plan_review\'', 'updated_at = now()'];
+    const params: unknown[] = [];
+    let p = 1;
+    if (input.contentRef !== undefined) {
+      setFragments.push(`content_ref = $${p++}`);
+      params.push(input.contentRef);
+    }
+    params.push(contribution.id);
+    const whereId = `$${p}`;
+    const sql = `UPDATE contributions SET ${setFragments.join(', ')} WHERE id = ${whereId}
+                 RETURNING state, requires_owner_approval, approved_by_composer_id,
+                           plan_review_approved_by_composer_id, plan_review_approved_at`;
+    const { rows } = await client.query<UpdateRow>(sql, params);
+    const updated = rows[0]!;
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.plan_submitted',
+      outcome: 'ok',
+      metadata: {
+        contributionId: contribution.id,
+        planLengthChars: input.planPayload.length,
+      },
+      client,
+    });
+
+    return rowToUpdateResult(contribution.id, updated);
+  }
+
+  private async applyPlanResubmission(
+    client: PoolClient,
+    ctx: SessionContext,
+    contribution: ContributionRow,
+    input: UpdateInput,
+  ): Promise<UpdateResult> {
+    if (contribution.author_session_id !== ctx.sessionId) {
+      throw new AtelierError('FORBIDDEN', 'only the contribution author may revise a plan');
+    }
+    if (!input.planPayload || input.planPayload.trim().length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'plan payload required for plan_review revision');
+    }
+    const setFragments = ['updated_at = now()'];
+    const params: unknown[] = [];
+    let p = 1;
+    if (input.contentRef !== undefined) {
+      setFragments.push(`content_ref = $${p++}`);
+      params.push(input.contentRef);
+    }
+    params.push(contribution.id);
+    const whereId = `$${p}`;
+    const sql = `UPDATE contributions SET ${setFragments.join(', ')} WHERE id = ${whereId}
+                 RETURNING state, requires_owner_approval, approved_by_composer_id,
+                           plan_review_approved_by_composer_id, plan_review_approved_at`;
+    const { rows } = await client.query<UpdateRow>(sql, params);
+    const updated = rows[0]!;
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.plan_resubmitted',
+      outcome: 'ok',
+      metadata: { contributionId: contribution.id, planLengthChars: input.planPayload.length },
+      client,
+    });
+
+    return rowToUpdateResult(contribution.id, updated);
+  }
+
+  private async applyPlanApproval(
+    client: PoolClient,
+    ctx: SessionContext,
+    contribution: ContributionRow,
+  ): Promise<UpdateResult> {
+    if (contribution.author_composer_id === ctx.composerId) {
+      throw new AtelierError('FORBIDDEN', 'authors cannot self-approve their own plan (ARCH 6.2.1.7)');
+    }
+    await assertReviewerDiscipline(client, contribution.territory_id, ctx);
+
+    const { rows } = await client.query<UpdateRow>(
+      `UPDATE contributions
+          SET state = 'in_progress',
+              plan_review_approved_by_composer_id = $1,
+              plan_review_approved_at = now(),
+              updated_at = now()
+        WHERE id = $2
+        RETURNING state, requires_owner_approval, approved_by_composer_id,
+                  plan_review_approved_by_composer_id, plan_review_approved_at`,
+      [ctx.composerId, contribution.id],
+    );
+    const updated = rows[0]!;
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.plan_approved',
+      outcome: 'ok',
+      metadata: { contributionId: contribution.id, reviewerComposerId: ctx.composerId },
+      client,
+    });
+
+    return rowToUpdateResult(contribution.id, updated);
+  }
+
+  private async applyPlanRejection(
+    client: PoolClient,
+    ctx: SessionContext,
+    contribution: ContributionRow,
+    input: UpdateInput,
+  ): Promise<UpdateResult> {
+    if (contribution.author_composer_id === ctx.composerId) {
+      throw new AtelierError('FORBIDDEN', 'authors cannot self-reject their own plan (ARCH 6.2.1.7)');
+    }
+    await assertReviewerDiscipline(client, contribution.territory_id, ctx);
+    if (!input.reason || input.reason.trim().length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'reason required when rejecting a plan (ARCH 6.2.1.7)');
+    }
+
+    const { rows } = await client.query<UpdateRow>(
+      `UPDATE contributions
+          SET state = 'claimed',
+              updated_at = now()
+        WHERE id = $1
+        RETURNING state, requires_owner_approval, approved_by_composer_id,
+                  plan_review_approved_by_composer_id, plan_review_approved_at`,
+      [contribution.id],
+    );
+    const updated = rows[0]!;
+
+    await this.recordTelemetry({
+      projectId: ctx.projectId,
+      composerId: ctx.composerId,
+      sessionId: ctx.sessionId,
+      action: 'contribution.plan_rejected',
+      outcome: 'ok',
+      metadata: {
+        contributionId: contribution.id,
+        reviewerComposerId: ctx.composerId,
+        reason: input.reason,
+      },
+      client,
+    });
+
+    return rowToUpdateResult(contribution.id, updated);
   }
 
   private async applyOwnerApproval(
@@ -530,6 +909,8 @@ export class AtelierClient {
         state: contribution.state,
         requiresOwnerApproval: false,
         approvedByComposerId: contribution.approved_by_composer_id,
+        planReviewApprovedByComposerId: contribution.plan_review_approved_by_composer_id,
+        planReviewApprovedAt: contribution.plan_review_approved_at,
       };
     }
 
@@ -544,18 +925,15 @@ export class AtelierClient {
       throw new AtelierError('FORBIDDEN', `review_role mismatch: territory requires ${requiredRole}, caller is ${ctx.discipline}`);
     }
 
-    const { rows } = await client.query<{
-      state: ContributionState;
-      requires_owner_approval: boolean;
-      approved_by_composer_id: string | null;
-    }>(
+    const { rows } = await client.query<UpdateRow>(
       `UPDATE contributions
           SET requires_owner_approval = false,
               approved_by_composer_id = $1,
               approved_at = now(),
               updated_at = now()
         WHERE id = $2
-        RETURNING state, requires_owner_approval, approved_by_composer_id`,
+        RETURNING state, requires_owner_approval, approved_by_composer_id,
+                  plan_review_approved_by_composer_id, plan_review_approved_at`,
       [ctx.composerId, contribution.id],
     );
     const updated = rows[0]!;
@@ -573,12 +951,7 @@ export class AtelierClient {
       client,
     });
 
-    return {
-      contributionId: contribution.id,
-      state: updated.state,
-      requiresOwnerApproval: updated.requires_owner_approval,
-      approvedByComposerId: updated.approved_by_composer_id,
-    };
+    return rowToUpdateResult(contribution.id, updated);
   }
 
   // =======================================================================
@@ -595,7 +968,11 @@ export class AtelierClient {
           authorSessionId: contribution.author_session_id,
         });
       }
-      if (contribution.state !== 'claimed' && contribution.state !== 'in_progress') {
+      // Per ARCH 6.2.4 release is permitted from claimed, plan_review, or
+      // in_progress. ADR-039 release-from-plan-review preserves the plan
+      // body at content_ref; the columns reset on transition to open.
+      const releasable: ReadonlyArray<ContributionState> = ['claimed', 'plan_review', 'in_progress'];
+      if (!releasable.includes(contribution.state)) {
         throw new AtelierError('BAD_REQUEST', `cannot release from state ${contribution.state}`, {
           currentState: contribution.state,
         });
@@ -604,11 +981,16 @@ export class AtelierClient {
       // Cascade-release locks held against this contribution (ARCH 6.2.4 side effects).
       await client.query(`DELETE FROM locks WHERE contribution_id = $1`, [contribution.id]);
 
+      // Audit M2-entry H3: clear plan_review_approved_* on transition to
+      // state=open so a re-claim does not inherit the prior reviewer's
+      // approval (corrupting the audit trail per ADR-039).
       await client.query(
         `UPDATE contributions
             SET state = 'open',
                 author_session_id = NULL,
                 author_composer_id = NULL,
+                plan_review_approved_by_composer_id = NULL,
+                plan_review_approved_at = NULL,
                 updated_at = now()
           WHERE id = $1`,
         [contribution.id],
@@ -682,8 +1064,8 @@ export class AtelierClient {
       const { rows } = await client.query<{ id: string }>(
         `INSERT INTO locks (
            project_id, holder_composer_id, session_id, contribution_id,
-           artifact_scope, fencing_token, lock_type
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+           artifact_scope, fencing_token
+         ) VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id`,
         [
           ctx.projectId,
@@ -692,7 +1074,6 @@ export class AtelierClient {
           contribution.id,
           input.artifactScope,
           fencingToken,
-          input.lockType ?? 'exclusive',
         ],
       );
       const lockId = rows[0]!.id;
@@ -921,6 +1302,27 @@ interface ContributionRow {
   territory_id: string;
   requires_owner_approval: boolean;
   approved_by_composer_id: string | null;
+  plan_review_approved_by_composer_id: string | null;
+  plan_review_approved_at: Date | null;
+}
+
+interface UpdateRow {
+  state: ContributionState;
+  requires_owner_approval: boolean;
+  approved_by_composer_id: string | null;
+  plan_review_approved_by_composer_id: string | null;
+  plan_review_approved_at: Date | null;
+}
+
+function rowToUpdateResult(contributionId: string, row: UpdateRow): UpdateResult {
+  return {
+    contributionId,
+    state: row.state,
+    requiresOwnerApproval: row.requires_owner_approval,
+    approvedByComposerId: row.approved_by_composer_id,
+    planReviewApprovedByComposerId: row.plan_review_approved_by_composer_id,
+    planReviewApprovedAt: row.plan_review_approved_at,
+  };
 }
 
 const SESSION_COLUMNS = `id, project_id, composer_id, surface, agent_client, status, heartbeat_at, created_at`;
@@ -985,7 +1387,8 @@ async function loadContribution(
 ): Promise<ContributionRow> {
   const { rows } = await client.query<ContributionRow>(
     `SELECT id, project_id, author_composer_id, author_session_id, state, kind,
-            territory_id, requires_owner_approval, approved_by_composer_id
+            territory_id, requires_owner_approval, approved_by_composer_id,
+            plan_review_approved_by_composer_id, plan_review_approved_at
        FROM contributions WHERE id = $1`,
     [contributionId],
   );
@@ -1013,12 +1416,16 @@ function checkAuthoringDiscipline(ctx: SessionContext, territory: TerritoryRow):
 
 function validateStateTransition(
   current: ContributionState,
-  next: 'claimed' | 'in_progress' | 'review' | undefined,
+  next: 'claimed' | 'plan_review' | 'in_progress' | 'review' | undefined,
 ): void {
   if (next === undefined) return;
+  // Plan-review transitions (ADR-039 / ARCH 6.2.1.7) are handled by the
+  // dedicated plan-review handlers in update(); they're listed here for
+  // completeness so the legality table is correct end-to-end.
   const legal: Record<ContributionState, ReadonlyArray<ContributionState>> = {
     open: ['claimed'],
-    claimed: ['in_progress', 'review'],
+    claimed: ['plan_review', 'in_progress', 'review'],
+    plan_review: ['claimed', 'in_progress', 'plan_review'],
     in_progress: ['review'],
     review: [],
     merged: [],
@@ -1026,6 +1433,67 @@ function validateStateTransition(
   };
   if (!legal[current].includes(next)) {
     throw new AtelierError('BAD_REQUEST', `illegal state transition ${current} -> ${next}`);
+  }
+}
+
+async function assertPlanReviewRequired(
+  client: PoolClient,
+  territoryId: string,
+  projectId: string,
+): Promise<void> {
+  const { rows } = await client.query<{ requires_plan_review: boolean }>(
+    `SELECT requires_plan_review FROM territories WHERE id = $1 AND project_id = $2`,
+    [territoryId, projectId],
+  );
+  const row = rows[0];
+  if (!row) throw new AtelierError('INTERNAL', 'territory missing for contribution');
+  if (!row.requires_plan_review) {
+    throw new AtelierError(
+      'BAD_REQUEST',
+      'territory does not require plan_review (ARCH 6.2.1.7); set territories.requires_plan_review=true to opt in',
+    );
+  }
+}
+
+async function assertPlanReviewNotRequired(
+  client: PoolClient,
+  territoryId: string,
+  projectId: string,
+): Promise<void> {
+  const { rows } = await client.query<{ requires_plan_review: boolean }>(
+    `SELECT requires_plan_review FROM territories WHERE id = $1 AND project_id = $2`,
+    [territoryId, projectId],
+  );
+  const row = rows[0];
+  if (!row) return; // territory missing -- defer to other validation paths
+  if (row.requires_plan_review) {
+    throw new AtelierError(
+      'BAD_REQUEST',
+      'territory requires plan_review; transition to plan_review first (ARCH 6.2.1.7)',
+    );
+  }
+}
+
+async function assertReviewerDiscipline(
+  client: PoolClient,
+  territoryId: string,
+  ctx: SessionContext,
+): Promise<void> {
+  const { rows } = await client.query<{ review_role: string | null; owner_role: string }>(
+    `SELECT review_role::text AS review_role, owner_role::text AS owner_role
+       FROM territories WHERE id = $1 AND project_id = $2`,
+    [territoryId, ctx.projectId],
+  );
+  const row = rows[0];
+  if (!row) throw new AtelierError('INTERNAL', 'territory missing for contribution');
+  // Per ADR-025 review_role is nullable; when null, reviewing falls back to
+  // owner_role.
+  const requiredRole = row.review_role ?? row.owner_role;
+  if (ctx.discipline !== requiredRole) {
+    throw new AtelierError(
+      'FORBIDDEN',
+      `review_role mismatch: territory requires ${requiredRole}, caller is ${ctx.discipline ?? '<none>'}`,
+    );
   }
 }
 

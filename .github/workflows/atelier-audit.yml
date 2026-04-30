@@ -13,6 +13,7 @@ name: atelier-audit
 #   - sync-substrate smoke (event bus + 5 scripts + adapter dispatch)
 #   - GitHub-adapter smoke (mocked fetch + delivery_sync_state integration)
 #   - endpoint dispatcher smoke (12-tool surface + plan-review per ADR-039)
+#   - committer smoke (ARCH 7.8 / ADR-023 per-project git committer)
 #   - transport wire smoke (Streamable HTTP MCP + JWKS verifier + RFC 8414)
 #   - round-trip corpus (6 doc classes, M1 exit gate per scripts/README.md)
 #   - round-trip negative-case smoke (harness rejects synthetic drift)
@@ -90,6 +91,9 @@ jobs:
 
       - name: Endpoint dispatcher smoke (12-tool surface + plan-review)
         run: npx tsx scripts/endpoint/__smoke__/endpoint.smoke.ts
+
+      - name: Committer smoke (ARCH 7.8 / ADR-023 per-project committer)
+        run: npx tsx scripts/endpoint/__smoke__/committer.smoke.ts
 
       - name: Transport wire smoke (Streamable HTTP MCP + JWKS + RFC 8414)
         run: npx tsx scripts/endpoint/__smoke__/transport.smoke.ts

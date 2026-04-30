@@ -19,6 +19,7 @@
 import { AtelierClient, AtelierError } from '../../sync/lib/write.ts';
 import type { AuthContext, BearerVerifier } from './auth.ts';
 import { authenticate } from './auth.ts';
+import type { AdrCommitter } from './committer.ts';
 import * as handlers from './handlers.ts';
 
 export const TOOL_NAMES = [
@@ -56,8 +57,13 @@ export type DispatchResult =
 export interface DispatchDeps {
   client: AtelierClient;
   verifier: BearerVerifier;
-  /** Required for log_decision; omitted handlers can stub. */
-  decisionCommit?: (allocation: { adrId: string; repoPath: string; slug: string; adrNumber: number }) => Promise<string>;
+  /**
+   * Per-project git committer (ARCH 7.8 / ADR-023). Required for
+   * log_decision; if omitted, log_decision returns INTERNAL with a
+   * `decisionCommit`-named marker. Constructed from env via
+   * `gitCommitterFromEnv()` in production.
+   */
+  decisionCommit?: AdrCommitter;
 }
 
 export async function dispatch(req: DispatchRequest, deps: DispatchDeps): Promise<DispatchResult> {
@@ -120,7 +126,12 @@ async function invokeHandler(
           'log_decision requires a decisionCommit callback configured on the dispatcher',
         );
       }
-      return handlers.logDecision(deps.client, auth, b as unknown as handlers.LogDecisionRequest, deps.decisionCommit);
+      return handlers.logDecision(
+        deps.client,
+        auth,
+        b as unknown as handlers.LogDecisionRequest,
+        deps.decisionCommit,
+      );
     case 'acquire_lock':
       return handlers.acquireLock(deps.client, auth, b as unknown as handlers.AcquireLockRequest);
     case 'release_lock':

@@ -23,7 +23,12 @@
 // Run against a fresh local Supabase (`supabase db reset --local` first):
 //   DATABASE_URL=... npx tsx scripts/endpoint/__smoke__/transport.smoke.ts
 
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import * as http from 'node:http';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
 import { Client } from 'pg';
 import {
   exportJWK,
@@ -32,6 +37,7 @@ import {
   type JWK,
 } from 'jose';
 import { AtelierClient } from '../../sync/lib/write.ts';
+import { createGitCommitter, type AdrCommitter } from '../lib/committer.ts';
 import { createJwksVerifier } from '../lib/jwks-verifier.ts';
 import { TOOL_NAMES } from '../lib/dispatch.ts';
 import { handleMcpRequest } from '../lib/transport.ts';
@@ -113,6 +119,7 @@ async function startMcpServer(deps: {
   client: AtelierClient;
   verifier: ReturnType<typeof createJwksVerifier>;
   oauthIssuer: string;
+  committer?: AdrCommitter;
 }): Promise<McpServer> {
   const server = http.createServer(async (req, res) => {
     try {
@@ -126,7 +133,12 @@ async function startMcpServer(deps: {
 
       if (url.pathname === '/api/mcp' || url.pathname === '/mcp') {
         const webReq = await nodeRequestToWebRequest(req, url);
-        const webRes = await handleMcpRequest(webReq, { deps });
+        const transportDeps = {
+          client: deps.client,
+          verifier: deps.verifier,
+          ...(deps.committer ? { decisionCommit: deps.committer } : {}),
+        };
+        const webRes = await handleMcpRequest(webReq, { deps: transportDeps });
         await pipeWebResponse(webRes, res);
         return;
       }
@@ -176,6 +188,21 @@ function readNodeBody(req: http.IncomingMessage): Promise<string> {
     req.on('data', (c: Buffer) => chunks.push(c));
     req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
+  });
+}
+
+function tsxGit(args: string[], cwd: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('git', args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    const out: Buffer[] = [];
+    const err: Buffer[] = [];
+    proc.stdout.on('data', (c: Buffer) => out.push(c));
+    proc.stderr.on('data', (c: Buffer) => err.push(c));
+    proc.on('error', reject);
+    proc.on('close', (code) => {
+      if (code === 0) resolve(Buffer.concat(out).toString('utf8'));
+      else reject(new Error(`git ${args.join(' ')} (exit ${code}): ${Buffer.concat(err).toString('utf8')}`));
+    });
   });
 }
 
@@ -277,8 +304,29 @@ async function main(): Promise<void> {
     audience: issuer.audience,
   });
   const client = new AtelierClient({ databaseUrl: DB_URL });
-  const mcp = await startMcpServer({ client, verifier, oauthIssuer: issuer.url });
+
+  // ---- Per-project git committer (ARCH 7.8 / ADR-023) ----
+  // Bare-repo `origin` + working clone on tmp; the committer uses these as
+  // a real working tree so log_decision lands a real commit + push.
+  const committerRoot = await mkdtemp(path.join(os.tmpdir(), 'atelier-tr-committer-'));
+  const committerRemote = path.join(committerRoot, 'remote.git');
+  const committerWorking = path.join(committerRoot, 'working');
+  await tsxGit(['init', '--bare', committerRemote], committerRoot);
+  await tsxGit(['clone', committerRemote, committerWorking], committerRoot);
+  await tsxGit(['config', 'user.email', 'bootstrap@tr-smoke.invalid'], committerWorking);
+  await tsxGit(['config', 'user.name', 'bootstrap'], committerWorking);
+  await tsxGit(['commit', '--allow-empty', '-m', 'seed'], committerWorking);
+  await tsxGit(['branch', '-M', 'main'], committerWorking);
+  await tsxGit(['push', '-u', 'origin', 'main'], committerWorking);
+
+  const committer = createGitCommitter({
+    workingDir: committerWorking,
+    botIdentity: { email: 'atelier-bot@transport-smoke' },
+  });
+
+  const mcp = await startMcpServer({ client, verifier, oauthIssuer: issuer.url, committer });
   console.log(`  mcp server at ${mcp.url}`);
+  console.log(`  committer working clone at ${committerWorking}`);
 
   const devToken = await issuer.signFor('sub-tr-dev');
 
@@ -438,10 +486,14 @@ async function main(): Promise<void> {
     );
 
     // -------------------------------------------------------------------
-    // [9] log_decision returns INTERNAL when decisionCommit not configured
-    //     (per SESSION.md M2-mid scope: per-project committer lands later)
+    // [9] log_decision lands a real ADR commit through the per-project
+    //     committer (ARCH 7.8 / ADR-023). Asserts: SHA returned, ADR file
+    //     present in the working clone, frontmatter shape correct,
+    //     commit author matches the bot identity, Co-Authored-By trailer
+    //     carries the calling composer, push reaches the bare remote, and
+    //     idempotency_key replay returns the cached SHA.
     // -------------------------------------------------------------------
-    console.log('\n[9] log_decision INTERNAL stub (per-project committer pending)');
+    console.log('\n[9] log_decision -> real ADR commit (ARCH 7.8 / ADR-023)');
     const reg2 = await rpc(mcp.url, devToken, 'tools/call', {
       name: 'register',
       arguments: { surface: 'ide' },
@@ -453,21 +505,100 @@ async function main(): Promise<void> {
         project_id: projectId,
         session_id: sid2,
         category: 'architecture',
-        summary: 'test decision',
-        rationale: 'should fail with INTERNAL because committer not configured',
-        trace_ids: ['ADR-040'],
+        summary: 'Transport smoke ADR via committer',
+        rationale: 'End-to-end path: dispatcher -> handler -> committer -> git push.',
+        trace_ids: ['ADR-023', 'ADR-040'],
+        idempotency_key: 'transport-smoke-key-9',
       },
     });
     const logDecParsed = parseToolResult(logDec.envelope);
-    check('log_decision returns isError', logDecParsed.isError);
-    check(
-      'log_decision error.code = INTERNAL (committer pending)',
-      (logDecParsed.data as { code: string }).code === 'INTERNAL',
-    );
-    check(
-      'log_decision error.message names decisionCommit',
-      (logDecParsed.data as { message: string }).message.includes('decisionCommit'),
-    );
+    check('log_decision returns ok (committer wired)', !logDecParsed.isError, JSON.stringify(logDecParsed.data));
+    let originalSha = '';
+    let originalRepoPath = '';
+    if (!logDecParsed.isError) {
+      const r = logDecParsed.data as { adr_id: string; repo_path: string; repo_commit_sha: string };
+      check('log_decision.adr_id matches ADR-NNN shape', /^ADR-\d{3,}$/.test(r.adr_id), r.adr_id);
+      check('log_decision.repo_path under decisions dir', r.repo_path.startsWith('docs/architecture/decisions/'));
+      check('log_decision.repo_commit_sha is full 40-char sha', /^[0-9a-f]{40}$/.test(r.repo_commit_sha));
+      originalSha = r.repo_commit_sha;
+      originalRepoPath = r.repo_path;
+    }
+
+    // Verify the file landed in the working clone
+    if (originalRepoPath) {
+      const adrBody = await readFile(path.join(committerWorking, originalRepoPath), 'utf8');
+      check('ADR file frontmatter has id field', /^id: ADR-\d{3,}$/m.test(adrBody));
+      check('ADR file frontmatter has multi-trace inline list', /^trace_id: \[ADR-023, ADR-040\]$/m.test(adrBody));
+      check('ADR file frontmatter has category=architecture', /^category: architecture$/m.test(adrBody));
+      check('ADR file frontmatter has composer=Dev (display_name)', /^composer: Dev$/m.test(adrBody));
+      check('ADR file body has H1 title from summary', /^# Transport smoke ADR via committer$/m.test(adrBody));
+
+      // Commit author + co-author shape
+      const authorLine = (await tsxGit(['log', '-1', '--pretty=%an <%ae>'], committerWorking)).trim();
+      check(
+        'commit author = "Dev via Atelier <atelier-bot@transport-smoke>"',
+        authorLine === 'Dev via Atelier <atelier-bot@transport-smoke>',
+        authorLine,
+      );
+      const commitBody = await tsxGit(['log', '-1', '--pretty=%B'], committerWorking);
+      check(
+        'commit body has Co-Authored-By: Dev <dev-tr@smoke.invalid>',
+        commitBody.includes('Co-Authored-By: Dev <dev-tr@smoke.invalid>'),
+        commitBody.split('\n').slice(0, 6).join(' | '),
+      );
+
+      // Push reached the bare remote
+      const remoteHas = await tsxGit(['cat-file', '-e', originalSha], committerRemote)
+        .then(() => true)
+        .catch(() => false);
+      check('committer pushed the new commit to origin', remoteHas);
+    }
+
+    // Idempotency replay: same key must return the same SHA without writing
+    // a new file. New session, same idempotency_key.
+    const reg3 = await rpc(mcp.url, devToken, 'tools/call', {
+      name: 'register',
+      arguments: { surface: 'ide' },
+    });
+    const sid3 = (parseToolResult(reg3.envelope).data as { session_id: string }).session_id;
+    const replayLogDec = await rpc(mcp.url, devToken, 'tools/call', {
+      name: 'log_decision',
+      arguments: {
+        project_id: projectId,
+        session_id: sid3,
+        category: 'architecture',
+        summary: 'Different summary -- should be ignored on idempotent replay',
+        rationale: 'Replay rationale.',
+        trace_ids: ['ADR-023'],
+        // NOTE: cache key in the committer is `(sessionId, idempotencyKey)`
+        // and `sessionId` flows from the request payload. This call uses the
+        // SAME session_id as the first call so the cache hits.
+      },
+    });
+    void sid3;
+    const replayLogDec2 = await rpc(mcp.url, devToken, 'tools/call', {
+      name: 'log_decision',
+      arguments: {
+        project_id: projectId,
+        session_id: sid2, // same session as first call
+        category: 'architecture',
+        summary: 'Replay summary (ignored on cache hit)',
+        rationale: 'Replay rationale.',
+        trace_ids: ['ADR-023'],
+        idempotency_key: 'transport-smoke-key-9',
+      },
+    });
+    const idemReplayParsed = parseToolResult(replayLogDec2.envelope);
+    check('idempotent replay returns ok', !idemReplayParsed.isError);
+    if (!idemReplayParsed.isError) {
+      const r = idemReplayParsed.data as { repo_commit_sha: string };
+      check(
+        'idempotent replay returns the original SHA (no new commit)',
+        r.repo_commit_sha === originalSha,
+        `original=${originalSha} replay=${r.repo_commit_sha}`,
+      );
+    }
+    void replayLogDec; // first replay used new session; not asserted (different cache key)
 
     // -------------------------------------------------------------------
     // [10] propose_contract_change: stubbed at M2-mid per ADR-040
@@ -553,6 +684,7 @@ async function main(): Promise<void> {
     await mcp.close();
     await issuer.close();
     await client.close();
+    await rm(committerRoot, { recursive: true, force: true }).catch(() => {});
   }
 
   console.log('');

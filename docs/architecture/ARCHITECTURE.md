@@ -201,6 +201,7 @@ territories
   review_role                                                          -- ADR-025 (review-routing key); nullable when same as owner_role
   scope_kind (files | doc_region | research_artifact | design_component | slice_config)
   scope_pattern
+  requires_plan_review (bool, default false)                           -- ADR-039: when true, contributions in this territory must transition through state=plan_review before in_progress; opt-in per territory (default off keeps simple-territory workflows unaffected)
   created_at
 
 contributions
@@ -211,13 +212,15 @@ contributions
   trace_ids (text[], CHECK cardinality(trace_ids) > 0)                 -- ADR-021; non-empty enforced at DB level
   territory_id (fk)
   artifact_scope (text[], interpreted per territory.scope_kind)
-  state (open | claimed | in_progress | review | merged | rejected)    -- ADR-034 (blocked moved to blocked_by)
+  state (open | claimed | plan_review | in_progress | review | merged | rejected)    -- ADR-034 (blocked moved to blocked_by); ADR-039 (plan_review added; per-territory opt-in)
   kind (implementation | research | design)                             -- ADR-033 (proposal + decision dropped)
   requires_owner_approval (bool, default false)                         -- ADR-033 (set when author role != territory owner_role; gates merge per ARCH 7.5)
   blocked_by (fk to contributions, nullable)                            -- ADR-034 (non-null implies blocked, regardless of state)
   blocked_reason (text, nullable)                                       -- ADR-034 (optional human-readable, e.g., "waiting on auth contract")
   approved_by_composer_id (fk to composers, nullable)                   -- audit G2: set when an authorized reviewer clears requires_owner_approval via update(owner_approval=true) per ARCH 6.2.2; null otherwise
   approved_at (timestamp, nullable)                                     -- audit G2: timestamp of approval recording; null when requires_owner_approval has not been cleared
+  plan_review_approved_by_composer_id (fk to composers, nullable)       -- ADR-039: immortal identity of the plan-reviewer; populated only when state transitioned out of plan_review via approval (not on plan_review->claimed rejection)
+  plan_review_approved_at (timestamp, nullable)                         -- ADR-039: timestamp of plan approval; null when plan_review was never engaged or was rejected
   content_ref (path or URL)
   transcript_ref (text, nullable, CHECK matches path-or-url pattern)    -- ADR-024 + audit F8 (repo path under transcripts/** OR fully-qualified URL)
   fencing_token (bigint, nullable)
@@ -410,6 +413,14 @@ Create paths (per ADR-022):
       Agent → claim(null, kind, trace_ids, territory_id, optional content_stub)
         Endpoint inserts (state=open) and transitions to claimed in one transaction
    In both paths the endpoint runs find_similar on the new claim → warns if match
+Optional plan-review gate (per ADR-039; activates iff territory.requires_plan_review=true):
+   Agent → update(contribution_id, state=plan_review, payload=<plan markdown>)
+     state=claimed → state=plan_review; no fencing token required (plan IS the working content at this state)
+   Reviewer (territory.review_role; not the author) → update(contribution_id, state=in_progress)
+     state=plan_review → state=in_progress; populates plan_review_approved_by_composer_id + plan_review_approved_at
+   Reviewer rejects: update(contribution_id, state=claimed, reason=<text>)
+     state=plan_review → state=claimed; agent revises and re-submits, or releases
+   When territory.requires_plan_review=false (default), this gate is skipped entirely; lifecycle proceeds claimed → in_progress as before. See section 6.2.1.7 for full semantics.
 Acquire lock: Agent → acquire_lock(artifact_scope) → returns fencing_token
 Write: Agent writes to artifact (file, doc region, etc.) passing fencing_token
    For remote-surface composers, the endpoint commits on their behalf — see §7.8 (ADR-023)
@@ -505,6 +516,87 @@ claim(
 
 **Created flag.** `ClaimResponse.created` is `false` for the pre-existing path, distinguishing it from atomic-create.
 
+#### 6.2.1.7 Plan-review gate (per ADR-039; per-territory opt-in)
+
+When the contribution's territory has `requires_plan_review=true`, the lifecycle inserts a `plan_review` state between `claimed` and `in_progress`. When the territory has `requires_plan_review=false` (the default), this section does not apply and the lifecycle proceeds claimed -> in_progress as before.
+
+**Activation rule.** The endpoint reads `territories.requires_plan_review` for the contribution's `territory_id` at the moment of any `update(state=...)` call. If the territory requires plan-review:
+- `update(state="in_progress")` from `state=claimed` is REJECTED with `BAD_REQUEST` ("territory requires plan_review; transition to plan_review first"). The agent must transition to plan_review before in_progress.
+- `update(state="plan_review", payload=<plan markdown>)` from `state=claimed` is the legal path forward.
+
+If the territory does not require plan-review, calls to `update(state="plan_review", ...)` are REJECTED with `BAD_REQUEST` ("territory does not require plan_review"). Plan-review is opt-in; territories that haven't enabled it cannot be targeted for plan-review writes (prevents accidental scope creep).
+
+**Author transitions into plan_review.**
+
+```
+update(
+  contribution_id:   uuid,
+  state:             "plan_review",
+  payload:           string,                                  // required; the plan markdown body
+  content_ref:       string,                                  // required on first plan_review entry; e.g., "<contribution>/plan.md"
+  fencing_token:     null                                     // not required at plan_review (no artifact-body lock applies; see "Lock semantics" below)
+) -> UpdateResponse
+```
+
+Validation:
+1. Contribution is in `state=claimed`.
+2. Calling session's composer is the `author_composer_id` of the contribution (only the author may submit a plan).
+3. Territory has `requires_plan_review=true`.
+4. `payload` is non-empty (no zero-length plans).
+
+On success, the contribution row updates: `state=plan_review`, `content_ref` set (if first entry), the plan body is stored at `content_ref`. Telemetry: `contribution.plan_submitted` recorded with `plan_length_chars` in metadata.
+
+**Plan-revision path.** If the agent wants to revise a submitted plan before review (e.g., realized something missing), `update(state="plan_review", payload=<revised plan>)` from `state=plan_review` is permitted only by the author. The plan body at `content_ref` is overwritten. Telemetry: `contribution.plan_resubmitted`. This avoids forcing the author through claimed -> plan_review for trivial in-flight edits.
+
+**Reviewer transitions out of plan_review (approval).**
+
+```
+update(
+  contribution_id:   uuid,
+  state:             "in_progress"
+) -> UpdateResponse
+```
+
+Validation:
+1. Contribution is in `state=plan_review`.
+2. Calling session's composer holds `discipline = territory.review_role` (the same role-check used for the existing review state per ADR-025).
+3. Calling session's composer is NOT the contribution's `author_composer_id` (self-approval blocked, same as the audit-G2 owner-approval rule).
+
+On success: `state=in_progress`, `plan_review_approved_by_composer_id` set to the reviewer's composer_id, `plan_review_approved_at = now()`. Telemetry: `contribution.plan_approved` recorded with `reviewer_composer_id` in metadata.
+
+**Reviewer transitions out of plan_review (rejection).**
+
+```
+update(
+  contribution_id:   uuid,
+  state:             "claimed",
+  reason:            string                                   // required when transitioning plan_review -> claimed; surfaces in /atelier and in telemetry
+) -> UpdateResponse
+```
+
+Validation: same as approval (reviewer composer in territory.review_role; not the author). The `reason` field is required so the author has actionable feedback and the audit trail captures why the plan was rejected.
+
+On success: `state=claimed`, `plan_review_approved_by_composer_id` and `plan_review_approved_at` remain NULL (never set on a rejected plan). The agent can revise and re-submit by transitioning to plan_review again. Telemetry: `contribution.plan_rejected` with `reviewer_composer_id` and `reason` in metadata.
+
+**Lock semantics.** No lock is required at `plan_review`. The plan markdown is a document that the author writes once (or revises in-place) and the reviewer reads; there is no concurrent-write conflict surface to fence against. Two agents cannot be simultaneously in plan_review for the same contribution because the contribution is single-claimed via `author_session_id` from the prior claim transition. Locks remain required at `in_progress` per ARCH section 7.4 -- the existing `acquire_lock` flow happens after plan-approval transitions the contribution to `in_progress`.
+
+**Release behavior at plan_review.** `release(contribution_id)` from `state=plan_review` is permitted only by the author (same author-only rule as release from any other state). On release:
+- `state -> open`, `author_session_id -> null`, `author_composer_id -> null` (per existing release semantics).
+- The plan body at `content_ref` is preserved as a repo artifact -- it is not deleted. A subsequent claimer of the now-open contribution could read the prior plan as context, though they are not bound by it (the new claim path resets `state=open` and erases `plan_review_approved_*` columns).
+- Telemetry: standard `contribution.released` event; the `metadata` payload includes `prior_state=plan_review` so the abandoned-at-plan pattern is observable.
+
+**Auditability shape.** An auditor reading the canonical state for a contribution that passed through plan_review sees:
+- `plan_review_approved_by_composer_id` -- who approved
+- `plan_review_approved_at` -- when they approved
+- The plan body at `content_ref` (preserved via the standard content-ref mechanism)
+- The telemetry trail: `contribution.plan_submitted` -> `contribution.plan_approved` (or `_rejected`) -> `contribution.updated` -> `contribution.released` or final state
+
+This is the load-bearing primitive that justifies the structural addition over a convention-based alternative: the audit trail lives in canonical state, queryable via RLS, telemetry-visible, and survives session reaping per ADR-036.
+
+**Configuration.** Adding `requires_plan_review: true` to a territory in `.atelier/territories.yaml` is a deliberate signal that the territory's work warrants the alignment-touchpoint cost. The repo's own territories.yaml does NOT enable plan_review on any territory at v1 ship -- this is a per-deployment opt-in decision. Reasonable defaults for teams that opt in: enable on territories with `owner_role` in (architect, designer) where work tends to be high-stakes and irreversible.
+
+**Find_similar interaction.** The implicit find_similar gate per section 6.2.1 fires at claim time, before plan_review. The plan body is not re-embedded as a separate find_similar surface at v1 -- only contributions, decisions, and BRD/PRD sections are corpus-eligible per ADR-006. Plan re-embedding can be a v1.x feature if reviewers signal demand for "is anyone else proposing this plan shape?" surfacing.
+
 #### 6.2.2 Update operation semantics
 
 `update` is the tool that advances a contribution from `claimed` through `in_progress` to `review`, and is the write-path for artifact content. Latent details from ARCH 6.2's high-level lifecycle:
@@ -514,7 +606,7 @@ claim(
 ```
 update(
   contribution_id:    uuid,                                   // required
-  state:              "claimed" | "in_progress" | "review" | null,   // optional; null means no state change; per ADR-034 blocked is no longer a state value
+  state:              "claimed" | "plan_review" | "in_progress" | "review" | null,   // optional; null means no state change; per ADR-034 blocked is no longer a state value; plan_review per ADR-039 (per-territory opt-in; see section 6.2.1.7)
   content_ref:        string | null,                          // optional; sets the artifact path on first call
   payload:            string | null,                          // optional; the artifact body
   payload_format:     "full" | "patch",                       // optional; defaults to "full"

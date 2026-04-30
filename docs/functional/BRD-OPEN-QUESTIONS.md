@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-28 (section 24 resolved during M1 step 4.iii implementation; sections 3, 7, 19, 21, 22, 23 are the genuinely-open list)
+**Last updated:** 2026-04-30 (section 19 resolved as ADR-039 prior to M2 entry per the architect-of-record strategic call; sections 3, 7, 21, 22, 23 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Six entries remain genuinely open. Sections 3 and 7 require benchmark data; section 19 requires a strategic call on adding a new contribution-lifecycle state; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. None blocks M1; section 19 wants resolution before M2 contribution-lifecycle endpoint work; sections 21-23 want resolution before M5/M6.
+Five entries remain genuinely open. Sections 3 and 7 require benchmark data; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. Section 19 (plan-review checkpoint) was resolved 2026-04-30 as ADR-039 -- accepted into v1 as a per-territory opt-in (default off) lifecycle gate -- prior to M2 entry per the architect-of-record strategic call; per ADR-011 (destination-first), defer-to-v1.x was rejected as the "Phase 2 / coming soon" pattern.
 
 ### 3 · Embedding-model default + swappability for find_similar
 
@@ -48,29 +48,9 @@ Six entries remain genuinely open. Sections 3 and 7 require benchmark data; sect
 
 ### 19 - Plan-review checkpoint between claim and implementation
 
-**Scenario.** A composer (or their agent) atomic-creates and claims a contribution per ARCH 6.2.1. Today the contribution lifecycle goes `open -> claimed -> in_progress -> review -> merged`. There is no checkpoint where a human edits the agent's intent before implementation begins. Implementation may take minutes; the only alignment touchpoint is PR review at the end, when the work is already done.
+Accepted into v1 as a per-territory opt-in (default off) lifecycle gate. `contributions.state` enum gains `plan_review`; `territories.yaml` gains `requires_plan_review: bool` field. New ARCH section 6.2.1.7 specifies semantics.
 
-This pattern was surfaced by the 2026-04-28 strategy addendum (`../strategic/addenda/2026-04-28-multi-agent-coordination-landscape.md`) drawing on:
-- Maggie Appleton's talk -- "alignment touchpoints have collapsed; PR holds all the coordination weight"
-- ACE -- multiplayer sessions where teams collaboratively edit agent-generated plans before code is written
-- SpecLang -- spec-as-source pattern
-- Copilot Workspace -- plan-then-implement workflow
-
-Three independent projects converge on the same pattern: agent generates plan -> team edits collaboratively -> code follows.
-
-**Open questions:**
-- Should Atelier add a `plan_review` state between `claimed` and `in_progress`?
-- If yes, opt-in per territory (so simple work is not slowed) or default-on?
-- What's the plan format -- free-form markdown? Structured (intent / approach / files-touched / risks)?
-- Who approves -- the territory's `review_role`, or a different reviewer (the contribution requester, the cross-territory consumer)?
-- What's the agent's behavior when the plan is rejected? Revise and re-submit, or release?
-- Does plan_review require its own `acquire_lock` (agent grabs files mentioned in the plan), or are locks deferred to in_progress?
-
-**Recommendation.** Add an opt-in `plan_review` state, gated per-territory via `territories.yaml: requires_plan_review: true` (default false to keep simple work fast). The agent calls `update(state="plan_review", payload=<plan markdown>, fencing_token=<from acquire_lock if files known>)`. The territory's `review_role` approves via `update(state="in_progress")` (with same author_session_id semantics as the original claim, i.e., only the original author can transition). On rejection, the contribution returns to `state=claimed` with the reviewer's comments stored in the contribution's content_ref or transcript_ref. Plan format is free-form markdown at v1; structured templates can be added per-territory at v1.x as a config knob.
-
-This addresses the "should we build it" alignment bottleneck at the right point -- before code, not at PR. Per-territory opt-in means territories with established patterns (e.g., trivial config edits) don't pay the latency cost; territories with high-stakes work (e.g., architecture changes, design tokens) do.
-
-**Status.** OPEN. Wants resolution before M2 contribution-lifecycle endpoint work lands. If accepted, becomes an ADR + ARCH addition (likely a new section 6.2.1.7 between 6.2.1.5 pre-existing claim path and 6.2.2 update operation semantics). If rejected, document the rejection rationale (e.g., "plan-as-checkpoint adds latency disproportionate to alignment value at Atelier's target team scale") and revisit if v1 deployment surfaces the gap.
+**Status.** RESOLVED 2026-04-30. See [ADR-039](../architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md). Resolved prior to M2 entry per the architect-of-record strategic call. The defer-to-v1.x option was rejected as the "Phase 2 / coming soon" pattern that ADR-011 (destination-first design) prohibits; the AI-speed pivot's commitment to addressing human-latency-as-bottleneck plus Atelier's regulated-team intent-vs-execution audit-trail value made acceptance the right binary call.
 
 ---
 

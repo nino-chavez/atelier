@@ -15,8 +15,11 @@
 // propose_contract_change wires through write.ts after the contracts-
 // publish helper lands).
 
+import type { Pool } from 'pg';
+
 import { AtelierClient, AtelierError } from '../../sync/lib/write.ts';
 import type { AuthContext } from './auth.ts';
+import type { AdrCommitter, ComposerIdentity } from './committer.ts';
 
 // =========================================================================
 // Tool: register (ARCH 6.1)
@@ -251,15 +254,33 @@ export interface LogDecisionRequest {
   trace_ids: string[];
   reverses?: string | null;
   triggered_by_contribution_id?: string | null;
+  /**
+   * Optional. When set, the committer caches `(session_id, idempotency_key)`
+   * -> sha for 1 hour per ARCH 6.3.1; same key in window returns the cached
+   * SHA without re-writing the ADR.
+   */
+  idempotency_key?: string | null;
+}
+
+export interface LogDecisionResponse {
+  decision_id: string;
+  adr_id: string;
+  repo_path: string;
+  repo_commit_sha: string;
 }
 
 export async function logDecision(
   client: AtelierClient,
   auth: AuthContext,
   req: LogDecisionRequest,
-  commit: (allocation: { adrId: string; repoPath: string; slug: string; adrNumber: number }) => Promise<string>,
-) {
-  return client.logDecision(
+  committer: AdrCommitter,
+): Promise<LogDecisionResponse> {
+  // ARCH 7.8 attribution requires the composer's display_name + email so
+  // the bridge closure can build the Co-Authored-By trailer. Fetched once
+  // per call against the AtelierClient's pool.
+  const composer = await loadComposerIdentity(client, auth.composerId);
+
+  const result = await client.logDecision(
     {
       projectId: req.project_id,
       authorComposerId: auth.composerId,
@@ -271,8 +292,47 @@ export async function logDecision(
       reverses: req.reverses ?? null,
       triggeredByContributionId: req.triggered_by_contribution_id ?? null,
     },
-    commit,
+    async (allocation) =>
+      committer.commit({
+        allocation,
+        category: req.category,
+        summary: req.summary,
+        rationale: req.rationale,
+        traceIds: req.trace_ids,
+        reverses: req.reverses ?? null,
+        triggeredByContributionId: req.triggered_by_contribution_id ?? null,
+        composer,
+        sessionId: req.session_id ?? null,
+        projectId: req.project_id,
+        idempotencyKey: req.idempotency_key ?? null,
+      }),
   );
+  // ARCH 6.3.1 wire shape is snake_case to match the other 11 tools; project
+  // from write.ts's camelCase result.
+  return {
+    decision_id: result.decisionId,
+    adr_id: result.adrId,
+    repo_path: result.repoPath,
+    repo_commit_sha: result.repoCommitSha,
+  };
+}
+
+async function loadComposerIdentity(
+  client: AtelierClient,
+  composerId: string,
+): Promise<ComposerIdentity> {
+  // AtelierClient does not expose a getComposer() method; reach the pool
+  // via the same typed escape hatch that dispatch.ts uses for authenticate().
+  const pool = (client as unknown as { pool: Pool }).pool;
+  const { rows } = await pool.query<{ display_name: string; email: string }>(
+    `SELECT display_name, email FROM composers WHERE id = $1`,
+    [composerId],
+  );
+  const row = rows[0];
+  if (!row) {
+    throw new AtelierError('INTERNAL', `composer ${composerId} not found for log_decision attribution`);
+  }
+  return { composerId, displayName: row.display_name, email: row.email };
 }
 
 // =========================================================================

@@ -11,6 +11,7 @@
 // Edge.
 
 import { AtelierClient } from '../../../../../scripts/sync/lib/write.ts';
+import { gitCommitterFromEnv } from '../../../../../scripts/endpoint/lib/committer.ts';
 import { jwksVerifierFromEnv } from '../../../../../scripts/endpoint/lib/jwks-verifier.ts';
 import { handleMcpRequest } from '../../../../../scripts/endpoint/lib/transport.ts';
 
@@ -41,16 +42,25 @@ function getVerifier() {
   return cachedVerifier;
 }
 
+let cachedCommitter: ReturnType<typeof gitCommitterFromEnv> | null = null;
+function getCommitter() {
+  if (cachedCommitter !== null) return cachedCommitter;
+  cachedCommitter = gitCommitterFromEnv();
+  return cachedCommitter;
+}
+
 export async function POST(request: Request): Promise<Response> {
-  // decisionCommit is omitted at M2-mid per .atelier/checkpoints/SESSION.md
-  // section "M2 follow-ups not blocking exit" item 1: the per-project git
-  // committer (ARCH 7.8 / ADR-023) lands later in M2-mid. Until then,
-  // log_decision returns INTERNAL with the documented marker so callers
-  // observe the gap explicitly.
+  // ARCH 7.8 / ADR-023: per-project git committer wires into the
+  // dispatcher's `decisionCommit` slot. Configured via env vars consumed by
+  // gitCommitterFromEnv(); when unset (e.g., during local dev without a
+  // working clone) committer is null and log_decision returns INTERNAL with
+  // the documented marker so callers observe the gap explicitly.
+  const committer = getCommitter();
   return handleMcpRequest(request, {
     deps: {
       client: getClient(),
       verifier: getVerifier(),
+      ...(committer !== null ? { decisionCommit: committer } : {}),
     },
   });
 }

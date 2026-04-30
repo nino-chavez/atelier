@@ -8,10 +8,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "smoke:endpoint": "tsx scripts/endpoint/__smoke__/endpoint.smoke.ts",
+    "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
+    "jose": "^5.9.6",
     "pg": "^8.13.1",
     "yaml": "^2.8.3"
   },

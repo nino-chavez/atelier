@@ -1,17 +1,19 @@
 name: atelier-audit
 
 # Per scripts/README.md "CI gate: runs on every PR; blocks merge if any
-# canonical doc fails round-trip." Wires the M1 test suites + the round-trip
-# integrity test + the traceability validator as PR gates against an
-# ephemeral local Supabase.
+# canonical doc fails round-trip." Wires the M1 + M2-substrate test suites
+# + the round-trip integrity test + the traceability validator as PR gates
+# against an ephemeral local Supabase.
 #
 # Gates (any failure blocks merge):
 #   - typecheck
-#   - schema migrations apply cleanly
+#   - schema migrations apply cleanly (M1 + M2 entry)
 #   - schema-invariants smoke (ADR-005, RLS, ADR-036, fencing, ADR-035)
 #   - write-library smoke (ARCH 6.x mutation contracts)
 #   - sync-substrate smoke (event bus + 5 scripts + adapter dispatch)
 #   - GitHub-adapter smoke (mocked fetch + delivery_sync_state integration)
+#   - endpoint dispatcher smoke (12-tool surface + plan-review per ADR-039)
+#   - transport wire smoke (Streamable HTTP MCP + JWKS verifier + RFC 8414)
 #   - round-trip corpus (6 doc classes, M1 exit gate per scripts/README.md)
 #   - round-trip negative-case smoke (harness rejects synthetic drift)
 #   - traceability validator (--diff mode, scoped to PR-changed files; full
@@ -38,7 +40,7 @@ concurrency:
 
 jobs:
   audit:
-    name: M1 audit gate
+    name: M1 + M2 substrate audit gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -85,6 +87,12 @@ jobs:
 
       - name: GitHub-adapter smoke (mocked fetch + delivery_sync_state)
         run: npx tsx scripts/sync/__smoke__/github.smoke.ts
+
+      - name: Endpoint dispatcher smoke (12-tool surface + plan-review)
+        run: npx tsx scripts/endpoint/__smoke__/endpoint.smoke.ts
+
+      - name: Transport wire smoke (Streamable HTTP MCP + JWKS + RFC 8414)
+        run: npx tsx scripts/endpoint/__smoke__/transport.smoke.ts
 
       - name: Round-trip corpus (M1 exit gate; 6 doc classes)
         run: npx tsx scripts/test/roundtrip.ts

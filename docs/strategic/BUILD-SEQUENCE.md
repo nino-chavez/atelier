@@ -52,7 +52,7 @@ This is also the strongest disconfirming test available before public release. A
 | ID | Title | Bootstrap function | Status |
 |---|---|---|---|
 | **M0** | Methodology | Repo + git + markdown is the starting substrate | **Done** (2026-04-24) |
-| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) + adapter interface + GitHub adapter | Sync scripts run against real persistence; dogfooding ignition point | Planned |
+| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) + adapter interface + GitHub adapter | Sync scripts run against real persistence; dogfooding ignition point | **Done** (2026-04-29; see `../architecture/audits/milestone-M1-exit.md`) |
 | **M1.5** | Remaining external adapters (Jira, Linear, Confluence, Notion, Figma) | Full v1 adapter coverage; sequenced after M1 to avoid blocking dogfooding ignition | Planned |
 | **M2** | 12-tool endpoint + fenced locks + remaining schema (5 tables) | Coordination substrate goes live; agents coordinate through the endpoint | Planned |
 | **M3** | Prototype shell + `/atelier` + 5 lenses | The dashboard you build is the dashboard you use | Planned |
@@ -87,7 +87,7 @@ This is also the strongest disconfirming test available before public release. A
 
 ### M1 — SDLC sync substrate + thin schema
 
-**Status:** Planned
+**Status:** Done (2026-04-29). Audit: `../architecture/audits/milestone-M1-exit.md`. M1 implementation completed across 8 commits 2026-04-28 to 2026-04-29 (`0a283b2..0f9b8c4`). 170 test assertions across 6 smoke suites + 43 canonical files round-trip clean. One HIGH M2-entry follow-up filed (build-registry script for traceability.json entries[]).
 
 **Produces.** All five sync scripts per ADR-008: `publish-docs` (repo → published-doc system, full overwrite + banner), `publish-delivery` (contribution state → delivery tracker), `mirror-delivery` (delivery tracker → registry, nightly), `reconcile` (bidirectional drift detector, reports only), `triage` (external comments → contributions with `kind=<discipline>` + `requires_owner_approval=true` per ADR-033, never auto-merges).
 

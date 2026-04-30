@@ -1,6 +1,6 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-04-28T00:00:00Z",
+  "generated_at": "2026-04-29T00:00:00Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",

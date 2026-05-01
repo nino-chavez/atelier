@@ -7,11 +7,11 @@
   "counts": {
     "brd-epics": 16,
     "brd-stories": 105,
-    "decisions": 43,
-    "open-questions": 25,
+    "decisions": 46,
+    "open-questions": 28,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 41
+    "adrs": 44
   },
   "entries": [
     {
@@ -1434,6 +1434,39 @@
       "status": "DECIDED"
     },
     {
+      "id": "D44",
+      "label": "find_similar adopts hybrid retrieval (vector + BM25 via RRF) with calibrated thresholds",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-042",
+      "source": "m5-entry-calibration-2026-05-01",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D45",
+      "label": "find_similar gate split into advisory (v1 default) and blocking (v1.x opt-in) tiers",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-043-find-similar-gate-split-into-advisory-and-blocking-tiers.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-043",
+      "source": "m5-entry-calibration-2026-05-01",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D46",
+      "label": "Bootstrap inflection at M5-exit; build sessions are MCP clients of the substrate; local-stack scope; deploy deferred to network-access trigger",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-044-bootstrap-inflection-at-m5-exit-local-stack-scope.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-044",
+      "source": "m5-exit-bootstrap-strategic-call-2026-05-01",
+      "status": "DECIDED"
+    },
+    {
       "id": "BRD-OPEN-QUESTIONS:section-1",
       "label": "Territory-model validation on the analyst case",
       "kind": "open-question",
@@ -1656,6 +1689,33 @@
       "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
       "docUrl": "#25-cross-dimension-embedding-model-swap-migration-path",
       "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-26",
+      "label": "Seed-author bias in the M5-entry find_similar eval",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#26-seed-author-bias-in-the-m5-entry-find_similar-eval",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-27",
+      "label": "Cross-encoder reranker as a v1.x option for the blocking tier",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#27-cross-encoder-reranker-as-a-v1x-option-for-the-blocking-tier",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-28",
+      "label": "Deploy trigger conditions for the Atelier endpoint",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#28-deploy-trigger-conditions-for-the-atelier-endpoint",
+      "prototypePages": [],
       "status": "OPEN"
     }
   ],
@@ -1863,6 +1923,21 @@
     {
       "from": "ADR-041",
       "to": "BRD:Epic-6",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-042",
+      "to": "BRD:Epic-6",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-043",
+      "to": "BRD:Epic-6",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-044",
+      "to": "BRD:Epic-1",
       "rel": "implements"
     }
   ]

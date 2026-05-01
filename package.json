@@ -13,6 +13,7 @@
     "smoke:committer": "tsx scripts/endpoint/__smoke__/committer.smoke.ts",
     "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts",
     "smoke:real-client": "tsx scripts/endpoint/__smoke__/real-client.smoke.ts",
+    "smoke:broadcast": "tsx scripts/coordination/__smoke__/broadcast.smoke.ts",
     "smoke:lens": "tsx prototype/__smoke__/lens.smoke.ts"
   },
   "dependencies": {

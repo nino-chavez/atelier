@@ -1,6 +1,8 @@
 // Presence — active composers in the project (heartbeat <15min).
-// Per ARCH 6.8 session.presence_changed event surface; M3 polls; M4
-// upgrades to the live broadcast.
+// Per ARCH 6.8 session.presence_changed event surface. The live-update
+// surface lands at M4 via the LiveUpdater island in the lens shell:
+// session.presence_changed events trigger router.refresh(), which
+// re-runs this server component against the latest sessions table.
 
 import type { PresenceEntry } from '../../../../lib/atelier/lens-data.ts';
 import styles from './Panel.module.css';
@@ -44,7 +46,8 @@ export default function PresencePanel({
         </ul>
       )}
       <div className={styles.affordance}>
-        Live updates land at M4 with the broadcast substrate; this view polls.
+        Live updates via the broadcast substrate (ADR-016 / ARCH 6.8);
+        session.presence_changed events trigger refresh within ~2s.
       </div>
     </section>
   );

@@ -19,6 +19,9 @@
 //   6. ADR-035 effective_decision: the GENERATED ... STORED column
 //      computes COALESCE(override_decision, classifier_decision) for both
 //      branches; the override CHECK enforces non-empty justification.
+//   7. M4 allocate_broadcast_seq: per-project monotonic; nonexistent
+//      project_id rejected; per-project isolation. Mirrors the existing
+//      fencing-token / ADR-number allocator contracts.
 //
 // Run:  npx tsx scripts/test/__smoke__/schema-invariants.smoke.ts
 
@@ -423,6 +426,75 @@ async function testEffectiveDecision(): Promise<void> {
 }
 
 // =========================================================================
+// [7] M4 broadcast seq: per-project monotonic + nonexistent-project rejected
+//
+// Migration 5 mirrors the allocate_fencing_token / allocate_adr_number
+// pattern (atomic UPDATE ... RETURNING, raises on missing project). The
+// SQL function's atomicity is what enforces multi-instance monotonicity
+// in production -- the broadcast smoke asserts the wire contract; this
+// invariant block asserts the SQL contract directly.
+// =========================================================================
+async function testBroadcastSeqAllocator(): Promise<void> {
+  console.log('\n[7] M4 broadcast seq allocator (allocate_broadcast_seq)');
+  const fix = await seed();
+  const c = new Client({ connectionString: DB_URL });
+  await c.connect();
+  try {
+    const { rows: r1 } = await c.query<{ allocate_broadcast_seq: string }>(
+      `SELECT allocate_broadcast_seq($1)`,
+      [fix.projectId],
+    );
+    const { rows: r2 } = await c.query<{ allocate_broadcast_seq: string }>(
+      `SELECT allocate_broadcast_seq($1)`,
+      [fix.projectId],
+    );
+    const { rows: r3 } = await c.query<{ allocate_broadcast_seq: string }>(
+      `SELECT allocate_broadcast_seq($1)`,
+      [fix.projectId],
+    );
+    const seq1 = BigInt(r1[0]!.allocate_broadcast_seq);
+    const seq2 = BigInt(r2[0]!.allocate_broadcast_seq);
+    const seq3 = BigInt(r3[0]!.allocate_broadcast_seq);
+    check('first allocation returns starting seq (>=1)', seq1 >= 1n, seq1.toString());
+    check('seqs strictly monotonic (1 < 2)', seq1 < seq2);
+    check('seqs strictly monotonic (2 < 3)', seq2 < seq3);
+    check(
+      'no gaps in single-writer sequence',
+      seq2 === seq1 + 1n && seq3 === seq2 + 1n,
+      `${seq1}, ${seq2}, ${seq3}`,
+    );
+
+    // Per-project isolation: a fresh project starts at its own counter,
+    // not affected by the seqs allocated above.
+    const fix2 = await seed();
+    const { rows: rOther } = await c.query<{ allocate_broadcast_seq: string }>(
+      `SELECT allocate_broadcast_seq($1)`,
+      [fix2.projectId],
+    );
+    const otherSeq = BigInt(rOther[0]!.allocate_broadcast_seq);
+    check(
+      'separate project gets independent seq',
+      otherSeq < seq3,
+      `project1 seq=${seq3}, project2 seq=${otherSeq}`,
+    );
+
+    // Missing project must raise foreign_key_violation, mirroring the
+    // allocate_fencing_token / allocate_adr_number contract.
+    let missingRejected = false;
+    let missingMessage = '';
+    try {
+      await c.query(`SELECT allocate_broadcast_seq($1)`, ['00000000-0000-0000-0000-000000000000']);
+    } catch (err) {
+      missingRejected = true;
+      missingMessage = String((err as Error).message);
+    }
+    check('nonexistent project_id rejected', missingRejected, missingMessage.slice(0, 80));
+  } finally {
+    await c.end();
+  }
+}
+
+// =========================================================================
 // Run
 // =========================================================================
 async function main(): Promise<void> {
@@ -431,6 +503,7 @@ async function main(): Promise<void> {
   await testAttributionSurvivesReap();
   await testStaleFencingToken();
   await testEffectiveDecision();
+  await testBroadcastSeqAllocator();
 
   console.log('\n=========================================');
   if (failures === 0) console.log('ALL SCHEMA INVARIANT CHECKS PASSED');

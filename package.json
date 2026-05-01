@@ -11,9 +11,12 @@
     "typecheck": "tsc --noEmit",
     "smoke:endpoint": "tsx scripts/endpoint/__smoke__/endpoint.smoke.ts",
     "smoke:committer": "tsx scripts/endpoint/__smoke__/committer.smoke.ts",
-    "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts"
+    "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts",
+    "smoke:real-client": "tsx scripts/endpoint/__smoke__/real-client.smoke.ts",
+    "smoke:lens": "tsx prototype/__smoke__/lens.smoke.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.1",
     "gray-matter": "^4.0.3",
     "jose": "^5.9.6",
     "pg": "^8.13.1",

@@ -6,7 +6,7 @@
 
 This doc records **load-bearing strategic bets** — the assumptions whose disconfirmation would change Atelier's strategic story (commercial path, adoption story, scope) but **not** the spec. The spec is destination-first per ADR-011: every feature in [`NORTH-STAR.md`](./NORTH-STAR.md) ships regardless of how these bets resolve.
 
-This is **not a project risk register** (no schedule slippage, dependency blockers, or build-time hazards). Those belong in `.atelier/checkpoints/` ephemeral state. This doc tracks **strategic bets** — claims about the world that informed our design but cannot be verified until after build.
+This is **not a project risk register** (no schedule slippage, dependency blockers, or build-time hazards). Those flow through the contribution board + decisions surface (`get_context` against the live endpoint). This doc tracks **strategic bets** — claims about the world that informed our design but cannot be verified until after build.
 
 ---
 

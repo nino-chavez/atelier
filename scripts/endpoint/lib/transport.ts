@@ -11,7 +11,7 @@
 //   - Map DispatchResult <-> MCP response envelope, including
 //     AtelierErrorCode -> JSON-RPC error code class
 //
-// What is intentionally NOT here at M2-mid (per SESSION.md scope):
+// What is intentionally NOT here at M2-mid (per BUILD-SEQUENCE M2 scope):
 //   - OAuth dynamic-client-registration (RFC 7591)
 //   - Rate limiting (ARCH 7.7)
 //   - Transcript capture (ADR-024 / ARCH 7.8.1)

@@ -2,10 +2,10 @@
 //
 // Implements the ARCH 6.x mutation contracts -- claim, update, release,
 // log_decision, plus session and lock helpers -- against the Postgres schema
-// from migration 20260428000001. NOT yet exposed via MCP; sync scripts call
-// this library directly per .atelier/checkpoints/SESSION.md step 4.ii.
+// from migration 20260428000001. Sync scripts and the M2 12-tool dispatcher
+// call this library directly; the dispatcher is the MCP surface.
 //
-// Scope at M1 (per SESSION.md):
+// Scope at M1:
 //   - Schema-side mutations (DB writes are authoritative for this module).
 //   - Telemetry events emitted on every mutation per ARCH 8.1.
 //   - Atomic state transitions via single SQL statements where possible;

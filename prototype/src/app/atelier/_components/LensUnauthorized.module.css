@@ -1,0 +1,57 @@
+.shell {
+  background: #0e1014;
+  color: #e6e9ef;
+  font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  max-width: 560px;
+  width: 100%;
+  background: #161a22;
+  border: 1px solid #2a303c;
+  border-radius: 6px;
+  padding: 24px 28px;
+}
+
+.eyebrow {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: #8a93a6;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.title {
+  font: 600 20px/1.25 ui-sans-serif, system-ui, sans-serif;
+  margin: 0 0 12px;
+}
+
+.message {
+  color: #c9d1e0;
+  margin: 0 0 16px;
+}
+
+.help {
+  border-top: 1px solid #2a303c;
+  padding-top: 12px;
+  font-size: 13px;
+  color: #8a93a6;
+}
+
+.codeblock {
+  background: #0e1014;
+  border: 1px solid #2a303c;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  color: #c9d1e0;
+  overflow-x: auto;
+}

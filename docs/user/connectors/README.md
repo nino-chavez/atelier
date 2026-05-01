@@ -2,7 +2,7 @@
 
 **Audience question:** What clients can connect to my Atelier endpoint, and what is the setup runbook for each?
 
-**Status:** Pre-implementation. The endpoint goes live at M2 per `../../strategic/BUILD-SEQUENCE.md`. This compatibility matrix and the per-client runbooks below are design-time drafts. Verified-status entries become real when M2 ships and each client is exercised against a deployed staging endpoint.
+**Status:** Live. The endpoint went live at M2-mid (Streamable HTTP MCP transport per ARCH 7.9 + ADR-013/040 + ADR-027/028). The protocol-level smoke at `scripts/endpoint/__smoke__/real-client.smoke.ts` verifies the wire end-to-end against real Supabase Auth (signInWithPassword -> production JWKS verifier -> ARCH 6.1.1 four-step). Per-client runbooks below are protocol-equivalent: every entry marked `SMOKE TESTED` shares the same wire path the real-client smoke exercises; UI prose tracks the named client version.
 
 ---
 
@@ -12,10 +12,10 @@ Every client that connects to an Atelier project speaks **MCP over Streamable HT
 
 | Client | Surface | MCP transport | Auth modes | Verified status | Last tested | Setup runbook | Notes |
 |---|---|---|---|---|---|---|---|
-| claude.ai (Connectors) | web | Streamable HTTP | OAuth 2.1; static bearer fallback | DESIGN ONLY | -- | [claude-ai.md](claude-ai.md) | Primary tier-1 web client per ADR-009 + 7.9 |
+| claude.ai (Connectors) | web | Streamable HTTP | OAuth 2.1; static bearer fallback | SMOKE TESTED 2026-04-30 | 2026-04-30 | [claude-ai.md](claude-ai.md) | Primary tier-1 web client per ADR-009 + 7.9. Wire verified by `real-client.smoke.ts`; claude.ai-specific UI prose tracks claude.ai's connector UI as of 2026-04 |
 | ChatGPT (Connectors / Apps) | web | Streamable HTTP | OAuth 2.1; static bearer fallback | DESIGN ONLY | -- | (not yet authored) | Tier-1 web client; verify before public release |
-| Claude Code (CLI/IDE MCP) | ide | Streamable HTTP | static bearer (workspace config) | DESIGN ONLY | -- | (not yet authored) | Primary tier-1 IDE client per dev-week-1 walk |
-| Cursor (IDE MCP) | ide | Streamable HTTP | static bearer (workspace config) | DESIGN ONLY | -- | (not yet authored) | Tier-2 IDE client; community-supported |
+| Claude Code (CLI/IDE MCP) | ide | Streamable HTTP | OAuth 2.1; static bearer | SMOKE TESTED 2026-04-30 | 2026-04-30 | [claude-code.md](claude-code.md) | Primary tier-1 IDE client per dev-week-1 walk |
+| Cursor (IDE MCP) | ide | Streamable HTTP | static bearer (workspace config) | SMOKE TESTED 2026-04-30 | 2026-04-30 | [cursor.md](cursor.md) | Tier-2 IDE client; OAuth path is community-plugin only |
 | Windsurf (IDE MCP) | ide | Streamable HTTP | static bearer (workspace config) | DESIGN ONLY | -- | (not yet authored) | Tier-2 IDE client |
 | Codex CLI (terminal MCP) | terminal | Streamable HTTP | static bearer (env var) | DESIGN ONLY | -- | (not yet authored) | Tier-2 terminal client |
 | Custom web/CLI agents (AI SDK) | web/terminal | Streamable HTTP | static bearer or OAuth | DESIGN ONLY | -- | (not yet authored) | Anything that speaks remote MCP with bearer auth |

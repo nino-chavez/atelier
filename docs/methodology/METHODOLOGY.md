@@ -170,8 +170,7 @@ atelier/
 │
 └── .atelier/                       # Ephemeral state (per §6.1)
     ├── config.yaml                 # project_id, datastore binding, identity, deploy targets
-    ├── territories.yaml            # Territory declarations
-    └── checkpoints/                # Pre-M2 session continuity (sunset at M2)
+    └── territories.yaml            # Territory declarations
 ```
 
 Per ADR-031/032: docs are layered by audience-question (toolkit-derived) and by tier (Specification / Reference Implementation / Reference Deployment). Empty layer READMEs cite the BUILD-SEQUENCE milestone where they fill in.
@@ -209,9 +208,8 @@ The files at the repo root are the **canonical state precedence list** declared 
 |---|---|---|
 | `.atelier/config.yaml` | Project-lifetime | Project ID, datastore binding, deploy targets, identity provider, transcripts opt-in |
 | `.atelier/territories.yaml` | Project-lifetime | Territory declarations |
-| `.atelier/checkpoints/SESSION.md` | Pre-M2 only | Session-to-session continuity; **sunset when `get_context` (US-2.4) ships at M2** |
 
-Checkpoints are **not canonical**. They exist because the protocol primitive that replaces them (`get_context`) does not yet exist. Once M2 lands, `.atelier/checkpoints/` is removed and continuity becomes a tool call.
+Session-to-session continuity is served by `get_context` (US-2.4) against the project's live MCP endpoint per ARCH 6.7. The pre-M2 stand-in (`.atelier/checkpoints/SESSION.md`) was retired at M2-mid follow-up #1 once the endpoint was first consumed by a real MCP client with a Supabase-Auth-issued bearer (verified end-to-end by `scripts/endpoint/__smoke__/real-client.smoke.ts`).
 
 ### Drift discipline (the no-parallel-summary rule)
 
@@ -243,16 +241,16 @@ Test: **"If we'd done this right from the start, would the ADR survive?"**
 
 When in doubt, ask: *what's the alternative I'd be rejecting, and what's the consequence if I reverse the choice?* If both are weak, just do the work — don't ADR-document your own oversight.
 
-### Pre-M2 / post-M2 continuity transition
+### Continuity surface
 
-| Capability | Pre-M2 (now) | Post-M2 |
+| Capability | Local-only (no endpoint) | Endpoint-live (default) |
 |---|---|---|
 | "What's the current state?" | Read `README.md §Status` + `../strategic/BUILD-SEQUENCE.md` + `git log` | Call `get_context` (US-2.4) |
-| "Where did the last session leave off?" | `.atelier/checkpoints/SESSION.md` | Call `get_context` with last `session_id` |
+| "Where did the last session leave off?" | Read recent ADRs + `git log` | Call `get_context` with last `session_id` |
 | "What decisions affect my work?" | Read `../architecture/decisions` + `../functional/PRD-COMPANION.md` | `get_context` returns trace-ID-scoped recent decisions |
 | "What's open?" | Read `../functional/BRD-OPEN-QUESTIONS.md` | `get_context` returns territory-scoped open contributions |
 
-The pre-M2 path involves human reading. The post-M2 path is a single tool call. Both read from the same canonical state — the path is the only thing that changes.
+The local-only path involves human reading. The endpoint-live path is a single tool call. Both read from the same canonical state — the path is the only thing that changes.
 
 ### Provenance of this organization
 

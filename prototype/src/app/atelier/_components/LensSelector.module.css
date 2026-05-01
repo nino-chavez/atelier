@@ -1,0 +1,33 @@
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #2a303c;
+}
+
+.tab {
+  display: inline-block;
+  padding: 8px 14px;
+  text-decoration: none;
+  color: #8a93a6;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: -1px;
+  transition: color 120ms ease;
+}
+
+.tab:hover {
+  color: #e6e9ef;
+  background: #161a22;
+}
+
+.tabActive {
+  color: #e6e9ef;
+  background: #161a22;
+  border-color: #2a303c;
+  border-bottom-color: #161a22;
+}

@@ -1,6 +1,6 @@
 # Connect claude.ai to your Atelier project
 
-**Status:** Design draft 2026-04-28. The screenshots and click-precise UI prose below are pending M2 endpoint deployment + first end-to-end smoke test against a real claude.ai connector. Until then, this runbook is the structural template. The protocol-level spec it implements (OAuth 2.1 bearer tokens over Streamable HTTP MCP) is authoritative at ARCH section 7.9.
+**Status:** SMOKE TESTED 2026-04-30 (protocol-equivalent). The wire path the runbook implements -- Streamable HTTP MCP, OAuth 2.1 bearer extraction, JWKS verification of Supabase Auth tokens, ARCH 6.1.1 four-step -- is verified end-to-end by `scripts/endpoint/__smoke__/real-client.smoke.ts`. claude.ai's connector-setup UI prose tracks claude.ai's web UI as of 2026-04; if the menu paths shift, the JSON config shape (server URL, auth mode) is stable.
 
 ---
 

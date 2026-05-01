@@ -32,7 +32,7 @@ See `.atelier/territories.yaml` for the canonical declaration. Key rules:
 
 ## Agent-specific rules
 
-These rules describe the **target operating state** (post-M2 when the 12-tool endpoint exists). Pre-M2, the equivalent is reading the charter files directly and following the rules manually; see `.atelier/checkpoints/SESSION.md` for the pre-M2 fallback.
+These rules describe the operating state once the 12-tool endpoint is live, which it is for this repo as of M2-mid (Streamable HTTP MCP per ARCH 7.9 + ADR-013/040). For local dev without a deployed endpoint, the equivalent is reading the charter files directly and following the rules manually.
 
 1. **Read before writing.** Always pull `get_context` (post-M2) or read the charter files directly (pre-M2) before making changes.
 2. **Run `find_similar` before creating contributions** (post-M5 when find_similar ships). The cost of checking is much lower than the cost of duplication.

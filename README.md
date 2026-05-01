@@ -95,5 +95,5 @@ Build sequencing across M0–M7 is in [`docs/strategic/BUILD-SEQUENCE.md`](./doc
 
 ## Status
 
-- **Phase:** Pre-implementation. M0 of [`docs/strategic/BUILD-SEQUENCE.md`](./docs/strategic/BUILD-SEQUENCE.md) complete (methodology + 32 ADRs + scaffolding). M1 (SDLC sync substrate) is the next concrete step.
-- **Current session state:** see [`.atelier/checkpoints/SESSION.md`](./.atelier/checkpoints/SESSION.md) — ephemeral, sunset at M2 when `get_context` (US-2.4) replaces it.
+- **Phase:** M3 entry landed (the `/atelier` route + five lenses on top of the M2-mid 12-tool MCP endpoint substrate per [`docs/strategic/BUILD-SEQUENCE.md`](./docs/strategic/BUILD-SEQUENCE.md)). The endpoint is live and verified by `scripts/endpoint/__smoke__/real-client.smoke.ts` against real Supabase Auth.
+- **Current session state:** call `get_context` against the project's MCP endpoint (US-2.4) — that's the canonical "where did the last session leave off" surface. For local exploration without an endpoint, read the canonical state precedence list in [`CLAUDE.md`](./CLAUDE.md).

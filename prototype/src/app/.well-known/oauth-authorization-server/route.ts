@@ -13,6 +13,10 @@ import {
 
 export const runtime = 'nodejs';
 
-export async function GET(): Promise<Response> {
-  return oauthDiscoveryResponse(oauthDiscoveryConfigFromEnv());
+export async function GET(req: Request): Promise<Response> {
+  // Pass req.url so the lib can construct an absolute registration_endpoint
+  // URL from the request origin when ATELIER_ENDPOINT_URL is not set.
+  // Real-world MCP SDK validators (Claude Code, Cursor) reject relative
+  // URLs even though RFC 8414 §3 permits them.
+  return oauthDiscoveryResponse(oauthDiscoveryConfigFromEnv(process.env, req.url));
 }

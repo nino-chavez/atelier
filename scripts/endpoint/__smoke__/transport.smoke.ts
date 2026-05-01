@@ -41,7 +41,11 @@ import { createGitCommitter, type AdrCommitter } from '../lib/committer.ts';
 import { createJwksVerifier } from '../lib/jwks-verifier.ts';
 import { TOOL_NAMES } from '../lib/dispatch.ts';
 import { handleMcpRequest } from '../lib/transport.ts';
-import { oauthDiscoveryResponse, oauthRegistrationStubResponse } from '../lib/oauth-discovery.ts';
+import {
+  oauthDiscoveryConfigFromEnv,
+  oauthDiscoveryResponse,
+  oauthRegistrationStubResponse,
+} from '../lib/oauth-discovery.ts';
 
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
@@ -126,7 +130,17 @@ async function startMcpServer(deps: {
       const url = new URL(req.url ?? '/', `http://localhost`);
 
       if (req.method === 'GET' && url.pathname === '/.well-known/oauth-authorization-server') {
-        const webRes = oauthDiscoveryResponse({ issuer: deps.oauthIssuer });
+        // Mirror the production Next.js route: pass the request URL so the
+        // lib resolves registration_endpoint to an absolute URL. Real-world
+        // MCP SDK validators (Claude Code) reject relative URLs even though
+        // RFC 8414 §3 permits them.
+        const requestUrl = `http://${req.headers.host ?? '127.0.0.1'}${url.pathname}`;
+        const webRes = oauthDiscoveryResponse(
+          oauthDiscoveryConfigFromEnv(
+            { ATELIER_OIDC_ISSUER: deps.oauthIssuer } as NodeJS.ProcessEnv,
+            requestUrl,
+          ),
+        );
         await pipeWebResponse(webRes, res);
         return;
       }
@@ -362,6 +376,15 @@ async function main(): Promise<void> {
       typeof disc.registration_endpoint === 'string' && disc.registration_endpoint.length > 0,
       `actual: ${disc.registration_endpoint}`,
     );
+    // Hotfix to PR #11: the URL must be absolute. RFC 8414 §3 permits
+    // relative URLs but Claude Code's MCP SDK (and Cursor's) validates
+    // with Zod-style `.url()` requiring absolute. The strictness of
+    // wild validators forces absolute.
+    check(
+      'discovery.registration_endpoint is an absolute URL',
+      /^https?:\/\//.test(disc.registration_endpoint ?? ''),
+      `actual: ${disc.registration_endpoint}`,
+    );
 
     // [0a] OAuth registration stub returns 405 with documented error body
     console.log('\n[0a] /oauth/register stub returns 405 + documented error body');
@@ -377,6 +400,59 @@ async function main(): Promise<void> {
       check(
         `${method} /oauth/register hint references ADR-028`,
         typeof regBody.hint === 'string' && regBody.hint.includes('ADR-028'),
+      );
+    }
+
+    // [0b] Lib-level: oauthDiscoveryConfigFromEnv resolution paths for
+    // registration_endpoint. Wire-level [0] proves the route emits an
+    // absolute URL; this section proves each resolver path independently
+    // so future regressions in the lib surface in CI rather than at
+    // operator handoff.
+    console.log('\n[0b] oauthDiscoveryConfigFromEnv resolution paths');
+    {
+      const cfgEnvOverride = oauthDiscoveryConfigFromEnv(
+        {
+          ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1',
+          ATELIER_OAUTH_REGISTRATION_ENDPOINT: 'http://other.example.invalid/dcr',
+        } as NodeJS.ProcessEnv,
+        'http://api.example.invalid/.well-known/oauth-authorization-server',
+      );
+      check(
+        'env override beats requestUrl + ATELIER_ENDPOINT_URL',
+        cfgEnvOverride.registrationEndpoint === 'http://other.example.invalid/dcr',
+        `actual: ${cfgEnvOverride.registrationEndpoint}`,
+      );
+
+      const cfgEndpointUrl = oauthDiscoveryConfigFromEnv(
+        {
+          ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1',
+          ATELIER_ENDPOINT_URL: 'http://endpoint.example.invalid',
+        } as NodeJS.ProcessEnv,
+        'http://api.example.invalid/.well-known/oauth-authorization-server',
+      );
+      check(
+        'ATELIER_ENDPOINT_URL derivation beats requestUrl',
+        cfgEndpointUrl.registrationEndpoint === 'http://endpoint.example.invalid/oauth/register',
+        `actual: ${cfgEndpointUrl.registrationEndpoint}`,
+      );
+
+      const cfgRequestUrl = oauthDiscoveryConfigFromEnv(
+        { ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1' } as NodeJS.ProcessEnv,
+        'http://api.example.invalid/.well-known/oauth-authorization-server',
+      );
+      check(
+        'requestUrl derivation produces absolute URL on resource origin',
+        cfgRequestUrl.registrationEndpoint === 'http://api.example.invalid/oauth/register',
+        `actual: ${cfgRequestUrl.registrationEndpoint}`,
+      );
+
+      const cfgFallback = oauthDiscoveryConfigFromEnv(
+        { ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1' } as NodeJS.ProcessEnv,
+      );
+      check(
+        'no env + no requestUrl falls back to relative /oauth/register',
+        cfgFallback.registrationEndpoint === '/oauth/register',
+        `actual: ${cfgFallback.registrationEndpoint}`,
       );
     }
 

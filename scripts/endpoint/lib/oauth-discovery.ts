@@ -144,31 +144,46 @@ export function oauthRegistrationStubResponse(): Response {
  *      with a real DCR endpoint at their auth provider point at it here).
  *   2. ATELIER_ENDPOINT_URL — derive `<endpoint-base>/oauth/register`
  *      so the metadata carries an absolute URL when the deploy URL is known.
- *   3. Fall back to the relative `/oauth/register` (RFC 8414 §3 allows
- *      relative URLs in metadata; clients resolve them against the issuer's
- *      authority — which is the resource-server origin in our case).
+ *   3. Derived from `requestUrl` when supplied — the route knows its own
+ *      request origin and constructs the absolute URL there. This is the
+ *      runtime fallback for local-bootstrap where neither env var is set.
+ *   4. Last-resort relative `/oauth/register` — RFC 8414 §3 permits this,
+ *      but real-world MCP SDK validators (Claude Code, Cursor) reject
+ *      relative URLs with Zod-style `.url()` strictness. Use only for
+ *      contexts where no request URL is available (rare; mostly tests).
  *
- * The default works in local-bootstrap (where ATELIER_ENDPOINT_URL isn't
- * always exported) without requiring operators to remember another env var.
+ * The empirical tail of resolution order #4 was added 2026-05-01 as a
+ * hotfix to PR #11: the original fix emitted a relative URL by default,
+ * which was spec-compliant but failed Claude Code's MCP SDK schema
+ * validation (`registration_endpoint` validates as `.url()` requiring
+ * absolute). Wild-validator strictness > RFC permissiveness.
  */
-export function oauthDiscoveryConfigFromEnv(env: NodeJS.ProcessEnv = process.env): OAuthDiscoveryConfig {
+export function oauthDiscoveryConfigFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+  requestUrl?: string,
+): OAuthDiscoveryConfig {
   const issuer = env.ATELIER_OIDC_ISSUER;
   if (!issuer) {
     throw new Error('ATELIER_OIDC_ISSUER not set; cannot serve /.well-known/oauth-authorization-server (ARCH 7.9)');
   }
   return {
     issuer,
-    registrationEndpoint: resolveRegistrationEndpoint(env),
+    registrationEndpoint: resolveRegistrationEndpoint(env, requestUrl),
   };
 }
 
-function resolveRegistrationEndpoint(env: NodeJS.ProcessEnv): string {
+function resolveRegistrationEndpoint(env: NodeJS.ProcessEnv, requestUrl?: string): string {
   if (env.ATELIER_OAUTH_REGISTRATION_ENDPOINT) {
     return env.ATELIER_OAUTH_REGISTRATION_ENDPOINT;
   }
   if (env.ATELIER_ENDPOINT_URL) {
     const base = env.ATELIER_ENDPOINT_URL.replace(/\/+$/, '');
     return `${base}/oauth/register`;
+  }
+  if (requestUrl) {
+    // Construct absolute URL from request origin. URL constructor handles
+    // the resolution against the request's authority + scheme.
+    return new URL('/oauth/register', requestUrl).toString();
   }
   return '/oauth/register';
 }

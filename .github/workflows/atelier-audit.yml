@@ -16,6 +16,7 @@ name: atelier-audit
 #   - committer smoke (ARCH 7.8 / ADR-023 per-project git committer)
 #   - transport wire smoke (Streamable HTTP MCP + JWKS verifier + RFC 8414)
 #   - real-client smoke (real Supabase Auth -> production JWKS path; M2-mid #1)
+#   - broadcast smoke (M4 BroadcastService + real Supabase Realtime; ARCH 6.8)
 #   - lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
 #   - round-trip corpus (6 doc classes, M1 exit gate per scripts/README.md)
 #   - round-trip negative-case smoke (harness rejects synthetic drift)
@@ -111,6 +112,15 @@ jobs:
           export SUPABASE_ANON_KEY="$ANON_KEY"
           export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
           npx tsx scripts/endpoint/__smoke__/real-client.smoke.ts
+
+      - name: Broadcast smoke (M4 BroadcastService + real Supabase Realtime; ARCH 6.8 / ADR-029)
+        run: |
+          set -e
+          eval "$(supabase status -o env --workdir .)"
+          export SUPABASE_URL="$API_URL"
+          export SUPABASE_ANON_KEY="$ANON_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          npx tsx scripts/coordination/__smoke__/broadcast.smoke.ts
 
       - name: Lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
         run: npx tsx prototype/__smoke__/lens.smoke.ts

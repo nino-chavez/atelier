@@ -29,6 +29,14 @@
 
 import { Pool, type PoolConfig, type PoolClient } from 'pg';
 
+import {
+  NoopBroadcastService,
+  projectEventsChannel,
+  type BroadcastEnvelope,
+  type BroadcastEventKind,
+  type BroadcastService,
+} from '../../coordination/lib/broadcast.ts';
+
 // =========================================================================
 // Errors
 // =========================================================================
@@ -239,17 +247,33 @@ export interface LogDecisionResult {
 export interface AtelierClientOptions {
   databaseUrl: string;
   poolConfig?: Omit<PoolConfig, 'connectionString'>;
+  /**
+   * Optional broadcaster (ARCH 6.8 / ADR-029). When provided, mutation
+   * paths publish post-commit events to the per-project channel. When
+   * absent, mutations succeed without broadcast -- canonical state is
+   * still authoritative per ADR-005.
+   *
+   * Per ADR-029 the concrete adapter (Supabase Realtime / Postgres
+   * NOTIFY/LISTEN) lives in scripts/coordination/adapters/. This module
+   * does not import any provider SDK.
+   */
+  broadcaster?: BroadcastService;
 }
 
 export class AtelierClient {
   private readonly pool: Pool;
+  private readonly broadcaster: BroadcastService;
 
   constructor(opts: AtelierClientOptions) {
     this.pool = new Pool({ connectionString: opts.databaseUrl, ...opts.poolConfig });
+    this.broadcaster = opts.broadcaster ?? new NoopBroadcastService();
   }
 
   async close(): Promise<void> {
     await this.pool.end();
+    if (this.broadcaster.close) {
+      await this.broadcaster.close();
+    }
   }
 
   // =======================================================================
@@ -273,16 +297,53 @@ export class AtelierClient {
       outcome: 'ok',
       metadata: { surface: input.surface, agentClient: input.agentClient ?? null },
     });
+    // ARCH 6.8: a fresh session is the canonical "presence appeared" event.
+    await this.publishEvent(input.projectId, 'session.presence_changed', {
+      session_id: row.id,
+      composer_id: input.composerId,
+      status: 'active',
+      surface: input.surface,
+      agent_client: input.agentClient ?? null,
+    });
     return rowToSession(row);
   }
 
   async heartbeat(sessionId: string): Promise<void> {
-    const { rowCount } = await this.pool.query(
-      `UPDATE sessions SET heartbeat_at = now(), status = 'active' WHERE id = $1`,
+    // CTE captures the pre-update status so we can publish a
+    // presence-changed event only on actual transitions (idle/dead ->
+    // active), keeping broadcast volume proportional to real state
+    // changes rather than the 30s heartbeat cadence per ARCH 6.8.
+    const { rows } = await this.pool.query<{
+      project_id: string;
+      composer_id: string;
+      surface: SessionSurface;
+      agent_client: string | null;
+      prior_status: 'active' | 'idle' | 'dead';
+    }>(
+      `WITH prior AS (
+         SELECT id, status AS prior_status FROM sessions WHERE id = $1
+       )
+       UPDATE sessions
+          SET heartbeat_at = now(),
+              status = 'active'
+         FROM prior
+        WHERE sessions.id = prior.id
+       RETURNING sessions.project_id, sessions.composer_id, sessions.surface,
+                 sessions.agent_client, prior.prior_status`,
       [sessionId],
     );
-    if (rowCount === 0) {
+    const row = rows[0];
+    if (!row) {
       throw new AtelierError('NOT_FOUND', `session ${sessionId} does not exist`);
+    }
+    if (row.prior_status !== 'active') {
+      await this.publishEvent(row.project_id, 'session.presence_changed', {
+        session_id: sessionId,
+        composer_id: row.composer_id,
+        status: 'active',
+        surface: row.surface,
+        agent_client: row.agent_client,
+      });
     }
   }
 
@@ -293,13 +354,15 @@ export class AtelierClient {
    * subsequent heartbeats fail with 401.
    */
   async deregister(sessionId: string): Promise<void> {
-    return this.tx(async (client) => {
+    return this.txWithEvents(async (client, events) => {
       const { rows } = await client.query<{
         id: string;
         composer_id: string;
         project_id: string;
+        surface: SessionSurface;
+        agent_client: string | null;
       }>(
-        `SELECT id, composer_id, project_id FROM sessions WHERE id = $1`,
+        `SELECT id, composer_id, project_id, surface, agent_client FROM sessions WHERE id = $1`,
         [sessionId],
       );
       const session = rows[0];
@@ -335,6 +398,21 @@ export class AtelierClient {
         outcome: 'ok',
         metadata: { sessionId },
         client,
+      });
+
+      // ARCH 6.8: session.presence_changed=dead announces departure so
+      // subscribers (lens presence panel) can drop the row immediately
+      // rather than waiting for the next poll cycle.
+      events.push({
+        projectId: session.project_id,
+        kind: 'session.presence_changed',
+        payload: {
+          session_id: sessionId,
+          composer_id: session.composer_id,
+          status: 'dead',
+          surface: session.surface,
+          agent_client: session.agent_client,
+        },
       });
     });
   }
@@ -474,13 +552,13 @@ export class AtelierClient {
   // =======================================================================
 
   async claim(input: ClaimInput): Promise<ClaimResult> {
-    return this.tx(async (client) => {
+    return this.txWithEvents(async (client, events) => {
       const sessionContext = await loadSessionContext(client, input.sessionId);
 
       if (input.contributionId === null) {
-        return this.atomicClaim(client, sessionContext, input);
+        return this.atomicClaim(client, sessionContext, input, events);
       }
-      return this.preExistingClaim(client, sessionContext, input);
+      return this.preExistingClaim(client, sessionContext, input, events);
     });
   }
 
@@ -488,6 +566,7 @@ export class AtelierClient {
     client: PoolClient,
     ctx: SessionContext,
     input: Extract<ClaimInput, { contributionId: null }>,
+    events: PendingEvent[],
   ): Promise<ClaimResult> {
     if (input.traceIds.length === 0) {
       throw new AtelierError('BAD_REQUEST', 'trace_ids must be non-empty (ADR-021)');
@@ -532,6 +611,19 @@ export class AtelierClient {
       client,
     });
 
+    events.push({
+      projectId: ctx.projectId,
+      kind: 'contribution.state_changed',
+      payload: {
+        contribution_id: id,
+        prior_state: null,
+        new_state: 'claimed',
+        author_session_id: ctx.sessionId,
+        author_composer_id: ctx.composerId,
+        trace_ids: input.traceIds,
+      },
+    });
+
     return {
       contributionId: id,
       state: 'claimed',
@@ -546,6 +638,7 @@ export class AtelierClient {
     client: PoolClient,
     ctx: SessionContext,
     input: Extract<ClaimInput, { contributionId: string }>,
+    events: PendingEvent[],
   ): Promise<ClaimResult> {
     // Conditional UPDATE: only state='open' rows transition; losers see CONFLICT
     // with current author info. Per ARCH 6.2.1.5.
@@ -553,6 +646,7 @@ export class AtelierClient {
       id: string;
       requires_owner_approval: boolean;
       territory_id: string;
+      trace_ids: string[];
     }>(
       `UPDATE contributions
           SET state = 'claimed',
@@ -560,7 +654,7 @@ export class AtelierClient {
               author_composer_id = $3,
               updated_at = now()
         WHERE id = $1 AND state = 'open' AND project_id = $4
-        RETURNING id, requires_owner_approval, territory_id`,
+        RETURNING id, requires_owner_approval, territory_id, trace_ids`,
       [input.contributionId, ctx.sessionId, ctx.composerId, ctx.projectId],
     );
 
@@ -606,6 +700,19 @@ export class AtelierClient {
       client,
     });
 
+    events.push({
+      projectId: ctx.projectId,
+      kind: 'contribution.state_changed',
+      payload: {
+        contribution_id: claimed.id,
+        prior_state: 'open',
+        new_state: 'claimed',
+        author_session_id: ctx.sessionId,
+        author_composer_id: ctx.composerId,
+        trace_ids: claimed.trace_ids,
+      },
+    });
+
     return {
       contributionId: claimed.id,
       state: 'claimed',
@@ -621,7 +728,7 @@ export class AtelierClient {
   // =======================================================================
 
   async update(input: UpdateInput): Promise<UpdateResult> {
-    return this.tx(async (client) => {
+    return this.txWithEvents(async (client, events) => {
       const ctx = await loadSessionContext(client, input.sessionId);
       const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
 
@@ -635,17 +742,17 @@ export class AtelierClient {
 
       // Plan-review transitions per ARCH 6.2.1.7 (ADR-039)
       if (contribution.state === 'claimed' && input.state === 'plan_review') {
-        return this.applyPlanSubmission(client, ctx, contribution, input);
+        return this.applyPlanSubmission(client, ctx, contribution, input, events);
       }
       if (contribution.state === 'plan_review' && input.state === 'plan_review') {
         // Plan revision (author-only)
         return this.applyPlanResubmission(client, ctx, contribution, input);
       }
       if (contribution.state === 'plan_review' && input.state === 'in_progress') {
-        return this.applyPlanApproval(client, ctx, contribution);
+        return this.applyPlanApproval(client, ctx, contribution, events);
       }
       if (contribution.state === 'plan_review' && input.state === 'claimed') {
-        return this.applyPlanRejection(client, ctx, contribution, input);
+        return this.applyPlanRejection(client, ctx, contribution, input, events);
       }
       // Reject claimed -> in_progress when territory requires plan_review
       // (per ARCH 6.2.1.7 activation rule)
@@ -723,6 +830,21 @@ export class AtelierClient {
         client,
       });
 
+      if (input.state !== undefined && input.state !== contribution.state) {
+        events.push({
+          projectId: ctx.projectId,
+          kind: 'contribution.state_changed',
+          payload: {
+            contribution_id: contribution.id,
+            prior_state: contribution.state,
+            new_state: updated.state,
+            author_session_id: contribution.author_session_id,
+            author_composer_id: contribution.author_composer_id,
+            trace_ids: contribution.trace_ids,
+          },
+        });
+      }
+
       return rowToUpdateResult(contribution.id, updated);
     });
   }
@@ -736,6 +858,7 @@ export class AtelierClient {
     ctx: SessionContext,
     contribution: ContributionRow,
     input: UpdateInput,
+    events: PendingEvent[],
   ): Promise<UpdateResult> {
     if (contribution.author_session_id !== ctx.sessionId) {
       throw new AtelierError('FORBIDDEN', 'only the contribution author may submit a plan');
@@ -771,6 +894,19 @@ export class AtelierClient {
         planLengthChars: input.planPayload.length,
       },
       client,
+    });
+
+    events.push({
+      projectId: ctx.projectId,
+      kind: 'contribution.state_changed',
+      payload: {
+        contribution_id: contribution.id,
+        prior_state: 'claimed',
+        new_state: 'plan_review',
+        author_session_id: contribution.author_session_id,
+        author_composer_id: contribution.author_composer_id,
+        trace_ids: contribution.trace_ids,
+      },
     });
 
     return rowToUpdateResult(contribution.id, updated);
@@ -820,6 +956,7 @@ export class AtelierClient {
     client: PoolClient,
     ctx: SessionContext,
     contribution: ContributionRow,
+    events: PendingEvent[],
   ): Promise<UpdateResult> {
     if (contribution.author_composer_id === ctx.composerId) {
       throw new AtelierError('FORBIDDEN', 'authors cannot self-approve their own plan (ARCH 6.2.1.7)');
@@ -849,6 +986,19 @@ export class AtelierClient {
       client,
     });
 
+    events.push({
+      projectId: ctx.projectId,
+      kind: 'contribution.state_changed',
+      payload: {
+        contribution_id: contribution.id,
+        prior_state: 'plan_review',
+        new_state: 'in_progress',
+        author_session_id: contribution.author_session_id,
+        author_composer_id: contribution.author_composer_id,
+        trace_ids: contribution.trace_ids,
+      },
+    });
+
     return rowToUpdateResult(contribution.id, updated);
   }
 
@@ -857,6 +1007,7 @@ export class AtelierClient {
     ctx: SessionContext,
     contribution: ContributionRow,
     input: UpdateInput,
+    events: PendingEvent[],
   ): Promise<UpdateResult> {
     if (contribution.author_composer_id === ctx.composerId) {
       throw new AtelierError('FORBIDDEN', 'authors cannot self-reject their own plan (ARCH 6.2.1.7)');
@@ -889,6 +1040,19 @@ export class AtelierClient {
         reason: input.reason,
       },
       client,
+    });
+
+    events.push({
+      projectId: ctx.projectId,
+      kind: 'contribution.state_changed',
+      payload: {
+        contribution_id: contribution.id,
+        prior_state: 'plan_review',
+        new_state: 'claimed',
+        author_session_id: contribution.author_session_id,
+        author_composer_id: contribution.author_composer_id,
+        trace_ids: contribution.trace_ids,
+      },
     });
 
     return rowToUpdateResult(contribution.id, updated);
@@ -959,7 +1123,7 @@ export class AtelierClient {
   // =======================================================================
 
   async release(input: ReleaseInput): Promise<ReleaseResult> {
-    return this.tx(async (client) => {
+    return this.txWithEvents(async (client, events) => {
       const ctx = await loadSessionContext(client, input.sessionId);
       const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
 
@@ -1011,6 +1175,32 @@ export class AtelierClient {
         client,
       });
 
+      // ARCH 6.8: emit both contribution.released (with prior author info)
+      // and contribution.state_changed (so subscribers tracking state can
+      // observe the open state without filtering on event kind).
+      events.push({
+        projectId: ctx.projectId,
+        kind: 'contribution.released',
+        payload: {
+          contribution_id: contribution.id,
+          prior_author_session_id: contribution.author_session_id,
+          prior_author_composer_id: contribution.author_composer_id,
+          reason: 'released',
+        },
+      });
+      events.push({
+        projectId: ctx.projectId,
+        kind: 'contribution.state_changed',
+        payload: {
+          contribution_id: contribution.id,
+          prior_state: contribution.state,
+          new_state: 'open',
+          author_session_id: null,
+          author_composer_id: null,
+          trace_ids: contribution.trace_ids,
+        },
+      });
+
       return {
         contributionId: contribution.id,
         state: 'open',
@@ -1028,7 +1218,7 @@ export class AtelierClient {
     if (input.artifactScope.length === 0) {
       throw new AtelierError('BAD_REQUEST', 'artifact_scope must be non-empty');
     }
-    return this.tx(async (client) => {
+    return this.txWithEvents(async (client, events) => {
       const ctx = await loadSessionContext(client, input.sessionId);
       const contribution = await loadContribution(client, input.contributionId, ctx.projectId);
 
@@ -1088,20 +1278,35 @@ export class AtelierClient {
         client,
       });
 
+      events.push({
+        projectId: ctx.projectId,
+        kind: 'lock.acquired',
+        payload: {
+          lock_id: lockId,
+          contribution_id: contribution.id,
+          artifact_scope: input.artifactScope,
+          holder_session_id: ctx.sessionId,
+          holder_composer_id: ctx.composerId,
+          fencing_token: fencingToken.toString(),
+        },
+      });
+
       return { lockId, fencingToken };
     });
   }
 
   async releaseLock(input: ReleaseLockInput): Promise<void> {
-    return this.tx(async (client) => {
+    return this.txWithEvents(async (client, events) => {
       const ctx = await loadSessionContext(client, input.sessionId);
-      const { rowCount } = await client.query(
-        `DELETE FROM locks WHERE id = $1 AND holder_composer_id = $2`,
+      const { rows } = await client.query<{ id: string; contribution_id: string | null; session_id: string | null }>(
+        `DELETE FROM locks WHERE id = $1 AND holder_composer_id = $2
+         RETURNING id, contribution_id, session_id`,
         [input.lockId, ctx.composerId],
       );
-      if (rowCount === 0) {
+      if (rows.length === 0) {
         throw new AtelierError('NOT_FOUND', `lock ${input.lockId} not held by calling composer`);
       }
+      const released = rows[0]!;
       await this.recordTelemetry({
         projectId: ctx.projectId,
         composerId: ctx.composerId,
@@ -1110,6 +1315,18 @@ export class AtelierClient {
         outcome: 'ok',
         metadata: { lockId: input.lockId },
         client,
+      });
+
+      events.push({
+        projectId: ctx.projectId,
+        kind: 'lock.released',
+        payload: {
+          lock_id: released.id,
+          contribution_id: released.contribution_id,
+          prior_holder_session_id: released.session_id,
+          prior_holder_composer_id: ctx.composerId,
+          reason: 'released',
+        },
       });
     });
   }
@@ -1193,6 +1410,14 @@ export class AtelierClient {
       },
     });
 
+    await this.publishEvent(input.projectId, 'decision.created', {
+      decision_id: decisionId,
+      adr_id: allocation.adrId,
+      trace_ids: input.traceIds,
+      summary: input.summary,
+      category: input.category,
+    });
+
     return {
       decisionId,
       adrId: allocation.adrId,
@@ -1244,6 +1469,61 @@ export class AtelierClient {
   }
 
   // =======================================================================
+  // Broadcast (ARCH 6.8 / ADR-029)
+  //
+  // Post-commit publishes that fan out coordination state changes to
+  // subscribers via the configured BroadcastService. Failures are logged
+  // and swallowed -- ADR-005 invariant: canonical write succeeded;
+  // broadcast is downstream. Subscribers reconcile via the polling
+  // fallback per ARCH 6.8.
+  //
+  // Why post-commit: allocate_broadcast_seq() takes a row-exclusive lock
+  // on the projects row. Any open tx that holds an FK row-share on the
+  // same projects row (every contribution/lock/decision INSERT does) would
+  // deadlock if the publish ran inside the tx via a separate connection.
+  // Mutations using tx() collect a PendingEvent[] and txWithEvents()
+  // drains it after COMMIT.
+  // =======================================================================
+
+  private async publishEvent<TKind extends BroadcastEventKind>(
+    projectId: string,
+    kind: TKind,
+    payload: BroadcastEnvelope<TKind>['payload'],
+  ): Promise<void> {
+    let seq: bigint;
+    try {
+      const { rows } = await this.pool.query<{ allocate_broadcast_seq: string }>(
+        `SELECT allocate_broadcast_seq($1)`,
+        [projectId],
+      );
+      seq = BigInt(rows[0]!.allocate_broadcast_seq);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[atelier] allocate_broadcast_seq failed for project ${projectId}:`, err);
+      return;
+    }
+
+    const envelope: BroadcastEnvelope<TKind> = {
+      id: seq.toString(),
+      seq: seq.toString(),
+      published_at: new Date().toISOString(),
+      kind,
+      project_id: projectId,
+      payload,
+    };
+
+    try {
+      await this.broadcaster.publish({
+        channel: projectEventsChannel(projectId),
+        envelope,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(`[atelier] broadcast publish failed for ${kind} on project ${projectId}:`, err);
+    }
+  }
+
+  // =======================================================================
   // Internals
   // =======================================================================
 
@@ -1261,6 +1541,42 @@ export class AtelierClient {
       client.release();
     }
   }
+
+  /**
+   * tx() variant that captures broadcast events from inside the
+   * transaction and publishes them AFTER COMMIT.
+   *
+   * Why deferred (load-bearing; do NOT inline back into the tx):
+   *   publishEvent() calls allocate_broadcast_seq(project_id), which is an
+   *   UPDATE on the projects row -- it takes a row-EXCLUSIVE lock. Every
+   *   contribution / lock / decision INSERT in the open tx already holds
+   *   an FK row-SHARE on that same projects row until COMMIT. Running
+   *   publishEvent inside the tx via a fresh pool connection blocks the
+   *   second connection waiting on the first to commit, while the tx is
+   *   awaiting the publish call -> classic two-connection deadlock.
+   *
+   *   This pattern was discovered when the M4 broadcast smoke hung at
+   *   the first claim() emission. Refactoring to in-tx publishing for
+   *   "atomicity" looks tempting but reintroduces the deadlock; if you
+   *   need atomicity beyond at-least-once + idempotent subscribers,
+   *   change the seq allocator to a sequence object (no row lock) first.
+   */
+  private async txWithEvents<T>(
+    fn: (client: PoolClient, events: PendingEvent[]) => Promise<T>,
+  ): Promise<T> {
+    const events: PendingEvent[] = [];
+    const result = await this.tx((client) => fn(client, events));
+    for (const ev of events) {
+      await this.publishEvent(ev.projectId, ev.kind, ev.payload);
+    }
+    return result;
+  }
+}
+
+interface PendingEvent {
+  projectId: string;
+  kind: BroadcastEventKind;
+  payload: BroadcastEnvelope['payload'];
 }
 
 // =========================================================================
@@ -1300,6 +1616,7 @@ interface ContributionRow {
   state: ContributionState;
   kind: ContributionKind;
   territory_id: string;
+  trace_ids: string[];
   requires_owner_approval: boolean;
   approved_by_composer_id: string | null;
   plan_review_approved_by_composer_id: string | null;
@@ -1387,7 +1704,7 @@ async function loadContribution(
 ): Promise<ContributionRow> {
   const { rows } = await client.query<ContributionRow>(
     `SELECT id, project_id, author_composer_id, author_session_id, state, kind,
-            territory_id, requires_owner_approval, approved_by_composer_id,
+            territory_id, trace_ids, requires_owner_approval, approved_by_composer_id,
             plan_review_approved_by_composer_id, plan_review_approved_at
        FROM contributions WHERE id = $1`,
     [contributionId],

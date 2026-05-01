@@ -6,6 +6,7 @@
 
 import type { LensViewModel } from '../../../lib/atelier/lens-data.ts';
 import LensSelector from './LensSelector.tsx';
+import LiveUpdater from './LiveUpdater.tsx';
 import PanelHost from './PanelHost.tsx';
 import styles from './Lens.module.css';
 
@@ -13,6 +14,7 @@ export default function Lens({ viewModel }: { viewModel: LensViewModel }) {
   const { config, viewer } = viewModel;
   return (
     <main className={styles.shell}>
+      <LiveUpdater projectId={viewer.projectId} />
       <header className={styles.header}>
         <div className={styles.identity}>
           <div className={styles.eyebrow}>{viewer.projectName} · /atelier</div>

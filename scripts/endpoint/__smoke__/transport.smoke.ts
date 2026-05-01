@@ -129,11 +129,15 @@ async function startMcpServer(deps: {
     try {
       const url = new URL(req.url ?? '/', `http://localhost`);
 
-      if (req.method === 'GET' && url.pathname === '/.well-known/oauth-authorization-server') {
-        // Mirror the production Next.js route: pass the request URL so the
-        // lib resolves registration_endpoint to an absolute URL. Real-world
-        // MCP SDK validators (Claude Code) reject relative URLs even though
-        // RFC 8414 §3 permits them.
+      // Discovery is published ONLY at the path-prefixed URL matching the
+      // OAuth-flow route. Root /.well-known/oauth-authorization-server
+      // returns 404 so Claude Code's MCP SDK (which preferentially does
+      // OAuth when discovery is found) falls back to static bearer for
+      // clients targeting /api/mcp. Per substrate/oauth-discovery-split-urls.
+      if (
+        req.method === 'GET' &&
+        url.pathname === '/.well-known/oauth-authorization-server/oauth/api/mcp'
+      ) {
         const requestUrl = `http://${req.headers.host ?? '127.0.0.1'}${url.pathname}`;
         const webRes = oauthDiscoveryResponse(
           oauthDiscoveryConfigFromEnv(
@@ -151,7 +155,14 @@ async function startMcpServer(deps: {
         return;
       }
 
-      if (url.pathname === '/api/mcp' || url.pathname === '/mcp') {
+      // Both /api/mcp (static bearer) and /oauth/api/mcp (OAuth flow)
+      // share the same handler. They differ only in (a) URL path and
+      // (b) whether discovery is published.
+      if (
+        url.pathname === '/api/mcp' ||
+        url.pathname === '/mcp' ||
+        url.pathname === '/oauth/api/mcp'
+      ) {
         const webReq = await nodeRequestToWebRequest(req, url);
         const transportDeps = {
           client: deps.client,
@@ -352,12 +363,25 @@ async function main(): Promise<void> {
 
   try {
     // -------------------------------------------------------------------
-    // [0] OAuth discovery (RFC 8414)
+    // [0] OAuth discovery split (per substrate/oauth-discovery-split-urls)
     // -------------------------------------------------------------------
-    console.log('\n[0] /.well-known/oauth-authorization-server');
-    const discRes = await fetch(`${mcp.url}/.well-known/oauth-authorization-server`);
-    check('discovery returns 200', discRes.status === 200);
-    const disc = (await discRes.json()) as Record<string, string>;
+    console.log('\n[0] discovery split: root 404, path-prefixed 200');
+    // Root discovery must NOT exist — Claude Code's MCP SDK preferentially
+    // does OAuth flow when discovery is found, ignoring static bearer in
+    // headers. The static-bearer route at /api/mcp must have no discovery
+    // probe path return 200, or Claude Code bails attempting DCR.
+    const rootDiscRes = await fetch(`${mcp.url}/.well-known/oauth-authorization-server`);
+    check('root discovery returns 404 (no discovery for /api/mcp)', rootDiscRes.status === 404);
+
+    // Path-prefixed discovery for the OAuth-flow route returns the
+    // metadata. Future remote OAuth clients (claude.ai Connectors,
+    // ChatGPT Connectors) point at /oauth/api/mcp and find discovery at
+    // /.well-known/oauth-authorization-server/oauth/api/mcp.
+    const oauthDiscRes = await fetch(
+      `${mcp.url}/.well-known/oauth-authorization-server/oauth/api/mcp`,
+    );
+    check('path-prefixed discovery returns 200', oauthDiscRes.status === 200);
+    const disc = (await oauthDiscRes.json()) as Record<string, string>;
     check('discovery.issuer matches configured issuer', disc.issuer === issuer.url);
     check('discovery.jwks_uri derived correctly', disc.jwks_uri === `${issuer.url}/.well-known/jwks.json`);
     check('discovery.token_endpoint set', typeof disc.token_endpoint === 'string' && disc.token_endpoint.length > 0);
@@ -367,19 +391,11 @@ async function main(): Promise<void> {
       Array.isArray((disc as unknown as { code_challenge_methods_supported: unknown }).code_challenge_methods_supported) &&
         ((disc as unknown as { code_challenge_methods_supported: string[] }).code_challenge_methods_supported.includes('S256')),
     );
-    // registration_endpoint is always emitted so MCP clients (notably
-    // Claude Code's MCP SDK) that probe it during OAuth discovery don't
-    // bail. Atelier doesn't support RFC 7591 DCR; the endpoint is a 405
-    // stub that tells clients to use the static bearer in headers.
     check(
       'discovery.registration_endpoint is set (always emitted)',
       typeof disc.registration_endpoint === 'string' && disc.registration_endpoint.length > 0,
       `actual: ${disc.registration_endpoint}`,
     );
-    // Hotfix to PR #11: the URL must be absolute. RFC 8414 §3 permits
-    // relative URLs but Claude Code's MCP SDK (and Cursor's) validates
-    // with Zod-style `.url()` requiring absolute. The strictness of
-    // wild validators forces absolute.
     check(
       'discovery.registration_endpoint is an absolute URL',
       /^https?:\/\//.test(disc.registration_endpoint ?? ''),
@@ -453,6 +469,33 @@ async function main(): Promise<void> {
         'no env + no requestUrl falls back to relative /oauth/register',
         cfgFallback.registrationEndpoint === '/oauth/register',
         `actual: ${cfgFallback.registrationEndpoint}`,
+      );
+    }
+
+    // [0c] Both /api/mcp and /oauth/api/mcp accept the same bearer and
+    // serve identical handler responses. The split is purely about which
+    // URL publishes discovery; behind both URLs is the same MCP handler
+    // backed by the same DB pool, verifier, committer, and embedder.
+    console.log('\n[0c] both routes accept bearer auth (split is URL-only)');
+    for (const path of ['/api/mcp', '/oauth/api/mcp'] as const) {
+      const res = await fetch(`${mcp.url}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${devToken}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'initialize',
+          params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'split-smoke', version: '0.1' } },
+        }),
+      });
+      check(`POST ${path} initialize returns 200`, res.status === 200);
+      const body = (await res.json()) as { result?: { serverInfo?: { name: string } } };
+      check(
+        `POST ${path} returns atelier-mcp serverInfo`,
+        body.result?.serverInfo?.name === 'atelier-mcp',
       );
     }
 

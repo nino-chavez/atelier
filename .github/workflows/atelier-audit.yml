@@ -206,7 +206,7 @@ jobs:
           npx tsx scripts/coordination/embed-runner.ts \
             --project 00000000-eea1-eea1-eea1-000000000000
 
-      - name: Eval gate (M5 / ADR-043: advisory tier precision >= 0.60 AND recall >= 0.60)
+      - name: "Eval gate (M5 / ADR-043: advisory tier precision >= 0.60 AND recall >= 0.60)"
         if: env.OPENAI_API_KEY != ''
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

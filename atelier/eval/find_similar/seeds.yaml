@@ -1,0 +1,185 @@
+# find_similar eval seed set (ADR-006 + BRD Epic-6)
+#
+# Curated against Atelier's own ADR corpus per BUILD-SEQUENCE.md M5
+# ("Eval harness: labeled seed set drawn from this repo's own decisions
+#  corpus -- ADRs are the natural ground truth"). Each seed entry models a
+# realistic find_similar call an analyst, dev, or PM might issue while
+# coordinating against this repo. The expected list enumerates every ADR
+# that should appear in primary_matches for the query to count as a TP.
+#
+# Methodology:
+#   - Query text is a paraphrase, NOT the ADR title verbatim. Embedding the
+#     title back to find the same ADR is trivial and tests nothing about
+#     semantic search quality.
+#   - Expected ADRs in each seed are the canonical answers for the topic.
+#     Tangentially-related ADRs are deliberately excluded so a system that
+#     returns "similar but not the same topic" is correctly penalized.
+#   - Minimum 3 expected matches per seed where the topology supports it,
+#     so per-seed recall granularity is non-binary (0/0.33/0.66/1.0 vs.
+#     just 0/1).
+#   - 20+ seeds cover the major ADR clusters (find_similar itself,
+#     contribution lifecycle, locks/fencing, reference impl, lenses,
+#     remote agents, sync substrate, doc organization, etc.).
+#
+# CI gate per ADR-006: precision >= 0.75 AND recall >= 0.60 against this
+# set. Below 0.70 precision -> file follow-up ADR adopting hybrid retrieval
+# (RRF fusion of vector + BM25); see ADR-041 reverse/revisit conditions.
+#
+# When the corpus grows beyond ADRs (M5 will embed BRD/PRD/research
+# artifacts too), seeds should expand to cover cross-source-kind queries
+# (e.g. a query that should surface both an ADR + the BRD story it
+# implements). M7 hardening can extend.
+
+seeds:
+  - id: find-similar-001
+    description: "Eval harness coverage for the find_similar surface itself"
+    query: "What is the precision and recall gate for the semantic search service, and which embedding model does the reference implementation default to?"
+    expected:
+      - docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md
+      - docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md
+
+  - id: find-similar-002
+    description: "Vector search wedge framing"
+    # M5-AUDIT: rewrote per CAT B (over-paraphrased query). Original query
+    # ("how does system check whether change already in flight or duplicates
+    # prior decision before claim") severed all keyword bridges to ADR-006.
+    # Rewrite preserves the paraphrase methodology while restoring the
+    # bridge via "semantically-similar," "precision-recall gate," "claim."
+    query: "What primitive surfaces semantically-similar prior decisions or in-progress contributions before a new claim, and what precision-recall gate governs its quality?"
+    expected:
+      - docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md
+
+  - id: contribution-lifecycle-001
+    description: "Atomic create-and-claim and the broader contribution model"
+    # M5-AUDIT: removed ADR-002 per CAT A (foundational-tangential).
+    # ADR-002 establishes the ontology of contributions; the query asks about
+    # the procedural mechanism for atomic creation. ADR-022 is the precise
+    # topical answer; ADR-002 is the conceptual primer.
+    query: "How does an agent atomically create and claim a unit of work that did not exist as a pre-ingested row?"
+    expected:
+      - docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md
+
+  - id: contribution-lifecycle-002
+    description: "States of a contribution and gating between them"
+    # M5-AUDIT: removed ADR-002 per CAT A (foundational-tangential). The
+    # query asks about state machine + blocked orthogonality. ADR-034 is
+    # the direct answer for state/blocked separation; ADR-039 adds the
+    # plan_review state. ADR-002 establishes the contribution noun but
+    # does not address state machine or blocked-status representation.
+    query: "What states can a unit of authoring work move through, and how are blocked items represented separately from lifecycle position?"
+    expected:
+      - docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md
+      - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
+
+  - id: contribution-lifecycle-003
+    description: "Plan-review opt-in gate before in_progress"
+    query: "How can a territory require an explicit plan-approval step before authoring begins, and who can approve someone else's plan?"
+    expected:
+      - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
+
+  - id: contribution-lifecycle-004
+    description: "Discipline kinds vs the dropped proposal mechanism"
+    query: "What kinds of contributions exist now that proposal and decision were removed from the enum, and how is cross-role authoring gated?"
+    expected:
+      - docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md
+
+  - id: locks-fencing-001
+    description: "Why fencing tokens, who owns the implementation"
+    query: "Why does every lock acquisition return a token that must be presented on every write, and where does that mechanism live?"
+    expected:
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+      - docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md
+
+  - id: reference-impl-001
+    description: "Vendor stack + GCP migration story"
+    query: "Which managed services back the v1 reference deployment, and how does the architecture stay portable to a different cloud?"
+    expected:
+      - docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md
+      - docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md
+      - docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md
+
+  - id: reference-impl-002
+    description: "Identity provider default and BYO path"
+    query: "What identity provider does the reference implementation use by default, and how does an adopter swap to their own OIDC issuer?"
+    expected:
+      - docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md
+
+  - id: endpoint-surface-001
+    description: "12-tool MCP surface and consolidations"
+    query: "What is the locked tool surface the agent endpoint exposes, and which historical tools were merged into propose_contract_change?"
+    expected:
+      - docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md
+      - docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md
+
+  - id: remote-agents-001
+    description: "Web-surface agents as first-class authors"
+    query: "How are external chat-app or browser-based AI agents represented as composers, and how do they commit code without an IDE?"
+    expected:
+      - docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md
+      - docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md
+
+  - id: lenses-review-001
+    description: "Role-aware UI surfaces and review routing"
+    query: "What dashboard surfaces does each role see, and how is review responsibility routed when a contribution is ready?"
+    expected:
+      - docs/architecture/decisions/ADR-017-five-role-aware-lenses-at-atelier.md
+      - docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md
+
+  - id: sync-substrate-001
+    description: "All-or-nothing five sync scripts and triage"
+    query: "Why must all bidirectional sync scripts ship together at v1, and why does triage never auto-merge external comments?"
+    expected:
+      - docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md
+      - docs/architecture/decisions/ADR-018-triage-never-auto-merges.md
+
+  - id: scope-boundaries-001
+    description: "Self-hosted-only and explicit exclusions"
+    query: "Why is the project not delivered as a multi-tenant SaaS, and how are scope-creep adjacent categories pushed back?"
+    expected:
+      - docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md
+      - docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md
+
+  - id: design-discipline-001
+    description: "Destination-first vs phased rollout"
+    query: "Why does the v1 design lock all capabilities up front instead of staging features behind phase-2 markers?"
+    expected:
+      - docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md
+
+  - id: doc-organization-001
+    description: "ADR file split and seven-layer doc structure"
+    query: "Why was the single decision log split into one file per ADR, and how are documentation directories organized?"
+    expected:
+      - docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md
+      - docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md
+
+  - id: doc-organization-002
+    description: "Three reader intents at v1"
+    query: "What three audience tiers does the project documentation serve, and how do their entry points differ?"
+    expected:
+      - docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md
+
+  - id: composer-model-001
+    description: "Discipline vs access_level split and architect role"
+    query: "How is a composer's work role separated from their permission level, and where did the architect role come from?"
+    expected:
+      - docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md
+
+  - id: trace-ids-001
+    description: "Multi-trace support on contributions and decisions"
+    query: "How does a single contribution or decision link to multiple stories or epics simultaneously, and which index supports the lookup?"
+    expected:
+      - docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md
+
+  - id: decisions-discipline-001
+    description: "Decisions write to repo first; append-only invariants"
+    query: "Why do architectural decisions land in markdown files before the database, and what cleanup tightened the decisions table schema?"
+    expected:
+      - docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md
+      - docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md
+
+  - id: prototype-coordination-001
+    description: "Prototype is the dashboard"
+    query: "Why is the canonical artifact prototype the same surface that coordinates building it, and what does the /atelier route show?"
+    expected:
+      - docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md
+      - docs/architecture/decisions/ADR-017-five-role-aware-lenses-at-atelier.md

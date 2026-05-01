@@ -10,10 +10,23 @@
 // because the AtelierClient uses pg over TCP, which is not available in
 // Edge.
 
+import { resolve as pathResolve } from 'node:path';
+
 import { AtelierClient } from '../../../../../scripts/sync/lib/write.ts';
 import { gitCommitterFromEnv } from '../../../../../scripts/endpoint/lib/committer.ts';
 import { jwksVerifierFromEnv } from '../../../../../scripts/endpoint/lib/jwks-verifier.ts';
 import { handleMcpRequest } from '../../../../../scripts/endpoint/lib/transport.ts';
+import {
+  AdapterUnavailableError,
+  NoopEmbeddingService,
+  type EmbeddingService,
+} from '../../../../../scripts/coordination/lib/embeddings.ts';
+import { createOpenAICompatibleEmbeddingsService } from '../../../../../scripts/coordination/adapters/openai-compatible-embeddings.ts';
+import { loadFindSimilarConfig } from '../../../../../scripts/coordination/lib/embed-config.ts';
+import {
+  DEFAULT_FIND_SIMILAR_CONFIG,
+  type FindSimilarConfig,
+} from '../../../../../scripts/endpoint/lib/find-similar.ts';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,6 +62,50 @@ function getCommitter() {
   return cachedCommitter;
 }
 
+let cachedEmbedder: EmbeddingService | null = null;
+let cachedFindSimilarConfig: FindSimilarConfig | null = null;
+function getEmbeddingDeps(): { embedder: EmbeddingService; config: FindSimilarConfig } {
+  if (cachedEmbedder && cachedFindSimilarConfig) {
+    return { embedder: cachedEmbedder, config: cachedFindSimilarConfig };
+  }
+  const repoRoot = process.env.ATELIER_REPO_ROOT
+    ? pathResolve(process.env.ATELIER_REPO_ROOT)
+    : pathResolve(process.cwd());
+  let config;
+  try {
+    config = loadFindSimilarConfig(repoRoot);
+  } catch (err) {
+    console.warn(
+      `[mcp-route] find_similar config not loadable; using defaults + Noop embedder: ${(err as Error).message}`,
+    );
+    cachedEmbedder = new NoopEmbeddingService({ dimensions: 1536, modelVersion: 'noop@1536' });
+    cachedFindSimilarConfig = DEFAULT_FIND_SIMILAR_CONFIG;
+    return { embedder: cachedEmbedder, config: cachedFindSimilarConfig };
+  }
+  try {
+    cachedEmbedder = createOpenAICompatibleEmbeddingsService({
+      baseUrl: config.yaml.embeddings.base_url,
+      modelName: config.yaml.embeddings.model_name,
+      dimensions: config.yaml.embeddings.dimensions,
+      apiKeyEnv: config.yaml.embeddings.api_key_env,
+    });
+  } catch (err) {
+    if (err instanceof AdapterUnavailableError) {
+      console.warn(
+        `[mcp-route] ${err.message} -- find_similar will return degraded=true (set ${config.yaml.embeddings.api_key_env} to enable)`,
+      );
+      cachedEmbedder = new NoopEmbeddingService({
+        dimensions: config.yaml.embeddings.dimensions,
+        modelVersion: `noop@${config.yaml.embeddings.dimensions}`,
+      });
+    } else {
+      throw err;
+    }
+  }
+  cachedFindSimilarConfig = config.thresholds;
+  return { embedder: cachedEmbedder, config: cachedFindSimilarConfig };
+}
+
 export async function POST(request: Request): Promise<Response> {
   // ARCH 7.8 / ADR-023: per-project git committer wires into the
   // dispatcher's `decisionCommit` slot. Configured via env vars consumed by
@@ -56,11 +113,14 @@ export async function POST(request: Request): Promise<Response> {
   // working clone) committer is null and log_decision returns INTERNAL with
   // the documented marker so callers observe the gap explicitly.
   const committer = getCommitter();
+  const embedding = getEmbeddingDeps();
   return handleMcpRequest(request, {
     deps: {
       client: getClient(),
       verifier: getVerifier(),
       ...(committer !== null ? { decisionCommit: committer } : {}),
+      embedder: embedding.embedder,
+      findSimilarConfig: embedding.config,
     },
   });
 }

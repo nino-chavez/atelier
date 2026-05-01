@@ -1,0 +1,2445 @@
+{
+  "ran_at": "2026-05-01T13:38:04.833Z",
+  "project_id": "00000000-eea1-eea1-eea1-000000000000",
+  "seeds_total": 111,
+  "thresholds": {
+    "default": 0.032,
+    "weak": 0.03,
+    "topKPerBand": 5
+  },
+  "ci_gates": {
+    "precision": 0.6,
+    "recall": 0.6
+  },
+  "aggregate": {
+    "tp": 82,
+    "fp": 40,
+    "fn": 49,
+    "precision": 0.6721311475409836,
+    "recall": 0.6259541984732825
+  },
+  "passed": true,
+  "per_seed": [
+    {
+      "id": "find-similar-001",
+      "query": "What is the precision and recall gate for the semantic search service, and which embedding model does the reference implementation default to?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.5,
+      "recall": 0.5
+    },
+    {
+      "id": "find-similar-002",
+      "query": "What primitive surfaces semantically-similar prior decisions or in-progress contributions before a new claim, and what precision-recall gate governs its quality?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "contribution-lifecycle-001",
+      "query": "How does an agent atomically create and claim a unit of work that did not exist as a pre-ingested row?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "contribution-lifecycle-002",
+      "query": "What states can a unit of authoring work move through, and how are blocked items represented separately from lifecycle position?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "contribution-lifecycle-003",
+      "query": "How can a territory require an explicit plan-approval step before authoring begins, and who can approve someone else's plan?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-014-territory-contract-model-extended-to-non-code.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "contribution-lifecycle-004",
+      "query": "What kinds of contributions exist now that proposal and decision were removed from the enum, and how is cross-role authoring gated?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "locks-fencing-001",
+      "query": "Why does every lock acquisition return a token that must be presented on every write, and where does that mechanism live?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "reference-impl-001",
+      "query": "Which managed services back the v1 reference deployment, and how does the architecture stay portable to a different cloud?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md",
+        "docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "degraded": false,
+      "tp": 2,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.6666666666666666
+    },
+    {
+      "id": "reference-impl-002",
+      "query": "What identity provider does the reference implementation use by default, and how does an adopter swap to their own OIDC issuer?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "endpoint-surface-001",
+      "query": "What is the locked tool surface the agent endpoint exposes, and which historical tools were merged into propose_contract_change?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md",
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "remote-agents-001",
+      "query": "How are external chat-app or browser-based AI agents represented as composers, and how do they commit code without an IDE?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md",
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "primary_returned": [
+        "docs/functional/PRD.md#3-personas"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md",
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md",
+        "docs/functional/PRD.md#5-scope-boundaries-what-s-out"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "lenses-review-001",
+      "query": "What dashboard surfaces does each role see, and how is review responsibility routed when a contribution is ready?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-017-five-role-aware-lenses-at-atelier.md",
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "sync-substrate-001",
+      "query": "Why must all bidirectional sync scripts ship together at v1, and why does triage never auto-merge external comments?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md",
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md",
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "scope-boundaries-001",
+      "query": "Why is the project not delivered as a multi-tenant SaaS, and how are scope-creep adjacent categories pushed back?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md",
+        "docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "design-discipline-001",
+      "query": "Why does the v1 design lock all capabilities up front instead of staging features behind phase-2 markers?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md",
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "doc-organization-001",
+      "query": "Why was the single decision log split into one file per ADR, and how are documentation directories organized?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md",
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "doc-organization-002",
+      "query": "What three audience tiers does the project documentation serve, and how do their entry points differ?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md",
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "composer-model-001",
+      "query": "How is a composer's work role separated from their permission level, and where did the architect role come from?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md",
+        "docs/architecture/decisions/ADR-017-five-role-aware-lenses-at-atelier.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "trace-ids-001",
+      "query": "How does a single contribution or decision link to multiple stories or epics simultaneously, and which index supports the lookup?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "decisions-discipline-001",
+      "query": "Why do architectural decisions land in markdown files before the database, and what cleanup tightened the decisions table schema?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "prototype-coordination-001",
+      "query": "Why is the canonical artifact prototype the same surface that coordinates building it, and what does the /atelier route show?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md",
+        "docs/architecture/decisions/ADR-017-five-role-aware-lenses-at-atelier.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/functional/PRD.md#1-executive-summary",
+        "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md",
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-001",
+      "query": "Where is the project's defensible wedge against commoditized SDLC sync incumbents like GitHub Spec-Kit and Linear Agents, and where does it concede the market?",
+      "trace_id": null,
+      "expected": [
+        "docs/functional/PRD.md#2-market-context"
+      ],
+      "primary_returned": [
+        "docs/functional/PRD.md#2-market-context"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-002",
+      "query": "What disconfirming test must pass before any managed commercial surface ships, and why was a multi-tenant service ruled out at year-one cost math?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md",
+        "docs/functional/PRD.md#2-market-context"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-003",
+      "query": "Which adjacent product categories does this explicitly refuse to become — workflow engine, task tracker UI, chat app, design tool — and why would entering them destroy the destination?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md",
+        "docs/functional/PRD.md#5-scope-boundaries-whats-out"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#5-scope-boundaries-what-s-out"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "analyst-004",
+      "query": "Why was the studio-metaphor name chosen over Hivemind OS, Hive, Commons, and Loom — what did the OS framing fight?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-020-naming-atelier.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-020-naming-atelier.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-015-one-hive-many-projects.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-005",
+      "query": "What surface and agent client do analyst, PM, and stakeholder personas use, and what access scope does each carry against the repo and datastore?",
+      "trace_id": null,
+      "expected": [
+        "docs/functional/PRD.md#3-personas"
+      ],
+      "primary_returned": [
+        "docs/functional/PRD.md#3-personas"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-006",
+      "query": "Why are browser-based analysts not second-class reviewers in the actor model, and how many actor classes exist now versus the inherited bc-subscriptions design?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md",
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-007",
+      "query": "Why are the SDLC sync scripts and the blackboard coordination layer treated as two independently deployable substrates with different timescales and failure modes?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/functional/PRD.md#2-market-context",
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md",
+        "docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-008",
+      "query": "What is the relationship between a deployed datastore-plus-endpoint instance and the projects it hosts, and why was the singleton hackathon-hive shape rejected from day one?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-015-one-hive-many-projects.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-015-one-hive-many-projects.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-009",
+      "query": "Why does scope_kind ship with five values including doc_region and research_artifact rather than starting files-only and extending later?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-010",
+      "query": "How does the architecture stay capability-level so heterogeneous teams can adopt, while the reference deployment names a specific managed stack?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md",
+        "docs/functional/PRD.md#6-capability-requirements-vendor-neutral"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md",
+        "docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-011",
+      "query": "Why does the design-tool integration treat external comments as triage input rather than as the design source-of-truth, and what flows back through proposals?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md",
+        "docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md",
+        "docs/functional/PRD.md#1-executive-summary"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-012",
+      "query": "Why can no proposal generated from an external comment ever auto-merge, and what role gets notified when high-confidence proposals queue?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "analyst-013",
+      "query": "Beyond latency arguments, what audit-trail value does the plan-approval gate carry for regulated, audit-required teams, and why was a convention-based plan capture rejected?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "analyst-014",
+      "query": "Why is the duplicate-detection primitive considered the single most differentiated commercial wedge, and what precision-and-recall numbers gate it in CI?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md",
+        "docs/functional/PRD.md#46-findsimilar-epic-6"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/functional/PRD.md#7-success-metrics",
+        "docs/functional/PRD.md#2-market-context"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.5,
+      "recall": 0.5
+    },
+    {
+      "id": "analyst-015",
+      "query": "Why does the OpenAI-compatible adapter pattern keep the default convenient without locking adopters into a single vendor, and what happens when a swap changes the native dimension?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-016",
+      "query": "Why does the project ship find_similar below the precision-recall gate honestly rather than tuning seeds or thresholds until the metric clears?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md",
+        "docs/functional/PRD.md#7-success-metrics"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-017",
+      "query": "Why must a decision row land in the repo markdown file before any datastore insert, and how does that ordering survive a vector-index outage?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-018",
+      "query": "How does the Specification, Reference Implementation, Reference Deployment tiering map to W3C and IETF standards-body practice, and what reader intent does each tier serve?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md",
+        "docs/functional/PRD.md#1-executive-summary",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-019",
+      "query": "Which methodology, protocol, and schema sub-layers does the project add as peers to claude-docs-toolkit's default audience model, and why are they needed for projects that ship as specs?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md",
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#1-executive-summary",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "analyst-020",
+      "query": "What disciplines does the architecture impose on the reference Vercel-and-Supabase stack so that a future migration to a different cloud is mechanical rather than architectural?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "analyst-021",
+      "query": "What was the disqualifying gap in Switchman's lease-based lock model that made it not fencing-equivalent, and what validation did it nonetheless give the territory-as-scope-pattern shape?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-014-territory-contract-model-extended-to-non-code.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-022",
+      "query": "Why does Kleppmann's Redlock critique imply that monotonic per-resource fencing must ship at v1 rather than be added later, and which inherited stack lacked this protection?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-023",
+      "query": "Why does the project specify the entire v1 destination up front and treat phased delivery as planning-only, and which methodology does this counter?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md",
+        "docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-024",
+      "query": "Why is authorship recorded against an immortal composer identifier separate from the operational session reference, and what catastrophic deletion behavior was avoided?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-025",
+      "query": "Why is architect now a first-class work-discipline value rather than missing from the composers enum, and how did territories.yaml drift expose the conflation between work type and access level?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-026",
+      "query": "Once the contribution kind enum dropped proposal as a value, how is the triage-originated nature of an external comment still preserved without an enum echo?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md",
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-027",
+      "query": "Why was the convention category in the decisions enum vestigial and an other-or-misc anti-pattern, and where do commit-message and code-style decisions land now?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "analyst-028",
+      "query": "Why did a single breaking-change boolean collapse the classifier-and-override mechanism the architecture specified, and which four columns replaced it on the contracts row?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "analyst-029",
+      "query": "Why was overloading claim with a null contribution_id chosen over adding a separate create_contribution tool, and how does this respect the locked endpoint count?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md",
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "analyst-030",
+      "query": "Why are agent-session transcripts stored as repo sidecar files with a default-off opt-in rather than forced into a blob store, and what PII review applies when committed?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "research/README.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-001",
+      "query": "What stops a session whose lock was reaped from silently overwriting an artifact after another session re-acquired the lock?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+        "research/README.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-002",
+      "query": "Where does the fencing_token actually get checked for an IDE composer versus a web composer routing through the endpoint committer?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-003",
+      "query": "Can a single contribution hold more than one acquire_lock at a time, and does each call return its own fencing_token?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md",
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-004",
+      "query": "Why didn't we wrap an existing lease-based lock library and add fencing on top instead of writing our own lock subsystem?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "dev-005",
+      "query": "What parameters does claim accept when contribution_id is null so it can scaffold the row and transition to claimed in one transaction?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md",
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-006",
+      "query": "Which columns on contributions distinguish lifecycle position from blocked status, and what replaced the old blocked enum value?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-007",
+      "query": "When I clear blocked_by on a contribution, does it return to claimed or pick up where it paused, and what telemetry fires?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-008",
+      "query": "When an analyst authors a contribution against a dev-owned territory, what flag gets set on the row to require owner approval before merge?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-009",
+      "query": "If the territory's review_role rejects an agent's plan markdown, what state does the contribution return to and how does the agent re-submit?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md",
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-010",
+      "query": "Can the same composer who authored the plan markdown approve their own plan_review transition to in_progress?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-011",
+      "query": "What is the exact order of repo append, datastore insert, embedding upsert, and broadcast in log_decision, and which step is the success criterion?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-012",
+      "query": "How do I record that an ADR was raised in the context of a specific contribution PR so the dashboard can show a triggered-by link?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-013",
+      "query": "What index type backs the trace_ids column on contributions and decisions, and how do I write a where clause that finds rows tagged with US-1.3?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-014",
+      "query": "After the reaper deletes a 24-hour-old session row, how does a merged contribution still show who authored it, and which FK column survives?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-015",
+      "query": "Which holder column on the locks table is the durable composer reference and which is operational session_id with ON DELETE SET NULL?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-016",
+      "query": "What is the exact list of 12 tools the agent endpoint exposes at v1, and what was the rename from fit_check?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/functional/PRD.md#1-executive-summary"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "dev-017",
+      "query": "There's no get_contracts tool anymore — how do I retrieve contract schemas from the endpoint, and what parameter opts in to schema bodies?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md",
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-014-territory-contract-model-extended-to-non-code.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-018",
+      "query": "What does the endpoint return when an additive contract publishes versus when a breaking change creates a proposal contribution awaiting approval?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-014-territory-contract-model-extended-to-non-code.md",
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-019",
+      "query": "When a publisher overrides the classifier with override_classification=additive, where is the justification stored and which generated column reflects the final decision?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-020",
+      "query": "When a browser-based agent has no local git, how does the endpoint commit on its behalf with proper Co-Authored-By attribution, and what failure mode is retry-safe?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-021",
+      "query": "How do I rotate the deploy key the endpoint uses to push commits, and where does the audit log expose commit_sha to composer_id linkage?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-022",
+      "query": "How does the lock substrate behave when artifact_scope is the same path glob across two territories with different scope_kind values like files vs design_component?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-023",
+      "query": "I want to point Atelier at our existing Auth0 tenant instead of Supabase Auth — which config file key swaps the OIDC issuer?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-024",
+      "query": "Which @vercel/* and Supabase RPC helper imports are banned in the codebase, and which capability gets wrapped in BroadcastService?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#6-capability-requirements-vendor-neutral",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md",
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-025",
+      "query": "How do I switch find_similar from OpenAI to a self-hosted vLLM or Ollama endpoint without changing adapter code?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "dev-026",
+      "query": "What dimension does the embedding vector column use in M5's first migration, and which model produces that native output size?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-027",
+      "query": "When the triage script ingests an external comment, what state does the resulting contribution stop at, and what flag must be set before it can transition to merged?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md",
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-028",
+      "query": "Where do agent-session transcripts get written when capture is enabled, which contributions column references them, and is the sidecar gitignored by default?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md",
+        "research/README.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "dev-029",
+      "query": "After the column split, which composers field gates territory authorship and which one gates admin-only operations like token rotation?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "dev-030",
+      "query": "Can I deploy the publish-docs and reconcile sync scripts without standing up the 12-tool coordination endpoint, or do they share runtime?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md",
+        "docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md",
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md",
+        "docs/functional/PRD.md#1-executive-summary"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-001",
+      "query": "Why are we shipping as a self-hosted OSS template instead of a managed multi-tenant SaaS, and what's the year-1 cost math behind that call?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/functional/PRD.md#8-go-to-market",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-002",
+      "query": "When a publisher proposes a contract change that the classifier marks breaking, who has to approve it before it lands and how is the override justified?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "degraded": false,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-003",
+      "query": "Why can comments from published-doc systems or delivery trackers never auto-merge, and what human-approval flag governs the merge gate?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-018-triage-never-auto-merges.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-004",
+      "query": "What's the trade-off behind locking every capability into v1 instead of shipping a smaller surface and adding phase-2 markers later?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-005",
+      "query": "Can a single team's deployed Atelier infrastructure host multiple independent projects, or does each project need its own datastore and endpoint?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-015-one-hive-many-projects.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-015-one-hive-many-projects.md",
+        "docs/functional/PRD.md#1-executive-summary",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-006",
+      "query": "How does the system preserve who authored a merged contribution after the originating session row is reaped, and which tables carry the durable composer reference?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-007",
+      "query": "What's the default policy for capturing agent-session transcripts given PII and repository size concerns, and how does a team opt in?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "weak_returned": [
+        "research/README.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "pm-008",
+      "query": "What's the operational setup tax for the default embedding service, and roughly what does it cost to embed a typical project's full corpus once?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-009",
+      "query": "If the M5 eval misses the precision and recall thresholds even with hybrid retrieval, what does that gap tell us about the find_similar commercial wedge and how do we surface it honestly?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "docs/functional/PRD.md#7-success-metrics",
+        "docs/functional/PRD.md#2-market-context"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "pm-010",
+      "query": "What naming alternatives were considered for the product, and why did the studio metaphor win over Hivemind, Hive, Commons, and Loom?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-020-naming-atelier.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-020-naming-atelier.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-015-one-hive-many-projects.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-011",
+      "query": "How does the optional plan-review gate produce a queryable audit trail for regulated teams that need to record approver review of an agent's plan before work begins?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-012",
+      "query": "When a contribution moves to ready-for-review, which composer's lens picks it up by default and how is that mapping configured per territory?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-013",
+      "query": "What are the three engagement levels Atelier serves with one repo, and where does a Deploy versus Extend versus Implement reader land first?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#1-executive-summary",
+        "docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-014",
+      "query": "If a customer needs to migrate off the Supabase plus Vercel stack onto GCP, what migration path does the architecture preserve and which capabilities have direct equivalents?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md",
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md",
+        "docs/functional/PRD.md#6-capability-requirements-vendor-neutral",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "pm-015",
+      "query": "How does the territory model treat non-code work like research artifacts and design components as first-class scopes from day one, instead of starting files-only and extending later?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "research/README.md",
+        "docs/architecture/decisions/ADR-014-territory-contract-model-extended-to-non-code.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-016",
+      "query": "What's the operational difference between the SDLC sync substrate and the coordination substrate, and can a team adopt one without the other?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md",
+        "docs/functional/PRD.md#2-market-context"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-017",
+      "query": "If the datastore is unreachable when an architectural decision is logged, does the rationale still survive, and which step is the sole success criterion?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-027-reference-implementation-stack-github-supabase-vercel-mcp.md",
+        "docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "pm-018",
+      "query": "How does a single contribution or decision link to several stories at once when an architectural choice cuts across epics, and what query semantics does that preserve?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-019",
+      "query": "Why is the stale-holder data-loss risk addressed by mandatory fencing tokens at v1 rather than deferred, given that retrofitting the API later would be expensive?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+        "docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "pm-020",
+      "query": "We evaluated Switchman as a third-party lock dependency; why did we reject it and ship our own lock-and-fencing implementation instead?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-021",
+      "query": "A team running their own OIDC issuer doesn't want to swap to the default identity service; how do they override the provider via config?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md",
+        "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "pm-022",
+      "query": "Why don't designers author canonical components in Figma; how does feedback flow back into the prototype as the design source of truth?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#3-personas",
+        "docs/functional/PRD.md#1-executive-summary",
+        "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-023",
+      "query": "How does the dashboard report a contribution that is blocked while still claimed or in-progress, instead of collapsing the blocked status onto the lifecycle state?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md",
+        "docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md",
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-024",
+      "query": "When an ADR is raised because of a specific contribution's PR discussion, how does the decision row record that triggering contribution structurally rather than via citations in the body?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-025",
+      "query": "An analyst working in a browser web-agent has no local checkout; how does the endpoint commit on their behalf with proper attribution and what happens when the commit fails?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/functional/PRD.md#4-feature-scope"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-026",
+      "query": "Ad-hoc analyst research has no pre-existing open contribution to claim; how does the agent create and claim the unit in one step without expanding the 12-tool surface?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md",
+        "research/README.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-027",
+      "query": "Why are browser-based analysts treated as first-class composers rather than second-class reviewers, and what does that require of the session model?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md",
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md",
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "pm-028",
+      "query": "Why was the single decisions log split into one file per ADR, and what problems did the single-file approach cause for PR diffs and git blame?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md"
+      ],
+      "weak_returned": [
+        "docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md",
+        "docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-029",
+      "query": "How is a composer who owns methodology, architecture, and decisions territories represented now that the role split distinguishes work discipline from access level?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#3-personas",
+        "docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "pm-030",
+      "query": "Why is the canonical artifact prototype the same web app that hosts the coordination dashboard, and what duplication cost does the single-surface choice avoid?",
+      "trace_id": null,
+      "expected": [
+        "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md"
+      ],
+      "primary_returned": [
+        "docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md"
+      ],
+      "weak_returned": [
+        "docs/functional/PRD.md#4-feature-scope",
+        "docs/functional/PRD.md#1-executive-summary"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    }
+  ]
+}

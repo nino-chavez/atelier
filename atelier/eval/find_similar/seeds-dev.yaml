@@ -1,0 +1,200 @@
+# Dev-lens seeds (per ADR-017). Authored by Claude Opus 4.7 in single
+# session; priming + methodology per parent prompt.
+#
+# Reasoning shapes targeted: procedural ("how do I do X"), mechanism
+# ("how does Y work under the hood"), implementation-trace ("what code
+# path handles Z"), edge-case ("what happens when..."), schema-and-API
+# ("what's the contract / signature"). Vocabulary leans on column names,
+# tool names, parameter names, and code-shape terms a dev would type
+# while implementing or debugging against the spec.
+#
+# Methodology rules (from seeds.yaml header):
+#   - Query paraphrases the topic but preserves a 2-3 keyword bridge to
+#     the canonical answer body. No verbatim ADR titles.
+#   - Expected lists ONLY canonical answers. Foundational/conceptual ADRs
+#     that share vocabulary but don't directly answer the question are
+#     deliberately excluded (CAT A discipline per M5-AUDIT.md).
+#   - No over-paraphrasing that severs keyword bridges (CAT B).
+seeds:
+  - id: dev-001
+    description: "Stale lock-holder writes after lease reassignment"
+    query: "What stops a session whose lock was reaped from silently overwriting an artifact after another session re-acquired the lock?"
+    expected:
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+
+  - id: dev-002
+    description: "Fencing token validation surface differences"
+    query: "Where does the fencing_token actually get checked for an IDE composer versus a web composer routing through the endpoint committer?"
+    expected:
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+
+  - id: dev-003
+    description: "Acquiring multiple locks against one contribution"
+    query: "Can a single contribution hold more than one acquire_lock at a time, and does each call return its own fencing_token?"
+    expected:
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+
+  - id: dev-004
+    description: "Why a third-party lock manager was rejected"
+    query: "Why didn't we wrap an existing lease-based lock library and add fencing on top instead of writing our own lock subsystem?"
+    expected:
+      - docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+
+  - id: dev-005
+    description: "Atomic create-and-claim wire signature"
+    query: "What parameters does claim accept when contribution_id is null so it can scaffold the row and transition to claimed in one transaction?"
+    expected:
+      - docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md
+
+  - id: dev-006
+    description: "Contributions table column count after audit"
+    query: "Which columns on contributions distinguish lifecycle position from blocked status, and what replaced the old blocked enum value?"
+    expected:
+      - docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md
+
+  - id: dev-007
+    description: "Unblocking a contribution and its resume position"
+    query: "When I clear blocked_by on a contribution, does it return to claimed or pick up where it paused, and what telemetry fires?"
+    expected:
+      - docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md
+
+  - id: dev-008
+    description: "Cross-role authoring approval flag"
+    query: "When an analyst authors a contribution against a dev-owned territory, what flag gets set on the row to require owner approval before merge?"
+    expected:
+      - docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md
+
+  - id: dev-009
+    description: "Plan-review rejection path"
+    query: "If the territory's review_role rejects an agent's plan markdown, what state does the contribution return to and how does the agent re-submit?"
+    expected:
+      - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
+
+  - id: dev-010
+    description: "Plan-review reviewer self-approval rule"
+    query: "Can the same composer who authored the plan markdown approve their own plan_review transition to in_progress?"
+    expected:
+      - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
+
+  - id: dev-011
+    description: "log_decision four-step write order"
+    query: "What is the exact order of repo append, datastore insert, embedding upsert, and broadcast in log_decision, and which step is the success criterion?"
+    expected:
+      - docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md
+
+  - id: dev-012
+    description: "Linking a decision back to the contribution that prompted it"
+    query: "How do I record that an ADR was raised in the context of a specific contribution PR so the dashboard can show a triggered-by link?"
+    expected:
+      - docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md
+
+  - id: dev-013
+    description: "Querying contributions by multiple trace IDs"
+    query: "What index type backs the trace_ids column on contributions and decisions, and how do I write a where clause that finds rows tagged with US-1.3?"
+    expected:
+      - docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md
+
+  - id: dev-014
+    description: "Author attribution after session reaper deletes the session row"
+    query: "After the reaper deletes a 24-hour-old session row, how does a merged contribution still show who authored it, and which FK column survives?"
+    expected:
+      - docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md
+
+  - id: dev-015
+    description: "Lock holder identity after session cleanup"
+    query: "Which holder column on the locks table is the durable composer reference and which is operational session_id with ON DELETE SET NULL?"
+    expected:
+      - docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md
+
+  - id: dev-016
+    description: "12-tool surface enumerated"
+    query: "What is the exact list of 12 tools the agent endpoint exposes at v1, and what was the rename from fit_check?"
+    expected:
+      - docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md
+      - docs/architecture/decisions/ADR-013-12-tool-agent-endpoint-surface.md
+
+  - id: dev-017
+    description: "Reading contract bodies without a dedicated tool"
+    query: "There's no get_contracts tool anymore — how do I retrieve contract schemas from the endpoint, and what parameter opts in to schema bodies?"
+    expected:
+      - docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md
+
+  - id: dev-018
+    description: "propose_contract_change response shape"
+    query: "What does the endpoint return when an additive contract publishes versus when a breaking change creates a proposal contribution awaiting approval?"
+    expected:
+      - docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md
+
+  - id: dev-019
+    description: "Breaking-change classifier override audit trail"
+    query: "When a publisher overrides the classifier with override_classification=additive, where is the justification stored and which generated column reflects the final decision?"
+    expected:
+      - docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md
+
+  - id: dev-020
+    description: "Web-locus commit attribution"
+    query: "When a browser-based agent has no local git, how does the endpoint commit on its behalf with proper Co-Authored-By attribution, and what failure mode is retry-safe?"
+    expected:
+      - docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md
+
+  - id: dev-021
+    description: "Rotating the per-project committer deploy key"
+    query: "How do I rotate the deploy key the endpoint uses to push commits, and where does the audit log expose commit_sha to composer_id linkage?"
+    expected:
+      - docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md
+
+  - id: dev-022
+    description: "Glob patterns inside a territory's scope_pattern"
+    query: "How does the lock substrate behave when artifact_scope is the same path glob across two territories with different scope_kind values like files vs design_component?"
+    expected:
+      - docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md
+
+  - id: dev-023
+    description: "Identity provider override via config"
+    query: "I want to point Atelier at our existing Auth0 tenant instead of Supabase Auth — which config file key swaps the OIDC issuer?"
+    expected:
+      - docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md
+
+  - id: dev-024
+    description: "Vendor-specific imports banned outside named adapters"
+    query: "Which @vercel/* and Supabase RPC helper imports are banned in the codebase, and which capability gets wrapped in BroadcastService?"
+    expected:
+      - docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md
+
+  - id: dev-025
+    description: "Swapping the embedding provider via env vars"
+    query: "How do I switch find_similar from OpenAI to a self-hosted vLLM or Ollama endpoint without changing adapter code?"
+    expected:
+      - docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md
+
+  - id: dev-026
+    description: "pgvector column dimension at v1"
+    query: "What dimension does the embedding vector column use in M5's first migration, and which model produces that native output size?"
+    expected:
+      - docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md
+
+  - id: dev-027
+    description: "Triage pipeline terminal state"
+    query: "When the triage script ingests an external comment, what state does the resulting contribution stop at, and what flag must be set before it can transition to merged?"
+    expected:
+      - docs/architecture/decisions/ADR-018-triage-never-auto-merges.md
+
+  - id: dev-028
+    description: "Optional transcript capture sidecar"
+    query: "Where do agent-session transcripts get written when capture is enabled, which contributions column references them, and is the sidecar gitignored by default?"
+    expected:
+      - docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md
+
+  - id: dev-029
+    description: "Composer discipline vs access_level columns"
+    query: "After the column split, which composers field gates territory authorship and which one gates admin-only operations like token rotation?"
+    expected:
+      - docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md
+
+  - id: dev-030
+    description: "Sync substrate vs coordination substrate independence"
+    query: "Can I deploy the publish-docs and reconcile sync scripts without standing up the 12-tool coordination endpoint, or do they share runtime?"
+    expected:
+      - docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md
+      - docs/architecture/decisions/ADR-008-all-5-sync-substrate-scripts-ship-together.md

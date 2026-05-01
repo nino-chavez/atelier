@@ -8,10 +8,10 @@
     "brd-epics": 16,
     "brd-stories": 105,
     "decisions": 43,
-    "open-questions": 24,
+    "open-questions": 25,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 40
+    "adrs": 41
   },
   "entries": [
     {
@@ -1218,10 +1218,12 @@
       "id": "D24",
       "label": "Embedding model default for find_similar",
       "kind": "decision",
-      "docPath": "docs/functional/PRD-COMPANION.md",
-      "docUrl": "#d24--embedding-model-default-for-find_similar",
+      "docPath": "docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md",
+      "docUrl": "",
       "prototypePages": [],
-      "status": "OPEN"
+      "adr": "ADR-041",
+      "source": "m5-entry-strategic-call-2026-05-01",
+      "status": "DECIDED"
     },
     {
       "id": "D25",
@@ -1456,7 +1458,7 @@
       "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
       "docUrl": "#3-embedding-model-default-swappability-for-findsimilar",
       "prototypePages": [],
-      "status": "OPEN"
+      "status": "RESOLVED"
     },
     {
       "id": "BRD-OPEN-QUESTIONS:section-4",
@@ -1600,7 +1602,7 @@
       "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
       "docUrl": "#19-plan-review-checkpoint-between-claim-and-implementation",
       "prototypePages": [],
-      "status": "OPEN"
+      "status": "RESOLVED"
     },
     {
       "id": "BRD-OPEN-QUESTIONS:section-20",
@@ -1646,6 +1648,15 @@
       "docUrl": "#24-branch-reaping-in-reconcilets-for-ai-speed-contribution-churn",
       "prototypePages": [],
       "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-25",
+      "label": "Cross-dimension embedding-model swap migration path",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#25-cross-dimension-embedding-model-swap-migration-path",
+      "prototypePages": [],
+      "status": "OPEN"
     }
   ],
   "edges": [
@@ -1847,6 +1858,11 @@
     {
       "from": "ADR-040",
       "to": "BRD:Epic-2",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-041",
+      "to": "BRD:Epic-6",
       "rel": "implements"
     }
   ]

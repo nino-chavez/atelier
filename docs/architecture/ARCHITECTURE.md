@@ -887,9 +887,11 @@ Thresholds are read from `.atelier/config.yaml` at query time; both are per-proj
 | BRD/PRD section deleted | Row removed |
 | Project archived | All project_id rows soft-deleted (retained for audit) |
 
-**Embedding model swappability.** The `embedding_model_version` column on each row records which model produced the embedding. Switching models follows a documented procedure:
+**Embedding adapter and v1 default model.** Per ADR-041, the reference implementation ships a single named adapter that speaks the OpenAI `/v1/embeddings` API contract -- `EmbeddingService` interface at `scripts/coordination/lib/embeddings.ts` with the OpenAI-compatible adapter at `scripts/coordination/adapters/openai-compatible-embeddings.ts` (mirrors the M4 broadcast pattern). The v1 default config points the adapter at OpenAI with `text-embedding-3-small` (1536-dimension output); the pgvector column is `vector(1536)` accordingly. Adopters swap providers (Voyage, vLLM, Ollama, LocalAI, self-hosted) by overriding `find_similar.embeddings.base_url` and `find_similar.embeddings.api_key_env` in `.atelier/config.yaml` -- no adapter code change. Cross-dimension model swaps (e.g. moving to a 768-dim or 3072-dim model) are an open question per BRD-OPEN-QUESTIONS section 25.
 
-1. Update `find_similar.embedding_model` in `.atelier/config.yaml`.
+**Embedding model swappability.** The `embedding_model_version` column on each row records which model produced the embedding. Switching models within the same dimension count follows a documented procedure:
+
+1. Update `find_similar.embeddings.model_name` (and `base_url` if changing provider) in `.atelier/config.yaml`.
 2. Run `atelier eval find_similar --rebuild-index`. The CLI re-embeds the entire corpus into new rows tagged with the new `embedding_model_version`.
 3. During the rebuild, queries continue against the old version. On rebuild completion, the default-model pointer flips atomically to the new version.
 4. Old-version rows are retained for one config-defined grace period (default: 30 days) to enable rollback. After the grace window, a cleanup job removes them.

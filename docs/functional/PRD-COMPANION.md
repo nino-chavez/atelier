@@ -19,23 +19,7 @@ PRD-COMPANION owns only what ADRs cannot: items still in flight.
 
 ## Open & Proposed decisions
 
-### D24 — Embedding model default for find_similar
-
-**Status:** OPEN
-
-**Decision pending.** Default embedding-model choice for the find_similar vector index. Candidates:
-
-- OpenAI `text-embedding-3-small` — adequate, cheap, external API
-- Cohere Embed v3 — adequate, external API
-- Self-hostable models (e.g., BGE-large-en) — eliminates external AI dependency for self-host compliance
-
-**Constraint.** Swappability is the actual requirement (per ADR-012, vendor-neutrality). The default is a starting point, not a lock-in.
-
-**Recommendation.** Benchmark ≥3 candidates against the labeled eval set drawn from this repo's own decisions corpus (per ADR-006). Pick the one that meets the precision/recall gate with the cleanest self-host story.
-
-**Sequencing.** D24 must resolve before M5 of `../strategic/BUILD-SEQUENCE.md` begins (M5 ships find_similar; find_similar needs a chosen model). Recommend benchmarking during M3/M4 prep so M5 starts unblocked.
-
-**Lands as.** A new ADR when the benchmark concludes.
+_None at this time. D24 resolved 2026-05-01 as ADR-041 prior to M5 entry; see Decided redirect index below._
 
 ---
 
@@ -68,7 +52,7 @@ These decisions landed as ADRs. Full rationale, alternatives, and consequences l
 | D21 | Figma is feedback surface, not design source | [ADR-019](../architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md) |
 | D22 | Switchman as dependency for file-level locks | [ADR-026](../architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md) (own-implementation; Switchman not adopted) |
 | D23 | Identity service default | [ADR-028](../architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md) (Supabase Auth default; BYO via OIDC) |
-| D24 | Embedding model default for find_similar | **OPEN** — see Open & Proposed above |
+| D24 | Embedding model default for find_similar | [ADR-041](../architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md) (OpenAI-compatible adapter; default OpenAI `text-embedding-3-small` 1536-dim) |
 | D25 | Naming: Atelier | [ADR-020](../architecture/decisions/ADR-020-naming-atelier.md) |
 | D26 | Multi-trace-ID support on contributions and decisions | [ADR-021](../architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md) |
 | D27 | `claim` atomic-creates open contributions | [ADR-022](../architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md) |

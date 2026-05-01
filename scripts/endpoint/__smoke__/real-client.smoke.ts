@@ -155,11 +155,14 @@ async function startMcpServer(deps: {
     try {
       const url = new URL(req.url ?? '/', `http://localhost`);
 
-      if (req.method === 'GET' && url.pathname === '/.well-known/oauth-authorization-server') {
-        // Mirror the production route: pass request URL so the lib
-        // resolves registration_endpoint to an absolute URL (Claude Code
-        // MCP SDK requires absolute even though RFC 8414 §3 permits
-        // relative).
+      // Discovery published only at the path-prefixed URL matching the
+      // OAuth-flow route per substrate/oauth-discovery-split-urls.
+      // /api/mcp must NOT have discovery findable; Claude Code falls back
+      // to static bearer when no discovery is published.
+      if (
+        req.method === 'GET' &&
+        url.pathname === '/.well-known/oauth-authorization-server/oauth/api/mcp'
+      ) {
         const requestUrl = `http://${req.headers.host ?? '127.0.0.1'}${url.pathname}`;
         const webRes = oauthDiscoveryResponse(
           oauthDiscoveryConfigFromEnv(
@@ -423,12 +426,17 @@ async function main(): Promise<void> {
 
   try {
     // -------------------------------------------------------------------
-    // [0] Discovery -- the metadata clients fetch first.
+    // [0] Discovery split (per substrate/oauth-discovery-split-urls)
     // -------------------------------------------------------------------
-    console.log('\n[0] /.well-known/oauth-authorization-server points at Supabase Auth');
-    const discRes = await fetch(`${mcp.url}/.well-known/oauth-authorization-server`);
-    check('discovery returns 200', discRes.status === 200);
-    const disc = (await discRes.json()) as Record<string, string>;
+    console.log('\n[0] discovery split: root 404, path-prefixed points at Supabase Auth');
+    const rootDiscRes = await fetch(`${mcp.url}/.well-known/oauth-authorization-server`);
+    check('root discovery returns 404 (no discovery for /api/mcp)', rootDiscRes.status === 404);
+
+    const oauthDiscRes = await fetch(
+      `${mcp.url}/.well-known/oauth-authorization-server/oauth/api/mcp`,
+    );
+    check('path-prefixed discovery returns 200', oauthDiscRes.status === 200);
+    const disc = (await oauthDiscRes.json()) as Record<string, string>;
     check('discovery.issuer = Supabase auth issuer', disc.issuer === sb.authIssuer);
     check(
       'discovery.token_endpoint includes /token',
@@ -439,18 +447,11 @@ async function main(): Promise<void> {
       Array.isArray((disc as unknown as { code_challenge_methods_supported: unknown }).code_challenge_methods_supported) &&
         ((disc as unknown as { code_challenge_methods_supported: string[] }).code_challenge_methods_supported.includes('S256')),
     );
-    // registration_endpoint is always emitted so MCP clients (notably
-    // Claude Code's MCP SDK) that probe it during OAuth discovery don't
-    // bail. Atelier doesn't support RFC 7591 DCR; the route at
-    // /oauth/register returns 405 with a documented error body.
     check(
       'discovery.registration_endpoint is set (always emitted)',
       typeof disc.registration_endpoint === 'string' && disc.registration_endpoint.length > 0,
       `actual: ${disc.registration_endpoint}`,
     );
-    // Hotfix to PR #11: must be absolute URL. Claude Code's MCP SDK
-    // validates `.url()` strictly; relative URLs fail even though
-    // RFC 8414 §3 permits them.
     check(
       'discovery.registration_endpoint is an absolute URL',
       /^https?:\/\//.test(disc.registration_endpoint ?? ''),

@@ -320,7 +320,15 @@ function jsonRpcResponse(
 function isJsonRpcRequest(value: unknown): value is JsonRpcRequest {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
-  return v.jsonrpc === '2.0' && typeof v.method === 'string' && (v.id === null || ['string', 'number'].includes(typeof v.id));
+  // Per JSON-RPC 2.0 §4.1, notifications are valid envelopes WITHOUT an
+  // `id` field (server MUST NOT respond). The MCP `notifications/*`
+  // family arrives this shape (e.g., `notifications/initialized` from
+  // the standard client handshake). Accept undefined id alongside null /
+  // string / number; the dispatch switch decides whether the envelope
+  // gets a response or not. Surfaced by ADR-044 bootstrap session when
+  // Claude Code's HTTP MCP client probe failed handshake.
+  if (v.jsonrpc !== '2.0' || typeof v.method !== 'string') return false;
+  return v.id === undefined || v.id === null || ['string', 'number'].includes(typeof v.id);
 }
 
 // Re-export for convenience to consumers (Next.js route, smoke).

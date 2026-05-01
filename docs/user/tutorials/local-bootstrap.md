@@ -57,7 +57,7 @@ PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
   -c "SELECT count(*) FROM pg_tables WHERE schemaname='public';"
 ```
 
-You should see somewhere around 15+ tables (projects, composers, sessions, contributions, decisions, locks, contracts, embeddings, etc.).
+You should see 11 tables at M5-exit: `projects`, `composers`, `sessions`, `contributions`, `decisions`, `territories`, `contracts`, `locks`, `telemetry`, `embeddings`, `delivery_sync_state`. Migrations 1-8 (M1 schema + M1 counters + delivery sync state + M2-entry schema + M4 broadcast seq + M5 embeddings 1536/3072 swap) are all applied.
 
 ---
 
@@ -90,9 +90,13 @@ npx tsx scripts/bootstrap/seed-composer.ts \
   --access-level admin
 ```
 
-The script (which lives at `scripts/bootstrap/seed-composer.ts` and ships with the reference impl) creates the Supabase Auth user, captures the resulting `auth.users.id` as the composer's `identity_subject`, and inserts a row into `composers` with the discipline + access level you specified.
+The script (which lives at `scripts/bootstrap/seed-composer.ts` and ships with the reference impl) creates the Supabase Auth user, captures the resulting `auth.users.id` as the composer's `identity_subject`, and inserts a row into `composers` with the discipline + access level you specified. It also seeds a baseline `bootstrap` territory (scope `**`) so `/atelier` panels render real data on first visit.
 
 It echoes the composer UUID, the project UUID (`atelier-self` is auto-seeded if absent), and the steps to issue a bearer token.
+
+The script is idempotent: re-running with the same email is a no-op for the auth user (looks up the existing user.id) and a no-op for the composer row (UPSERT on `(project_id, email)`). To rotate the password without changing the email, use Supabase's admin `updateUserById` API with the new password, or run the script with a different email and clean the old user via `supabase studio` later.
+
+> **Save your password.** The script does not echo it back. Whatever you pass to `--password` is what you must pass to `issue-bearer.ts` in step 4. If you lose it, rotate via the admin API (see `docs/user/guides/rotate-secrets.md`) or re-seed with a fresh email.
 
 > **Note for adopters not on the reference impl:** the same seed can be done by hand with two SQL inserts (one to `composers` with your `identity_subject` matching your Supabase Auth user.id, one to `projects` if not present). The script is convenience, not a hard dependency.
 
@@ -149,7 +153,9 @@ claude mcp add atelier --transport http http://localhost:3030/api/mcp \
   --scope project
 ```
 
-`--scope project` writes the entry to `.mcp.json` at the project root (shared with anyone else who clones the repo and runs the bootstrap). Omit the flag for `--scope local` (writes to `~/.claude.json`, your machine only).
+`--scope project` writes the entry to `.mcp.json` at the project root. Omit the flag for `--scope local` (writes to `~/.claude.json`, your machine only).
+
+> **`.mcp.json` contains the literal bearer.** As of Claude Code 2.1.x, `claude mcp add --header ...` writes the literal `Authorization: Bearer <token>` value into `.mcp.json` (no token-reference indirection). The repo's `.gitignore` lists `.mcp.json` to prevent committing the bearer. If you fork Atelier or change the gitignore, keep `.mcp.json` excluded — the bearer is short-lived (1 hour) but does grant tool access during that window. The runbook previously claimed the CLI stores a reference; that was incorrect and has been corrected.
 
 ### Path B: Direct JSON edit
 
@@ -179,7 +185,9 @@ In a Claude Code session, ask the agent to call `get_context`:
 
 > "Call the atelier `get_context` tool and tell me what project + recent decisions you see."
 
-Expected response: the agent calls the tool against your local endpoint, gets back the `atelier-self` project info, the most recent decisions (the ones from your repo), and your composer's territory data.
+Expected response: the agent calls the tool against your local endpoint, gets back the `atelier-self` project info, your composer's territory data (at minimum the `bootstrap` territory the seed script inserted), and the charter paths from `.atelier/config.yaml`.
+
+> **`recent_decisions.direct` is empty on a fresh local-bootstrap.** That is expected. Per ADR-005 the only path that writes to the `decisions` table is `log_decision`. The 44 canonical ADRs in `docs/architecture/decisions/` predate the substrate (they were authored to the filesystem before the endpoint existed). The first ADR landed via `log_decision` from M6 onward becomes the inaugural row. Empty here is wire-up correctness, not a bug — the agent should still be able to read those ADRs by reading the markdown files directly per the CLAUDE.md fallback rule.
 
 If you see a "tool not found" or auth error, check:
 
@@ -225,6 +233,8 @@ When a network-access need surfaces (a teammate joining, a remote agent peer com
 **Migrations fail.** Run `supabase db reset` (DESTROYS LOCAL DATA) to start fresh and re-run all migrations from `supabase/migrations/`. If a specific migration fails, check the migration file for syntax that depends on a previous one.
 
 **`get_context` returns 401.** Bearer token expired (1-hour default). Re-run step 4 and update the config in step 6.
+
+**`claude mcp list` shows `Failed to connect` on the `atelier` entry but `curl` works against `/api/mcp`.** Check the dev server log: a `400` response on `notifications/initialized` is the symptom of a JSON-RPC envelope validator that rejects notifications (no `id` field per JSON-RPC 2.0 §4.1). The fix landed at M5-exit (`scripts/endpoint/lib/transport.ts:isJsonRpcRequest`); if you're on a fork branched before that fix, cherry-pick it or relax the validator to allow `v.id === undefined`.
 
 **`find_similar` returns `degraded: true` immediately.** OpenAI API key missing or invalid in step 5's env vars. Check `OPENAI_API_KEY` is set and the key works (e.g., `curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"` should return 200).
 

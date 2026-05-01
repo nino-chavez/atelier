@@ -14,7 +14,12 @@
     "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts",
     "smoke:real-client": "tsx scripts/endpoint/__smoke__/real-client.smoke.ts",
     "smoke:broadcast": "tsx scripts/coordination/__smoke__/broadcast.smoke.ts",
-    "smoke:lens": "tsx prototype/__smoke__/lens.smoke.ts"
+    "smoke:lens": "tsx prototype/__smoke__/lens.smoke.ts",
+    "smoke:embeddings": "tsx scripts/coordination/__smoke__/embeddings.smoke.ts",
+    "smoke:find_similar": "tsx scripts/endpoint/__smoke__/find_similar.smoke.ts",
+    "smoke:eval_harness": "tsx scripts/eval/find_similar/__smoke__/eval-harness.smoke.ts",
+    "embed:run": "tsx scripts/coordination/embed-runner.ts",
+    "eval:find_similar": "tsx scripts/eval/find_similar/runner.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",

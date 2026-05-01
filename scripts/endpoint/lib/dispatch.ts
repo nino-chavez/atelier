@@ -20,7 +20,12 @@ import { AtelierClient, AtelierError } from '../../sync/lib/write.ts';
 import type { AuthContext, BearerVerifier } from './auth.ts';
 import { authenticate } from './auth.ts';
 import type { AdrCommitter } from './committer.ts';
+import type { EmbeddingService } from '../../coordination/lib/embeddings.ts';
 import * as handlers from './handlers.ts';
+import {
+  DEFAULT_FIND_SIMILAR_CONFIG,
+  type FindSimilarConfig,
+} from './find-similar.ts';
 
 export const TOOL_NAMES = [
   'register',
@@ -64,6 +69,20 @@ export interface DispatchDeps {
    * `gitCommitterFromEnv()` in production.
    */
   decisionCommit?: AdrCommitter;
+  /**
+   * Embedding service for find_similar (ARCH 6.4 / ADR-041). When omitted,
+   * find_similar falls back to NoopEmbeddingService -- every call serves
+   * the keyword path with degraded=true. Constructed in production from
+   * .atelier/config.yaml find_similar.embeddings via the OpenAI-compatible
+   * adapter factory.
+   */
+  embedder?: EmbeddingService;
+  /**
+   * find_similar tunables. Defaults to DEFAULT_FIND_SIMILAR_CONFIG (matching
+   * .atelier/config.yaml shipped values: 0.80 / 0.65 / 5). Production wires
+   * this from the same config file at startup.
+   */
+  findSimilarConfig?: FindSimilarConfig;
 }
 
 export async function dispatch(req: DispatchRequest, deps: DispatchDeps): Promise<DispatchResult> {
@@ -111,8 +130,23 @@ async function invokeHandler(
       return handlers.deregister(deps.client, auth, b as unknown as handlers.DeregisterRequest);
     case 'get_context':
       return handlers.getContext(deps.client, auth, b as unknown as handlers.GetContextRequest);
-    case 'find_similar':
-      return handlers.findSimilar(deps.client, auth, b as unknown as handlers.FindSimilarRequest);
+    case 'find_similar': {
+      if (!deps.embedder) {
+        throw new AtelierError(
+          'INTERNAL',
+          'find_similar requires an EmbeddingService configured on the dispatcher (ADR-041); construct via createOpenAICompatibleEmbeddingsService() at startup',
+        );
+      }
+      return handlers.findSimilar(
+        deps.client,
+        auth,
+        b as unknown as handlers.FindSimilarRequest,
+        {
+          embedder: deps.embedder,
+          config: deps.findSimilarConfig ?? DEFAULT_FIND_SIMILAR_CONFIG,
+        },
+      );
+    }
     case 'claim':
       return handlers.claim(deps.client, auth, b as unknown as handlers.ClaimRequest);
     case 'update':

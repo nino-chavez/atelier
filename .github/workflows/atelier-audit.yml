@@ -125,6 +125,28 @@ jobs:
       - name: Lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
         run: npx tsx prototype/__smoke__/lens.smoke.ts
 
+      - name: Embeddings adapter smoke (M5 / ADR-041; mocked fetch + Noop)
+        # Pure unit-shaped smoke that exercises the EmbeddingService surface
+        # contract: Noop, formatModelVersion validation, OpenAI-compatible
+        # adapter wire shape against a stub fetch, fail-closed paths. No
+        # live OpenAI call (the optional [8] block is skipped when
+        # OPENAI_API_KEY is unset).
+        run: npx tsx scripts/coordination/__smoke__/embeddings.smoke.ts
+
+      - name: find_similar handler smoke (M5 / ARCH 6.4 + US-6.5; stub embedder)
+        # End-to-end against pgvector + FTS index from migration 6 with a
+        # stub embedder so we can engineer known cosine relationships
+        # without a live API key. Exercises the production code path
+        # (dispatch -> handler -> SQL -> partition).
+        run: npx tsx scripts/endpoint/__smoke__/find_similar.smoke.ts
+
+      - name: Eval harness smoke (M5 / ADR-006; seed shape + metric arithmetic)
+        # Validates the seed file structure + per-seed expected refs
+        # resolve to real files + precision/recall arithmetic. No DB or
+        # API key required. The full eval gate (next step) is what
+        # exercises the gate semantics with real measurements.
+        run: npx tsx scripts/eval/find_similar/__smoke__/eval-harness.smoke.ts
+
       - name: Round-trip corpus (M1 exit gate; 6 doc classes)
         run: npx tsx scripts/test/roundtrip.ts
 
@@ -141,6 +163,68 @@ jobs:
         if: github.event_name != 'pull_request'
         continue-on-error: true
         run: npx tsx scripts/traceability/validate-refs.ts --milestone-exit
+
+      # ---------------------------------------------------------------------
+      # find_similar eval gate (ADR-006: precision >= 0.75 AND recall >= 0.60)
+      # ---------------------------------------------------------------------
+      #
+      # Per ADR-006 the gate is mandatory on main. We split execution by
+      # secret availability:
+      #   - With OPENAI_API_KEY in the env (forks + main pipelines that hold
+      #     the secret): embed the corpus, run the eval, FAIL the build on
+      #     gate breach. This is the load-bearing gate.
+      #   - Without the secret (typical PR from a fork): skip with a clear
+      #     log; the eval-harness smoke above still validates the runner
+      #     machinery, so the gate is not silently bypassed for runner bugs.
+      #
+      # Cost trade-off: each run embeds the corpus (~30 ADRs + a handful of
+      # PRD/BRD/research items) once + ~20 query strings per call. At
+      # text-embedding-3-small's $0.02/M-token pricing this is well under
+      # one cent per run. A fixture-based optimization (cache corpus
+      # embeddings in the repo, re-embed only queries) is documented in
+      # atelier/eval/find_similar/README.md as a future tightening if CI
+      # cost ever becomes load-bearing.
+      - name: Embed corpus (M5 / ARCH 6.4.2; OPENAI_API_KEY-gated)
+        if: env.OPENAI_API_KEY != ''
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ATELIER_DATASTORE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -e
+          # Seed the find_similar project with a fixture project_id matching
+          # the eval runner's --project arg below.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c "
+            INSERT INTO projects (id, name, repo_url, template_version)
+            VALUES ('00000000-eval-eval-eval-000000000000', 'eval-find-similar', 'https://example.invalid/eval', '1.0')
+            ON CONFLICT (id) DO NOTHING;"
+          npx tsx scripts/coordination/embed-runner.ts \
+            --project 00000000-eval-eval-eval-000000000000
+
+      - name: Eval gate (M5 / ADR-006: precision >= 0.75 AND recall >= 0.60)
+        if: env.OPENAI_API_KEY != ''
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ATELIER_DATASTORE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          set -e
+          npx tsx scripts/eval/find_similar/runner.ts \
+            --project 00000000-eval-eval-eval-000000000000 \
+            --json-out atelier/eval/find_similar/last-run.json
+
+      - name: Eval gate skipped (no OPENAI_API_KEY in env)
+        if: env.OPENAI_API_KEY == ''
+        run: |
+          echo "::warning::OPENAI_API_KEY not set; ADR-006 eval gate skipped for this run."
+          echo "Eval-harness smoke above validated the runner machinery; the gate itself"
+          echo "still requires the secret to embed the corpus + queries."
+
+      - name: Upload eval metrics (when gate ran)
+        if: env.OPENAI_API_KEY != '' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: find_similar-eval-${{ github.run_id }}
+          path: atelier/eval/find_similar/last-run.json
+          if-no-files-found: ignore
 
       - name: Stop Supabase
         if: always()

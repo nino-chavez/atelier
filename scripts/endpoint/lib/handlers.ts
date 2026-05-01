@@ -20,6 +20,7 @@ import type { Pool } from 'pg';
 import { AtelierClient, AtelierError } from '../../sync/lib/write.ts';
 import type { AuthContext } from './auth.ts';
 import type { AdrCommitter, ComposerIdentity } from './committer.ts';
+import { findSimilar as findSimilarImpl, type FindSimilarDeps, type FindSimilarResponse } from './find-similar.ts';
 
 // =========================================================================
 // Tool: register (ARCH 6.1)
@@ -111,13 +112,13 @@ export async function getContext(
 }
 
 // =========================================================================
-// Tool: find_similar (ARCH 6.4)
+// Tool: find_similar (ARCH 6.4 / 6.4.1 / 6.4.3 + ADR-006 + ADR-041)
 // =========================================================================
 //
-// Stubbed at M2 entry per BUILD-SEQUENCE: the eval harness + vector
-// index land at M5. The endpoint advertises the surface and returns a
-// degraded:true response so callers behave correctly when the index is
-// not yet populated.
+// At M5 entry the real vector + keyword paths land. The dispatcher injects
+// the EmbeddingService + FindSimilarConfig via FindSimilarDeps; the
+// implementation lives in ./find-similar.ts so the eval harness can call
+// the same code path the endpoint uses.
 
 export interface FindSimilarRequest {
   description: string;
@@ -125,24 +126,17 @@ export interface FindSimilarRequest {
 }
 
 export async function findSimilar(
-  _client: AtelierClient,
-  _auth: AuthContext,
+  client: AtelierClient,
+  auth: AuthContext,
   req: FindSimilarRequest,
-): Promise<{
-  primary_matches: never[];
-  weak_suggestions: never[];
-  degraded: true;
-  thresholds_used: { default: number; weak: number };
-}> {
-  if (!req.description || req.description.trim().length === 0) {
-    throw new AtelierError('BAD_REQUEST', 'description must be non-empty');
-  }
-  return {
-    primary_matches: [],
-    weak_suggestions: [],
-    degraded: true,
-    thresholds_used: { default: 0.8, weak: 0.65 },
-  };
+  findSimilarDeps: Omit<FindSimilarDeps, 'pool'>,
+): Promise<FindSimilarResponse> {
+  const pool = (client as unknown as { pool: Pool }).pool;
+  return findSimilarImpl(
+    auth.projectId,
+    { description: req.description, ...(req.trace_id !== undefined ? { trace_id: req.trace_id } : {}) },
+    { pool, ...findSimilarDeps },
+  );
 }
 
 // =========================================================================

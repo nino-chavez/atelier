@@ -57,3 +57,8 @@ eval-results/
 secrets/
 supabase/signing_keys.json
 tsconfig.tsbuildinfo
+
+# MCP client config -- contains literal bearer tokens when written by
+# `claude mcp add --scope project` (per docs/user/tutorials/local-bootstrap.md).
+# The CLI does NOT redact bearers; the literal lands in the file.
+.mcp.json

@@ -77,7 +77,12 @@ export interface OAuthDiscoveryConfig {
  */
 export function buildOAuthMetadata(config: OAuthDiscoveryConfig): Record<string, unknown> {
   if (!config.issuer) throw new Error('buildOAuthMetadata: issuer required');
-  const issuer = config.issuer.endsWith('/') ? config.issuer.slice(0, -1) : config.issuer;
+  // Trim whitespace + trailing slashes. Empirically env vars set via
+  // `echo "$VAL" | vercel env add` (and similar piped flows) carry a
+  // trailing newline; the issuer is concatenated to form authorization /
+  // token / jwks URLs, so the newline propagates and breaks every URL
+  // downstream. Defensive trim covers that class of operator slip-up.
+  const issuer = config.issuer.trim().replace(/\/+$/, '');
 
   return {
     issuer,

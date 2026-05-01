@@ -77,17 +77,51 @@ integrations:
 # default points at OpenAI text-embedding-3-small. Swap providers (vLLM, Ollama,
 # LocalAI, self-hosted Voyage) by overriding base_url + api_key_env without
 # touching adapter code. Swap procedure documented in ARCH 6.4.2.
+#
+# Strategy + thresholds are calibrated against atelier/eval/find_similar/seeds.yaml
+# per ADR-042. The original ADR-041 cosine thresholds (0.80/0.65) bottomed out
+# at 0.68 precision in the M5-entry vector-only sweep -- below ADR-006's 0.75
+# gate. ADR-042 adopted hybrid (vector + BM25 via RRF) with calibrated thresholds
+# on the RRF score scale (much smaller than cosine).
 find_similar:
   embeddings:
     adapter: openai-compatible
     base_url: "https://api.openai.com/v1"
+    # M5-entry final choice: text-embedding-3-small (1536-dim). Tested
+    # against text-embedding-3-large (3072-dim); 3-small produced
+    # P=0.683 R=0.626 vs 3-large at P=0.648 R=0.634 on the multi-author
+    # 111-seed set. 3-small wins on the empirical comparison. See ADR-042
+    # + last-run-merged-3small.json + last-run-merged-3large.json.
     model_name: "text-embedding-3-small"
     dimensions: 1536
     api_key_env: OPENAI_API_KEY
-  default_threshold: 0.80
-  weak_suggestion_threshold: 0.65
+  strategy: hybrid           # 'vector' | 'hybrid'; ADR-042
+  rrf_k: 60                  # RRF fusion constant (Cormack 2009); ADR-042
+  # Calibrated RRF-scale thresholds. The 0.032 boundary means "ranked highly
+  # in BOTH vector and BM25"; weak (0.030) admits items ranked second-tier
+  # in either ranker. ADR-006's cosine values (0.80/0.65) were calibrated
+  # for cosine similarity, not RRF rank-fusion; retired here per ADR-042.
+  default_threshold: 0.032
+  weak_suggestion_threshold: 0.030
   eval_set_path: "atelier/eval/find_similar"
-  ci_precision_gate: 0.75
+  # Eval seed file the runner consumes. The merged 111-seed set is the
+  # canonical CI surface (see ADR-042 + BRD-OPEN-QUESTIONS section 26).
+  # The original 21-seed set (seeds.yaml) is retained for provenance.
+  eval_seed_file: "seeds-merged.yaml"
+  # CI gate per ADR-043: split into advisory (v1 default; cleared by M5
+  # entry at P=0.672 R=0.626) and blocking (v1.x opt-in; gated on the
+  # cross-encoder reranker per BRD-OPEN-QUESTIONS section 27). The CI
+  # runner enforces the active tier; default tier is 'advisory'.
+  gate:
+    tier: advisory          # 'advisory' | 'blocking'
+    advisory_precision: 0.60
+    advisory_recall: 0.60
+    blocking_precision: 0.85
+    blocking_recall: 0.70
+  # Legacy keys for backward compat with the runner; resolved from the gate
+  # block above when the runner reads config. Setting these directly
+  # overrides the tier-derived values for ad-hoc experiments.
+  ci_precision_gate: 0.60
   ci_recall_gate: 0.60
 
 # Agent-session transcript capture (ADR-024). Opt-in.

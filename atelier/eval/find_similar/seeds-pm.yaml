@@ -1,0 +1,190 @@
+# PM-lens seeds (per ADR-017). Authored by Claude Opus 4.7 in a single
+# session; priming + methodology per parent prompt.
+#
+# Reasoning shape: outcome-driven, trade-off, scope, stakeholder,
+# commitment, sequencing. Queries are paraphrased but preserve at least
+# 2-3 substantive keywords that appear in the canonical answer's body.
+# Foundational/conceptual ADRs that share vocabulary but don't answer
+# the question are deliberately excluded.
+
+seeds:
+  - id: pm-001
+    description: "Why OSS-only and not a hosted commercial offering at v1"
+    query: "Why are we shipping as a self-hosted OSS template instead of a managed multi-tenant SaaS, and what's the year-1 cost math behind that call?"
+    expected:
+      - docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md
+
+  - id: pm-002
+    description: "How a breaking territory contract change requires cross-territory approval"
+    query: "When a publisher proposes a contract change that the classifier marks breaking, who has to approve it before it lands and how is the override justified?"
+    expected:
+      - docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md
+      - docs/architecture/decisions/ADR-040-12-tool-surface-consolidation-propose-contract-change.md
+
+  - id: pm-003
+    description: "Triage as the human-approval gate for unsanitized external content"
+    query: "Why can comments from published-doc systems or delivery trackers never auto-merge, and what human-approval flag governs the merge gate?"
+    expected:
+      - docs/architecture/decisions/ADR-018-triage-never-auto-merges.md
+
+  - id: pm-004
+    description: "Why v1 locks the full scope rather than staging features behind phase markers"
+    query: "What's the trade-off behind locking every capability into v1 instead of shipping a smaller surface and adding phase-2 markers later?"
+    expected:
+      - docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md
+
+  - id: pm-005
+    description: "Hosting multiple projects on one team's deployed substrate"
+    query: "Can a single team's deployed Atelier infrastructure host multiple independent projects, or does each project need its own datastore and endpoint?"
+    expected:
+      - docs/architecture/decisions/ADR-015-one-hive-many-projects.md
+
+  - id: pm-006
+    description: "Audit-trail value of immortal authorship after session cleanup"
+    query: "How does the system preserve who authored a merged contribution after the originating session row is reaped, and which tables carry the durable composer reference?"
+    expected:
+      - docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md
+
+  - id: pm-007
+    description: "PII risk and storage cost of agent-session transcripts"
+    query: "What's the default policy for capturing agent-session transcripts given PII and repository size concerns, and how does a team opt in?"
+    expected:
+      - docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md
+
+  - id: pm-008
+    description: "Embedding API key dependency and per-corpus cost"
+    query: "What's the operational setup tax for the default embedding service, and roughly what does it cost to embed a typical project's full corpus once?"
+    expected:
+      - docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md
+
+  - id: pm-009
+    description: "Find_similar gate breach as strategic signal, not CI failure"
+    query: "If the M5 eval misses the precision and recall thresholds even with hybrid retrieval, what does that gap tell us about the find_similar commercial wedge and how do we surface it honestly?"
+    expected:
+      - docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md
+
+  - id: pm-010
+    description: "Why the product is named Atelier and what alternatives lost"
+    query: "What naming alternatives were considered for the product, and why did the studio metaphor win over Hivemind, Hive, Commons, and Loom?"
+    expected:
+      - docs/architecture/decisions/ADR-020-naming-atelier.md
+
+  - id: pm-011
+    description: "Plan-review as a regulated-team audit primitive"
+    query: "How does the optional plan-review gate produce a queryable audit trail for regulated teams that need to record approver review of an agent's plan before work begins?"
+    expected:
+      - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
+
+  - id: pm-012
+    description: "How review work is routed to the right discipline lens"
+    query: "When a contribution moves to ready-for-review, which composer's lens picks it up by default and how is that mapping configured per territory?"
+    expected:
+      - docs/architecture/decisions/ADR-025-review-routing-keyed-by-territoryreview-role.md
+
+  - id: pm-013
+    description: "Three-tier consumer model and which docs each audience reads"
+    query: "What are the three engagement levels Atelier serves with one repo, and where does a Deploy versus Extend versus Implement reader land first?"
+    expected:
+      - docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md
+
+  - id: pm-014
+    description: "Buyer-portability assurance: GCP migration story for the reference stack"
+    query: "If a customer needs to migrate off the Supabase plus Vercel stack onto GCP, what migration path does the architecture preserve and which capabilities have direct equivalents?"
+    expected:
+      - docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md
+
+  - id: pm-015
+    description: "Non-code work as first-class scope (analyst and designer cases)"
+    query: "How does the territory model treat non-code work like research artifacts and design components as first-class scopes from day one, instead of starting files-only and extending later?"
+    expected:
+      - docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md
+
+  - id: pm-016
+    description: "Two independently deployable substrates with different timescales"
+    query: "What's the operational difference between the SDLC sync substrate and the coordination substrate, and can a team adopt one without the other?"
+    expected:
+      - docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md
+
+  - id: pm-017
+    description: "Decision durability when datastore or vector index is down"
+    query: "If the datastore is unreachable when an architectural decision is logged, does the rationale still survive, and which step is the sole success criterion?"
+    expected:
+      - docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md
+
+  - id: pm-018
+    description: "Cross-cutting work that touches multiple stories or epics"
+    query: "How does a single contribution or decision link to several stories at once when an architectural choice cuts across epics, and what query semantics does that preserve?"
+    expected:
+      - docs/architecture/decisions/ADR-021-multi-trace-id-support-on-contributions-and-decisions.md
+
+  - id: pm-019
+    description: "Why fencing tokens were not deferred to v1.x"
+    query: "Why is the stale-holder data-loss risk addressed by mandatory fencing tokens at v1 rather than deferred, given that retrofitting the API later would be expensive?"
+    expected:
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+
+  - id: pm-020
+    description: "Why we own the lock implementation instead of integrating Switchman"
+    query: "We evaluated Switchman as a third-party lock dependency; why did we reject it and ship our own lock-and-fencing implementation instead?"
+    expected:
+      - docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md
+
+  - id: pm-021
+    description: "BYO identity provider for teams that already run Auth0 or Keycloak"
+    query: "A team running their own OIDC issuer doesn't want to swap to the default identity service; how do they override the provider via config?"
+    expected:
+      - docs/architecture/decisions/ADR-028-identity-service-default-supabase-auth-byo-supported.md
+
+  - id: pm-022
+    description: "Why Figma is feedback-only and not the design source-of-truth"
+    query: "Why don't designers author canonical components in Figma; how does feedback flow back into the prototype as the design source of truth?"
+    expected:
+      - docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md
+
+  - id: pm-023
+    description: "Reporting blocked items separately from lifecycle position"
+    query: "How does the dashboard report a contribution that is blocked while still claimed or in-progress, instead of collapsing the blocked status onto the lifecycle state?"
+    expected:
+      - docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md
+
+  - id: pm-024
+    description: "Linking a decision back to the contribution that prompted it"
+    query: "When an ADR is raised because of a specific contribution's PR discussion, how does the decision row record that triggering contribution structurally rather than via citations in the body?"
+    expected:
+      - docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md
+
+  - id: pm-025
+    description: "Web-locus analyst commits without a local filesystem"
+    query: "An analyst working in a browser web-agent has no local checkout; how does the endpoint commit on their behalf with proper attribution and what happens when the commit fails?"
+    expected:
+      - docs/architecture/decisions/ADR-023-remote-locus-commits-via-per-project-endpoint-committer.md
+
+  - id: pm-026
+    description: "Atomic create-and-claim for analyst research not pre-ingested as a row"
+    query: "Ad-hoc analyst research has no pre-existing open contribution to claim; how does the agent create and claim the unit in one step without expanding the 12-tool surface?"
+    expected:
+      - docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md
+
+  - id: pm-027
+    description: "Mixed-team thesis: web agents as first-class composers"
+    query: "Why are browser-based analysts treated as first-class composers rather than second-class reviewers, and what does that require of the session model?"
+    expected:
+      - docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md
+
+  - id: pm-028
+    description: "Per-ADR file split improves PR review and per-decision blame"
+    query: "Why was the single decisions log split into one file per ADR, and what problems did the single-file approach cause for PR diffs and git blame?"
+    expected:
+      - docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md
+
+  - id: pm-029
+    description: "Composer identity for an architect role that owns methodology territories"
+    query: "How is a composer who owns methodology, architecture, and decisions territories represented now that the role split distinguishes work discipline from access level?"
+    expected:
+      - docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md
+
+  - id: pm-030
+    description: "Prototype-as-dashboard eliminates a second coordination surface"
+    query: "Why is the canonical artifact prototype the same web app that hosts the coordination dashboard, and what duplication cost does the single-surface choice avoid?"
+    expected:
+      - docs/architecture/decisions/ADR-001-prototype-is-the-canonical-artifact-and-coordination-dashboa.md

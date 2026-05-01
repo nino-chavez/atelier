@@ -40,24 +40,36 @@ seeds:
 
   - id: find-similar-002
     description: "Vector search wedge framing"
-    query: "How does the system check whether a proposed change is already in flight or duplicates a prior decision before claim?"
+    # M5-AUDIT: rewrote per CAT B (over-paraphrased query). Original query
+    # ("how does system check whether change already in flight or duplicates
+    # prior decision before claim") severed all keyword bridges to ADR-006.
+    # Rewrite preserves the paraphrase methodology while restoring the
+    # bridge via "semantically-similar," "precision-recall gate," "claim."
+    query: "What primitive surfaces semantically-similar prior decisions or in-progress contributions before a new claim, and what precision-recall gate governs its quality?"
     expected:
       - docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md
 
   - id: contribution-lifecycle-001
     description: "Atomic create-and-claim and the broader contribution model"
+    # M5-AUDIT: removed ADR-002 per CAT A (foundational-tangential).
+    # ADR-002 establishes the ontology of contributions; the query asks about
+    # the procedural mechanism for atomic creation. ADR-022 is the precise
+    # topical answer; ADR-002 is the conceptual primer.
     query: "How does an agent atomically create and claim a unit of work that did not exist as a pre-ingested row?"
     expected:
       - docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md
-      - docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md
 
   - id: contribution-lifecycle-002
     description: "States of a contribution and gating between them"
+    # M5-AUDIT: removed ADR-002 per CAT A (foundational-tangential). The
+    # query asks about state machine + blocked orthogonality. ADR-034 is
+    # the direct answer for state/blocked separation; ADR-039 adds the
+    # plan_review state. ADR-002 establishes the contribution noun but
+    # does not address state machine or blocked-status representation.
     query: "What states can a unit of authoring work move through, and how are blocked items represented separately from lifecycle position?"
     expected:
       - docs/architecture/decisions/ADR-034-contribution-state-separated-from-blocked-status-flag.md
       - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
-      - docs/architecture/decisions/ADR-002-contribution-is-the-atomic-unit.md
 
   - id: contribution-lifecycle-003
     description: "Plan-review opt-in gate before in_progress"

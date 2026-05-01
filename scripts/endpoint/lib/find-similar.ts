@@ -37,18 +37,36 @@ import {
 // ===========================================================================
 
 export interface FindSimilarConfig {
-  /** ARCH 6.4.1: default similarity threshold; ADR-041 sets 0.80 default. */
+  /** ARCH 6.4.1: default similarity threshold. */
   defaultThreshold: number;
-  /** ARCH 6.4.1: weak-band lower bound; ADR-041 sets 0.65 default. */
+  /** ARCH 6.4.1: weak-band lower bound. */
   weakSuggestionThreshold: number;
   /** ARCH 6.4.1: per-band cap; default 5. */
   topKPerBand: number;
+  /**
+   * Retrieval strategy (ADR-042). 'vector' is the original M5-entry default;
+   * 'hybrid' fuses vector kNN + BM25 keyword search via Reciprocal Rank
+   * Fusion (RRF). Calibrated thresholds differ between the two strategies
+   * because hybrid scores are RRF rank-fusion values, not cosine similarities.
+   */
+  strategy: 'vector' | 'hybrid';
+  /**
+   * RRF fusion constant k (Cormack et al. 2009). 60 is the canonical value;
+   * larger k softens the reciprocal-rank curve. Only consulted when strategy='hybrid'.
+   */
+  rrfK: number;
 }
 
 export const DEFAULT_FIND_SIMILAR_CONFIG: FindSimilarConfig = {
-  defaultThreshold: 0.8,
-  weakSuggestionThreshold: 0.65,
+  // Calibrated against atelier/eval/find_similar/seeds.yaml + M5-AUDIT.md
+  // per ADR-042. RRF-scale thresholds; not directly comparable to the
+  // original ADR-006 cosine values (0.80/0.65). See .atelier/config.yaml
+  // for the canonical values + commentary.
+  defaultThreshold: 0.032,
+  weakSuggestionThreshold: 0.030,
   topKPerBand: 5,
+  strategy: 'hybrid',
+  rrfK: 60,
 };
 
 // ===========================================================================
@@ -187,6 +205,9 @@ export async function findSimilar(
     return runKeywordFallback(projectId, description, traceScope, deps);
   }
 
+  if (deps.config.strategy === 'hybrid') {
+    return runHybridSearch(projectId, description, embedding, traceScope, deps);
+  }
   return runVectorSearch(projectId, embedding, traceScope, deps);
 }
 
@@ -321,6 +342,194 @@ function stringifyFiniteNumber(n: number): string {
 }
 
 // ===========================================================================
+// FTS query construction
+// ===========================================================================
+//
+// plainto_tsquery and websearch_to_tsquery both AND query terms, which
+// returns zero rows for natural-language descriptions of three or more
+// content words. The hybrid path needs OR semantics so BM25 can find
+// "documents containing ANY of these keywords" -- which is the standard
+// IR / BM25 behavior. We tokenize, sanitize to alphanumeric, drop short
+// tokens, and join with `|`.
+//
+// Sanitization is the load-bearing safety: to_tsquery raises syntax errors
+// on special characters, so we strip everything that isn't [A-Za-z0-9].
+// Empty input after filtering returns null; callers fall back to "no FTS
+// candidates" rather than executing an invalid query.
+
+const FTS_MIN_TOKEN_LEN = 3;
+
+/**
+ * Build an OR-joined to_tsquery argument from free-form text. Returns null
+ * when no usable token survives sanitization (e.g., query is "?" or
+ * "test 1"); callers omit the FTS step in that case.
+ */
+export function buildOrTsQuery(text: string): string | null {
+  const tokens = text
+    .toLowerCase()
+    .split(/[^a-z0-9_]+/)
+    .map((t) => t.replace(/[^a-z0-9]/g, ''))
+    .filter((t) => t.length >= FTS_MIN_TOKEN_LEN);
+  if (tokens.length === 0) return null;
+  // De-dup so to_tsquery doesn't choke on repeated alternatives
+  // (e.g. "find_similar find_similar"); set preserves insertion order.
+  const unique = Array.from(new Set(tokens));
+  return unique.join(' | ');
+}
+
+// ===========================================================================
+// Hybrid retrieval: vector kNN + BM25 fused via Reciprocal Rank Fusion (RRF)
+// (ADR-042 + ADR-041 reverse condition + ARCH 6.4.1 default-threshold tuning)
+// ===========================================================================
+//
+// RRF (Cormack, Clarke, Buettcher 2009) is the canonical hybrid-retrieval
+// fusion approach: each ranker contributes 1 / (k + rank) per result, summed
+// across rankers. Items ranked highly by EITHER vector or BM25 surface; items
+// ranked highly by BOTH dominate. The k constant (60 by convention) tempers
+// rank-1's contribution; without it, rank-1 in either ranker would always
+// outweigh consensus rankings.
+//
+// Why not late fusion of similarity + BM25 scores directly: cosine similarity
+// (0..1) and ts_rank_cd output (unbounded) are not directly comparable. RRF
+// dodges the calibration question entirely by working only on RANK position,
+// which is dimensionless. ADR-042 records this rationale.
+//
+// Why not query-time decision (vector-when-confident, BM25-when-not): adds
+// substantial complexity for minimal gain at this corpus size. RRF as the
+// default keeps the path uniform; the eval gate measures whether it works.
+//
+// The candidate pool is (vector top-N) UNION (BM25 top-N). The fused score
+// is RRF-shaped; thresholds in DEFAULT_FIND_SIMILAR_CONFIG are calibrated for
+// RRF score scale (which differs from cosine scale -- see ADR-042).
+
+interface HybridCandidate {
+  source_kind: FindSimilarSourceKind;
+  source_ref: string;
+  trace_ids: string[];
+  content_text: string;
+  /** Final RRF-fused score (sum of reciprocal ranks across rankers). */
+  fused: number;
+}
+
+const HYBRID_CANDIDATE_POOL = 30;
+
+async function runHybridSearch(
+  projectId: string,
+  description: string,
+  embedding: number[],
+  traceScope: string[] | null,
+  deps: FindSimilarDeps,
+): Promise<FindSimilarResponse> {
+  const cfg = deps.config;
+  const embeddingText = embeddingToVectorLiteral(embedding);
+  const traceFilter = traceScope ? 'AND trace_ids && $3::text[]' : '';
+
+  // Vector kNN: top HYBRID_CANDIDATE_POOL by cosine. No threshold filter
+  // here -- RRF cares about rank position, not absolute score, so cutting
+  // off below a similarity floor would silently drop items that BM25
+  // legitimately likes.
+  const vectorSql = `
+    SELECT source_kind, source_ref, trace_ids, content_text,
+           (1 - (embedding <=> $1::vector))::float8 AS similarity
+      FROM embeddings
+     WHERE project_id = $2
+       ${traceFilter}
+     ORDER BY embedding <=> $1::vector ASC
+     LIMIT ${HYBRID_CANDIDATE_POOL}
+  `;
+  const vectorParams: unknown[] = [embeddingText, projectId];
+  if (traceScope) vectorParams.push(traceScope);
+
+  // BM25 path: tokenize + OR-join into to_tsquery. plainto_tsquery /
+  // websearch_to_tsquery have AND semantics that return zero rows for
+  // natural-language queries against this corpus density (verified
+  // empirically during M5 calibration). OR semantics + ts_rank_cd give
+  // standard BM25-like behavior: rank by density of matching keywords.
+  const orTsQuery = buildOrTsQuery(description);
+  let ftsRows: KeywordMatchRow[] = [];
+  let vectorRows: VectorMatchRow[];
+  try {
+    const vectorPromise = deps.pool.query<VectorMatchRow>(vectorSql, vectorParams);
+    let ftsPromise: Promise<{ rows: KeywordMatchRow[] }> = Promise.resolve({ rows: [] });
+    if (orTsQuery !== null) {
+      const ftsTraceFilter = traceScope ? 'AND trace_ids && $3::text[]' : '';
+      const ftsSql = `
+        SELECT source_kind, source_ref, trace_ids, content_text,
+               ts_rank_cd(to_tsvector('english', content_text),
+                          to_tsquery('english', $1))::float8 AS rank
+          FROM embeddings
+         WHERE project_id = $2
+           ${ftsTraceFilter}
+           AND to_tsvector('english', content_text) @@ to_tsquery('english', $1)
+         ORDER BY rank DESC
+         LIMIT ${HYBRID_CANDIDATE_POOL}
+      `;
+      const ftsParams: unknown[] = [orTsQuery, projectId];
+      if (traceScope) ftsParams.push(traceScope);
+      ftsPromise = deps.pool.query<KeywordMatchRow>(ftsSql, ftsParams);
+    }
+    const [v, f] = await Promise.all([vectorPromise, ftsPromise]);
+    vectorRows = v.rows;
+    ftsRows = f.rows;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[find_similar] hybrid query failed; falling back to keyword-only:', err);
+    return runKeywordFallback(projectId, description, traceScope, deps);
+  }
+
+  // RRF fusion. rank starts at 1 (not 0) so the formula 1/(k+rank) is
+  // well-defined for rank=1 and the 1st-place reward is bounded.
+  const k = cfg.rrfK;
+  const fused = new Map<string, HybridCandidate>();
+
+  vectorRows.forEach((row, idx) => {
+    const rrfContribution = 1 / (k + (idx + 1));
+    const existing = fused.get(row.source_ref);
+    if (existing) {
+      existing.fused += rrfContribution;
+    } else {
+      fused.set(row.source_ref, {
+        source_kind: row.source_kind,
+        source_ref: row.source_ref,
+        trace_ids: row.trace_ids,
+        content_text: row.content_text,
+        fused: rrfContribution,
+      });
+    }
+  });
+  ftsRows.forEach((row, idx) => {
+    const rrfContribution = 1 / (k + (idx + 1));
+    const existing = fused.get(row.source_ref);
+    if (existing) {
+      existing.fused += rrfContribution;
+    } else {
+      fused.set(row.source_ref, {
+        source_kind: row.source_kind,
+        source_ref: row.source_ref,
+        trace_ids: row.trace_ids,
+        content_text: row.content_text,
+        fused: rrfContribution,
+      });
+    }
+  });
+
+  const ordered = Array.from(fused.values()).sort((a, b) => b.fused - a.fused);
+
+  // Convert HybridCandidate -> VectorMatchRow shape for partitionRowsToResponse.
+  // The "similarity" field is the fused score; thresholds in cfg are calibrated
+  // against this scale per ADR-042.
+  const synthesized: VectorMatchRow[] = ordered.map((c) => ({
+    source_kind: c.source_kind,
+    source_ref: c.source_ref,
+    trace_ids: c.trace_ids,
+    content_text: c.content_text,
+    similarity: c.fused.toString(),
+  }));
+
+  return partitionRowsToResponse(synthesized, cfg, /* degraded */ false);
+}
+
+// ===========================================================================
 // Keyword fallback (ARCH 6.4 + US-6.5)
 // ===========================================================================
 //
@@ -367,6 +576,16 @@ async function runKeywordFallback(
     };
   }
 
+  const orTsQuery = buildOrTsQuery(description);
+  if (orTsQuery === null) {
+    return {
+      primary_matches: [],
+      weak_suggestions: [],
+      degraded: true,
+      thresholds_used: { default: cfg.defaultThreshold, weak: cfg.weakSuggestionThreshold },
+    };
+  }
+
   const traceFilter = traceScope ? 'AND trace_ids && $3::text[]' : '';
   const sql = `
     SELECT
@@ -376,17 +595,17 @@ async function runKeywordFallback(
       content_text,
       ts_rank_cd(
         to_tsvector('english', content_text),
-        plainto_tsquery('english', $1)
+        to_tsquery('english', $1)
       )::float8 AS rank
     FROM embeddings
     WHERE project_id = $2
       ${traceFilter}
-      AND to_tsvector('english', content_text) @@ plainto_tsquery('english', $1)
+      AND to_tsvector('english', content_text) @@ to_tsquery('english', $1)
     ORDER BY rank DESC
     LIMIT ${limit}
   `;
 
-  const params: unknown[] = [description, projectId];
+  const params: unknown[] = [orTsQuery, projectId];
   if (traceScope) params.push(traceScope);
 
   let rows: KeywordMatchRow[];

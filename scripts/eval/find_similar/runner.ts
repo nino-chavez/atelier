@@ -178,7 +178,8 @@ async function main(): Promise<void> {
   }
 
   const config = loadFindSimilarConfig(args.repoRoot);
-  const seedFilePath = args.seedFile || resolve(args.repoRoot, config.evalSetPath, 'seeds.yaml');
+  const seedFilePath =
+    args.seedFile || resolve(args.repoRoot, config.evalSetPath, config.evalSeedFile);
   if (!existsSync(seedFilePath)) {
     // eslint-disable-next-line no-console
     console.error(`Seed file not found: ${seedFilePath}`);
@@ -299,7 +300,7 @@ async function main(): Promise<void> {
   console.log(
     `\n[eval:find_similar] AGGREGATE  tp=${totalTp} fp=${totalFp} fn=${totalFn}  ` +
       `precision=${aggregatePrecision.toFixed(3)} recall=${aggregateRecall.toFixed(3)}  ` +
-      `gate=(>=${config.ciPrecisionGate}/>=${config.ciRecallGate})  ` +
+      `gate=${config.gateTier} (>=${config.ciPrecisionGate}/>=${config.ciRecallGate})  ` +
       `${passed ? 'PASS' : 'FAIL'}`,
   );
 

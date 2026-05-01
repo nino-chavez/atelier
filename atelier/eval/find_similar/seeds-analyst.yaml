@@ -1,0 +1,199 @@
+# Analyst-lens seeds (per ADR-017). Authored by Claude Opus 4.7 (1M context)
+# in single session; priming + methodology per parent prompt.
+#
+# Reasoning shape: descriptive ("what is X for"), comparative ("how does X
+# relate to Y"), boundary ("is X in scope or excluded"), context-seeking
+# ("what's the rationale, what came before this decision"). These are
+# queries an analyst running market-context, scope-boundary, persona, or
+# prior-art research would issue against the project's own corpus.
+#
+# Methodology rules enforced (parent: seeds.yaml header + M5-AUDIT.md):
+#   - Query paraphrases but preserves 2-3 keyword bridges to canonical body.
+#   - Expected list = canonical answers ONLY. Foundational/conceptual ADRs
+#     that share vocabulary but don't answer the question are EXCLUDED.
+#   - No duplication of seed-001 to seed-021 in seeds.yaml; overlapping
+#     topics use a different angle.
+
+seeds:
+  - id: analyst-001
+    description: "Market-context wedge framing and competitive surfaces"
+    query: "Where is the project's defensible wedge against commoditized SDLC sync incumbents like GitHub Spec-Kit and Linear Agents, and where does it concede the market?"
+    expected:
+      - docs/functional/PRD.md#2-market-context
+
+  - id: analyst-002
+    description: "Why OSS-only rather than SaaS — commercial surface boundary"
+    query: "What disconfirming test must pass before any managed commercial surface ships, and why was a multi-tenant service ruled out at year-one cost math?"
+    expected:
+      - docs/architecture/decisions/ADR-007-no-multi-tenant-saas-self-hosted-oss-only.md
+
+  - id: analyst-003
+    description: "Adjacent-category scope boundary check"
+    query: "Which adjacent product categories does this explicitly refuse to become — workflow engine, task tracker UI, chat app, design tool — and why would entering them destroy the destination?"
+    expected:
+      - docs/architecture/decisions/ADR-010-explicit-exclusions-enforce-scope-boundaries.md
+      - docs/functional/PRD.md#5-scope-boundaries-whats-out
+
+  - id: analyst-004
+    description: "Naming rationale and rejected alternatives"
+    query: "Why was the studio-metaphor name chosen over Hivemind OS, Hive, Commons, and Loom — what did the OS framing fight?"
+    expected:
+      - docs/architecture/decisions/ADR-020-naming-atelier.md
+
+  - id: analyst-005
+    description: "Persona model — non-dev composer surfaces"
+    query: "What surface and agent client do analyst, PM, and stakeholder personas use, and what access scope does each carry against the repo and datastore?"
+    expected:
+      - docs/functional/PRD.md#3-personas
+
+  - id: analyst-006
+    description: "Mixed-team thesis and remote-actor first-class status"
+    query: "Why are browser-based analysts not second-class reviewers in the actor model, and how many actor classes exist now versus the inherited bc-subscriptions design?"
+    expected:
+      - docs/architecture/decisions/ADR-009-remote-principal-actor-class-web-agents-as-first-class-compo.md
+
+  - id: analyst-007
+    description: "Two-substrate framing — sync vs coordination"
+    query: "Why are the SDLC sync scripts and the blackboard coordination layer treated as two independently deployable substrates with different timescales and failure modes?"
+    expected:
+      - docs/architecture/decisions/ADR-016-two-orthogonal-substrates-sdlc-sync-coordination.md
+
+  - id: analyst-008
+    description: "Hive-vs-project plurality from v1"
+    query: "What is the relationship between a deployed datastore-plus-endpoint instance and the projects it hosts, and why was the singleton hackathon-hive shape rejected from day one?"
+    expected:
+      - docs/architecture/decisions/ADR-015-one-hive-many-projects.md
+
+  - id: analyst-009
+    description: "Non-code territories — analyst case as first-class"
+    query: "Why does scope_kind ship with five values including doc_region and research_artifact rather than starting files-only and extending later?"
+    expected:
+      - docs/architecture/decisions/ADR-003-scope-kind-generalized-from-day-one.md
+
+  - id: analyst-010
+    description: "Capability vendor-neutrality vs reference stack"
+    query: "How does the architecture stay capability-level so heterogeneous teams can adopt, while the reference deployment names a specific managed stack?"
+    expected:
+      - docs/architecture/decisions/ADR-012-capability-level-architecture-no-vendor-lock-in.md
+      - docs/functional/PRD.md#6-capability-requirements-vendor-neutral
+
+  - id: analyst-011
+    description: "Figma's role boundary — feedback surface not source"
+    query: "Why does the design-tool integration treat external comments as triage input rather than as the design source-of-truth, and what flows back through proposals?"
+    expected:
+      - docs/architecture/decisions/ADR-019-figma-is-feedback-surface-not-design-source.md
+
+  - id: analyst-012
+    description: "External-input safety contract"
+    query: "Why can no proposal generated from an external comment ever auto-merge, and what role gets notified when high-confidence proposals queue?"
+    expected:
+      - docs/architecture/decisions/ADR-018-triage-never-auto-merges.md
+
+  - id: analyst-013
+    description: "Audit-trail value of plan-review for regulated teams"
+    query: "Beyond latency arguments, what audit-trail value does the plan-approval gate carry for regulated, audit-required teams, and why was a convention-based plan capture rejected?"
+    expected:
+      - docs/architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md
+
+  - id: analyst-014
+    description: "Find_similar wedge and gate semantics"
+    query: "Why is the duplicate-detection primitive considered the single most differentiated commercial wedge, and what precision-and-recall numbers gate it in CI?"
+    expected:
+      - docs/architecture/decisions/ADR-006-fit-check-ships-at-v1-with-eval-harness-and-ci-gate.md
+      - docs/functional/PRD.md#46-findsimilar-epic-6
+
+  - id: analyst-015
+    description: "Embedding-model swap as default-not-lock-in"
+    query: "Why does the OpenAI-compatible adapter pattern keep the default convenient without locking adopters into a single vendor, and what happens when a swap changes the native dimension?"
+    expected:
+      - docs/architecture/decisions/ADR-041-embedding-model-default-openai-compatible-adapter.md
+
+  - id: analyst-016
+    description: "M5 hybrid retrieval ship-below-gate decision"
+    query: "Why does the project ship find_similar below the precision-recall gate honestly rather than tuning seeds or thresholds until the metric clears?"
+    expected:
+      - docs/architecture/decisions/ADR-042-find-similar-hybrid-retrieval-with-calibrated-rrf-thresholds.md
+
+  - id: analyst-017
+    description: "Repo-first decision durability and graceful degradation"
+    query: "Why must a decision row land in the repo markdown file before any datastore insert, and how does that ordering survive a vector-index outage?"
+    expected:
+      - docs/architecture/decisions/ADR-005-decisions-write-to-decisionsmd-first-datastore-second.md
+
+  - id: analyst-018
+    description: "Three-tier consumer model and standards-body lineage"
+    query: "How does the Specification, Reference Implementation, Reference Deployment tiering map to W3C and IETF standards-body practice, and what reader intent does each tier serve?"
+    expected:
+      - docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md
+
+  - id: analyst-019
+    description: "Doc-tree extensions over the seven-layer toolkit"
+    query: "Which methodology, protocol, and schema sub-layers does the project add as peers to claude-docs-toolkit's default audience model, and why are they needed for projects that ship as specs?"
+    expected:
+      - docs/architecture/decisions/ADR-032-adopt-extended-documentation-structure-toolkit-derived-ateli.md
+
+  - id: analyst-020
+    description: "GCP-portability constraint on the reference stack"
+    query: "What disciplines does the architecture impose on the reference Vercel-and-Supabase stack so that a future migration to a different cloud is mechanical rather than architectural?"
+    expected:
+      - docs/architecture/decisions/ADR-029-reference-impl-preserves-gcp-portability-migration-mapping-d.md
+
+  - id: analyst-021
+    description: "Switchman prior-art evaluation — why not adopted"
+    query: "What was the disqualifying gap in Switchman's lease-based lock model that made it not fencing-equivalent, and what validation did it nonetheless give the territory-as-scope-pattern shape?"
+    expected:
+      - docs/architecture/decisions/ADR-026-atelier-owns-the-lock-fencing-implementation-switchman-not-a.md
+
+  - id: analyst-022
+    description: "Why fencing tokens cannot be a v1.x retrofit"
+    query: "Why does Kleppmann's Redlock critique imply that monotonic per-resource fencing must ship at v1 rather than be added later, and which inherited stack lacked this protection?"
+    expected:
+      - docs/architecture/decisions/ADR-004-fencing-tokens-mandatory-on-all-locks-from-v1.md
+
+  - id: analyst-023
+    description: "Discipline-first design over phased rollout"
+    query: "Why does the project specify the entire v1 destination up front and treat phased delivery as planning-only, and which methodology does this counter?"
+    expected:
+      - docs/architecture/decisions/ADR-011-destination-first-design-no-feature-deferral.md
+
+  - id: analyst-024
+    description: "Composer identity vs operational session — durability split"
+    query: "Why is authorship recorded against an immortal composer identifier separate from the operational session reference, and what catastrophic deletion behavior was avoided?"
+    expected:
+      - docs/architecture/decisions/ADR-036-immortal-author-identity-via-composer-id.md
+
+  - id: analyst-025
+    description: "Architect drift in territories.yaml versus composers enum"
+    query: "Why is architect now a first-class work-discipline value rather than missing from the composers enum, and how did territories.yaml drift expose the conflation between work type and access level?"
+    expected:
+      - docs/architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md
+
+  - id: analyst-026
+    description: "Triage provenance after dropping kind=proposal"
+    query: "Once the contribution kind enum dropped proposal as a value, how is the triage-originated nature of an external comment still preserved without an enum echo?"
+    expected:
+      - docs/architecture/decisions/ADR-033-contribution-kind-scoped-to-output-discipline.md
+
+  - id: analyst-027
+    description: "Decisions table category cleanup — convention dropped"
+    query: "Why was the convention category in the decisions enum vestigial and an other-or-misc anti-pattern, and where do commit-message and code-style decisions land now?"
+    expected:
+      - docs/architecture/decisions/ADR-037-decisions-table-cleanup-drop-convention-add-contribution-link.md
+
+  - id: analyst-028
+    description: "Contract metadata vs single breaking_change boolean"
+    query: "Why did a single breaking-change boolean collapse the classifier-and-override mechanism the architecture specified, and which four columns replaced it on the contracts row?"
+    expected:
+      - docs/architecture/decisions/ADR-035-contract-metadata-covers-arch-661-classifier-surface.md
+
+  - id: analyst-029
+    description: "Atomic create-and-claim — keeping the surface at 12"
+    query: "Why was overloading claim with a null contribution_id chosen over adding a separate create_contribution tool, and how does this respect the locked endpoint count?"
+    expected:
+      - docs/architecture/decisions/ADR-022-claim-atomic-creates-open-contributions.md
+
+  - id: analyst-030
+    description: "Transcript sidecar provenance and PII opt-in"
+    query: "Why are agent-session transcripts stored as repo sidecar files with a default-off opt-in rather than forced into a blob store, and what PII review applies when committed?"
+    expected:
+      - docs/architecture/decisions/ADR-024-transcripts-as-repo-sidecar-files-opt-in-by-config.md

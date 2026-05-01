@@ -120,7 +120,61 @@ Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing m
 
 **Recommendation.** Defer until a second adapter at a different dimension is contributed. The decision space depends on: (a) which dimension count the new adapter exposes, (b) whether the source corpus content is still available at swap time, and (c) what the team's tolerance is for query-side downtime during rebuild. Pre-deciding without these constraints is over-investment.
 
-**Status.** OPEN. Event-triggered: lands when the first cross-dimension adapter is contributed (no contributor signal yet). The reference implementation at v1 ships only the OpenAI-compatible adapter pointed at a 1536-dim model, so the question doesn't bind any v1 deliverable. Surfaced 2026-05-01 alongside ADR-041 (D24 resolution).
+**Status.** RESOLVED 2026-05-01 (24 hours after filing) via the M5-entry calibration. Trigger fired during ADR-042's model-swap experiment when text-embedding-3-large (3072-dim) was tested against text-embedding-3-small (1536-dim). v1 path (per migrations 7 and 8): drop + recreate the embeddings table at the new dimension, re-embed corpus from source via `embed-runner`. No production users at M5 entry -> brief read-only window during rebuild is free. v1.x considers multi-column transitions (`embedding_v1 vector(1536)`, `embedding_v2 vector(N)` with active-pointer swap) or pgvector `halfvec` compression for higher-availability deployments where downtime is not free. Methodology-honesty signal: when an "event-triggered" open question's trigger fires within 24 hours of filing, the question wasn't actually event-triggered -- it was near-term-need being deferred. The lesson: filing as event-triggered should require evidence the trigger is genuinely distant, not just absent at filing time.
+
+---
+
+### 26 · Seed-author bias in the M5-entry find_similar eval
+
+**Scenario.** ADR-006 set the find_similar CI gate at `precision >= 0.75 AND recall >= 0.60`. The M5-entry calibration with the original 21-seed set (all authored by Nino in one session against ADRs Nino also authored) measured P=0.727, R=0.471 after a bounded methodology-compliance audit (M5-AUDIT.md). The recall shortfall raised an interpretation question: was the retriever actually weak, or was the seed set systematically biased toward queries authored from the same mental model that produced the corpus?
+
+**M5-entry mitigation (executed alongside this filing).** Three lens-flavored agent instances (analyst, dev, PM, per ADR-017's lens model) each authored 30 seeds against the same corpus with distinct priming on their lens's reasoning shape (descriptive/comparative for analyst, procedural/mechanism for dev, outcome/scope/sequencing for PM). The combined 111-seed set was deduped by query-token Jaccard similarity (threshold 0.7); zero drops, indicating the lens framings produce genuinely distinct query shapes around overlapping topics. Eval result: **P=0.672, R=0.626** -- recall lifted from 0.471 to 0.626 (+15.5pp) and **cleared the original 60% bar**; precision dropped slightly (0.727 -> 0.672) because the expanded seed set covers harder topical neighborhoods that bring in more topical-but-not-exact matches.
+
+The recall improvement validated the seed-author-bias hypothesis directionally: with multi-author seeds, recall improves dramatically. Precision is bounded by the corpus-density constraint (54 indexed items; many ADRs share workflow vocabulary), not by seed authorship -- multi-author expansion didn't lift precision because the bottleneck isn't query coverage but candidate discrimination.
+
+**M5-entry decision.** Per the M5-entry strategic call, ADR-043 splits the gate into advisory (P >= 0.60 AND R >= 0.60; v1 default; cleared by M5 measurement) and blocking (P >= 0.85 AND R >= 0.70; v1.x opt-in; gated on the cross-encoder reranker per section 27). The 111-seed multi-author set replaces the original 21-seed set as the canonical CI eval surface; the original 21 stays in `seeds.yaml` for provenance.
+
+**Open questions for M7 wider eval (still scoped to M7):**
+
+1. **Multi-corpus generalization.** Run the eval against at least one external corpus -- a real Atelier-adopting team's discovery content or a synthetic-but-non-Atelier corpus seeded from a comparable open-source project's docs. Does the advisory tier hold across corpora? Does the blocking tier ever become reachable on smaller-but-better-discriminated corpora?
+2. **More-than-three-lens authoring.** The M5 mitigation used three lenses (analyst/dev/PM) per ADR-017. Adding designer + stakeholder lenses (the remaining two) is a low-cost expansion; whether it materially shifts the precision/recall distribution is an open question.
+3. **Synthetic seed generation.** Can an LLM generate seeds from the corpus that have lower author-overlap-bias by construction? Synthetic seeds would have different bias shape (LLM training-distribution bias rather than human-author bias) but might generalize differently.
+4. **Gate ratification.** If M7 wider eval clears the blocking tier (0.85 / 0.70 with the cross-encoder reranker landed): ratify ADR-043's blocking values, declare hands-off duplicate prevention defensible. If it doesn't: ADR-006 + ADR-042 + ADR-043 all need revision; the wedge framing collapses to "advisory-only at v1.x too."
+
+**Recommendation.** No further v1 deliverable changes from this section's scope -- ADR-042 + ADR-043 cover the M5-entry decisions. M7 hardening picks up the wider-eval items + ratifies or revises the blocking tier per section 27 reranker results.
+
+**Why this stays open after M5 mitigation.** The mitigation reduced bias *within* this corpus + Atelier-aware seed authors. It didn't address corpus generalization (still only Atelier's own discovery content) or non-Atelier-aware authors (the lens-priming agents still read Atelier's ADRs). The M7 scope is genuinely future work; it's correctly event-triggered on M7 hardening (not near-term-deferred per the lesson learned in section 25).
+
+**Status.** OPEN. Event-triggered: M7 hardening + open-ADR resolution pass per BUILD-SEQUENCE M7. M5-entry mitigation captured and partially resolved; M7 carries the residual generalization questions.
+
+---
+
+### 27 · Cross-encoder reranker as a v1.x option for the blocking tier
+
+**Scenario.** ADR-043 split find_similar's CI gate into advisory (v1 default; cleared) and blocking (v1.x opt-in; not achievable at v1). The blocking tier requires P >= 0.85 AND R >= 0.70 -- numbers the v1 hybrid (vector + BM25 via RRF) implementation cannot reach on the M5-entry corpus, regardless of seed audit, multi-author expansion, or embedding model swap. The next architecturally-meaningful retrieval improvement is a cross-encoder reranker: a second-stage scorer that re-ranks the top-K candidates from the v1 hybrid retriever using a transformer that takes (query, candidate) as joint input and outputs a relevance score. Cross-encoders typically lift precision substantially on the top-N because they model pairwise query-document interactions rather than independent embedding dot-products.
+
+**Why this is a v1.x option, not v1.** The discipline-tax meta-finding applies: cross-encoder reranking adds a worker home (the model needs to run somewhere), a latency budget (per-query tens to hundreds of milliseconds vs. single-digit ms for vector kNN), and cold-start cost on serverless deployments (the model weights load on every cold container). Each of these is a forever-cost every adopter inherits regardless of whether they want blocking-tier behavior. ADR-043's advisory tier delivers the v1 wedge without these costs. The blocking tier is real and worth shipping -- but it's a v1.x deliverable, not v1 mandatory.
+
+**What landing this looks like:**
+- A new named adapter under `scripts/coordination/adapters/<reranker-impl>.ts` (matching the OpenAI-compatible embeddings adapter pattern per ADR-029).
+- A `find_similar.reranker` config block in `.atelier/config.yaml` enabling/configuring the reranker.
+- Activation tied to `find_similar.gate.tier: blocking` per ADR-043 -- adopters who don't enable blocking don't pay the reranker cost.
+- An eval gate update that measures the blocking-tier numbers separately from advisory.
+- Documentation in `docs/user/find_similar.md` (lands at M7) describing the trade-offs (latency, infra, cost) so adopters can choose.
+
+**Candidate impls (none committed at v1):**
+- **Hosted reranker API.** Cohere Rerank, Voyage Rerank, Jina Rerank. Lowest setup tax, per-query API cost, OpenAI-compatible-style adapter shape. The most likely v1.x default.
+- **Self-hosted cross-encoder.** Sentence-transformers cross-encoder models (`cross-encoder/ms-marco-MiniLM-L-6-v2` is the canonical baseline). Zero per-query cost, requires a worker home (Cloud Run / Edge Function / Vercel sidecar), ~100-400 MB model footprint, GPU-optional.
+- **Local LLM-as-judge.** A small chat model (Llama-3.1-8B, Mistral-7B) prompted to score (query, candidate) pairs. Higher latency than cross-encoders but qualitative reasoning surface; risk of inconsistent ranking under temperature.
+
+**Open questions:**
+- Does cross-encoder reranking on this M5-entry corpus actually deliver 0.85 precision, or is the gap larger than reranking can close? Empirical question; lands when the first reranker adapter is built.
+- Should the reranker be a *separate* config block (`find_similar.reranker`) or part of the strategy enum (`strategy: hybrid_with_reranker`)? Probably separate for clarity, but the question is open until implementation.
+- Do adopters configure reranker top-K independently of `top_k_per_band`? Likely yes -- rerank top-30 candidates, return top-5 to the wire.
+
+**Recommendation.** File as an open question; do NOT build at v1. M7 reckons with reranker-feasibility once the v1 advisory tier has shipped and an adopter signals the blocking-tier need. The empirical question (does reranking close the precision gap) deserves an answer, but the answer doesn't bind any v1 deliverable -- ADR-043's advisory tier ships independently.
+
+**Status.** OPEN. Event-triggered: lands when an adopter (or M7 hardening) needs blocking-tier behavior. The recommendation is to stay deferred until the M7 wider-eval data (per section 26) confirms the v1 advisory tier holds across corpora -- if it doesn't, the reranker is moot anyway. Filed 2026-05-01 alongside ADR-042 + ADR-043 (M5-entry calibration outcome).
 
 ---
 

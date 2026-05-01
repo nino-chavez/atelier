@@ -51,7 +51,7 @@ import { createGitCommitter, type AdrCommitter } from '../lib/committer.ts';
 import { TOOL_NAMES } from '../lib/dispatch.ts';
 import { createJwksVerifier } from '../lib/jwks-verifier.ts';
 import { handleMcpRequest } from '../lib/transport.ts';
-import { oauthDiscoveryResponse } from '../lib/oauth-discovery.ts';
+import { oauthDiscoveryConfigFromEnv, oauthDiscoveryResponse } from '../lib/oauth-discovery.ts';
 
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
@@ -156,7 +156,17 @@ async function startMcpServer(deps: {
       const url = new URL(req.url ?? '/', `http://localhost`);
 
       if (req.method === 'GET' && url.pathname === '/.well-known/oauth-authorization-server') {
-        const webRes = oauthDiscoveryResponse({ issuer: deps.oauthIssuer });
+        // Mirror the production route: pass request URL so the lib
+        // resolves registration_endpoint to an absolute URL (Claude Code
+        // MCP SDK requires absolute even though RFC 8414 §3 permits
+        // relative).
+        const requestUrl = `http://${req.headers.host ?? '127.0.0.1'}${url.pathname}`;
+        const webRes = oauthDiscoveryResponse(
+          oauthDiscoveryConfigFromEnv(
+            { ATELIER_OIDC_ISSUER: deps.oauthIssuer } as NodeJS.ProcessEnv,
+            requestUrl,
+          ),
+        );
         await pipeWebResponse(webRes, res);
         return;
       }
@@ -436,6 +446,14 @@ async function main(): Promise<void> {
     check(
       'discovery.registration_endpoint is set (always emitted)',
       typeof disc.registration_endpoint === 'string' && disc.registration_endpoint.length > 0,
+      `actual: ${disc.registration_endpoint}`,
+    );
+    // Hotfix to PR #11: must be absolute URL. Claude Code's MCP SDK
+    // validates `.url()` strictly; relative URLs fail even though
+    // RFC 8414 §3 permits them.
+    check(
+      'discovery.registration_endpoint is an absolute URL',
+      /^https?:\/\//.test(disc.registration_endpoint ?? ''),
       `actual: ${disc.registration_endpoint}`,
     );
 

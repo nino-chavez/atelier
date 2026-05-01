@@ -177,13 +177,17 @@ As any composer (via agent), I want `get_context` so that my agent knows the cur
 Acceptance:
 - Given a session, when get_context is called, then the response contains charter files, last N decisions, territory state, contribution summary for active territory, and traceability registry slice.
 - Given a trace_id parameter, when get_context is called, then the response is filtered to that trace ID's scope.
+- Given a `scope_files` parameter (per ADR-045), when get_context is called, then the response carries an `overlapping_active` section listing active contributions and held locks whose `artifact_scope` intersects the supplied file scope. Empty arrays (not absent) when no overlaps exist; section absent when `scope_files` is omitted. This is the canonical pre-claim file-overlap awareness surface — composers query before committing to a `claim` whose intended files might collide with active work.
 
-**US-2.5 — Find_similar**
-As any composer (via agent), I want `find_similar` so that I can detect duplication before starting work.
+**US-2.5 — Find_similar (advisory search aid; per ADR-006 + ADR-042 + ADR-043)**
+As any composer (via agent), I want `find_similar` so that I can search for prior semantically-related work across decisions, contributions, BRD/PRD sections, and research artifacts.
 
 Acceptance:
 - Given a description string + optional trace_id, when find_similar is called, then matches above similarity threshold are returned with sources (decisions, contributions, BRD/PRD sections, research artifacts) and similarity scores.
-- Given the vector index is unavailable, when find_similar is called, then keyword search runs and the response includes a `degraded: true` flag.
+- Given the vector index is unavailable or the embeddings adapter is misconfigured, when find_similar is called, then keyword search runs and the response includes a `degraded: true` flag (per US-6.5).
+- The advisory tier (P >= 0.60 AND R >= 0.60 per ADR-043) is the v1 default. Warnings surface in claim flows, PR comments, and `/atelier` panels but do not block. The blocking tier (P >= 0.85, R >= 0.70) is v1.x opt-in gated on the cross-encoder reranker per BRD-OPEN-QUESTIONS section 27.
+
+Note: pre-claim file-overlap awareness (the question "is anyone touching these specific files right now?") is `get_context`'s job per US-2.4 + ADR-045, not find_similar's. The two capabilities answer different questions and ship as siblings, not alternatives.
 
 **US-2.6 — Claim contribution**
 As any composer (via agent), I want to claim an open contribution so that other composers see it's taken.

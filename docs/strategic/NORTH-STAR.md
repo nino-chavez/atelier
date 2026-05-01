@@ -123,7 +123,7 @@ Twelve tools, grouped by concern. All present on day one. Exposed via whatever a
 | Session | `heartbeat` | Keep session alive |
 | Session | `deregister` | End session, release held resources |
 | Context | `get_context` | Charter + recent decisions + territory state + traceability registry |
-| Context | `find_similar` | Semantic search: is this already done or in flight? |
+| Context | `find_similar` | Semantic search aid (advisory): "have we discussed this kind of thing before?" across decisions, contributions, BRD/PRD sections, and research artifacts. Per ADR-006/042/043: hybrid retrieval (vector + BM25 RRF), advisory tier at v1, blocking tier opt-in at v1.x via cross-encoder reranker. NOT a pre-claim file-overlap surface — that's `get_context(scope_files)` per ADR-045. |
 | Contribution | `claim` | Claim an open contribution. Atomic create-and-claim when called with `contribution_id=null` + `kind`, `trace_ids`, `territory_id`, optional `content_stub` (ADR-022) |
 | Contribution | `update` | Transition contribution state |
 | Contribution | `release` | Release a claimed contribution |
@@ -155,20 +155,24 @@ If the coordination datastore is down, `decisions.md` still gets committed. If p
 
 ---
 
-## 7. Find_similar — the irreducible technical bet
+## 7. Find_similar — auxiliary advisory capability (post-M5 calibration)
 
-**Not deferred. Ships at v1.**
+**Ships at v1 as the advisory-tier semantic search aid (per ADR-006 + ADR-042 + ADR-043).** The original framing of find_similar as the "irreducible technical bet" / "load-bearing capability" was demoted at M5 measurement + M6 strategic re-evaluation: P=0.672, R=0.626 on Atelier's own corpus is useful as a search aid but does not deliver hands-off duplicate prevention. The substrate as a whole — territories + contracts + atomic claim + fenced locks + broadcast + repo-canonical decisions + per-project committer + the methodology — is the load-bearing differentiation; find_similar is one auxiliary capability within it.
 
-- Vector-index-backed semantic search over decisions + merged contributions + BRD/PRD sections + research artifacts
-- Embedding model committed up front, swappable via config
-- Eval harness ships with the template — labeled eval set in `atelier/eval/find_similar/*.yaml`
-- `atelier eval find_similar` runs precision/recall against the eval set
-- CI gate: PRs that touch find_similar logic must maintain ≥75% precision at ≥60% recall
-- Runtime: composers can accept/reject matches, feedback loops back to the eval set
-- Triggered automatically on: contribution creation, research artifact upload, BRD section drafting
-- Degrades to keyword search if embeddings unavailable — explicit banner in UI, not silent
+What ships at v1:
 
-This is the load-bearing capability. Designed, evaluated, and monitored from v1. If precision drops below target, the system reports it honestly — it doesn't hide.
+- Hybrid retrieval (vector + BM25 via Reciprocal Rank Fusion per ADR-042) over decisions + merged contributions + BRD/PRD sections + research artifacts
+- OpenAI-compatible embedding adapter (per ADR-041), default OpenAI text-embedding-3-small (1536-dim), swappable via `find_similar.embeddings.base_url` + `api_key_env` to vLLM / Ollama / LocalAI / self-hosted Voyage without adapter code change
+- Eval harness in `atelier/eval/find_similar/`; `atelier eval find_similar` runs precision/recall against the seed corpus
+- **Advisory tier** (P >= 0.60 AND R >= 0.60 per ADR-043; cleared by M5 measurement) is the v1 default — warnings surface in claim flows, PR comments, and `/atelier` panels but do not block. The CI eval gate is informational at v1 (per ADR-045): runs, produces `last-run.json` + log output, but does not fail the workflow. Adopters wanting strict gating set `find_similar.ci_gate.enabled: true` + remove `continue-on-error` in the audit workflow.
+- **Blocking tier** (P >= 0.85, R >= 0.70) is v1.x opt-in gated on the cross-encoder reranker per BRD-OPEN-QUESTIONS section 27
+- Composers accept/reject matches; feedback informs eval set evolution
+- Triggered automatically on contribution creation (claim) + log_decision; explicitly callable as a search tool from `/atelier`
+- Degrades to keyword search if embeddings unavailable — explicit `degraded: true` flag in the response (per US-6.5)
+
+What find_similar does NOT do at v1: pre-claim file-overlap awareness. That capability lives on `get_context(scope_files)` per ADR-045 — different question (file-overlap, not semantic similarity), different implementation (SQL array intersection, not vector kNN), different cost (single SQL query, no external API). The two are siblings, not alternatives.
+
+If precision/recall drops below target, the system reports it honestly via the eval artifact — it doesn't hide. The threshold itself is calibrated to what's empirically achievable at v1 quality (per ADR-043), not to an aspirational number that the implementation cannot meet.
 
 ---
 
@@ -323,11 +327,14 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 
 ---
 
-## 16. The find_similar threshold
+## 16. The find_similar threshold (post-M5 calibration)
 
-Find_similar ships with an eval harness and CI gate enforcing ≥75% precision at ≥60% recall on a labeled eval set drawn from this repo's own decisions corpus (per ADR-006).
+The original ADR-006 specification framed find_similar with a single CI gate at ≥75% precision and ≥60% recall, treating both as the load-bearing strategic bet. Post-M5 calibration produced two corrections (per ADR-042 + ADR-043 + ADR-045):
 
-The threshold is part of the spec. Whether the threshold can actually be hit by current embedding models is a strategic bet tracked separately in [`risks.md`](./risks.md). The spec stands regardless of how the bet resolves.
+1. **Gate-tier split:** the original 0.75/0.60 threshold is the *blocking-tier* target (hands-off duplicate prevention; v1.x opt-in; gated on cross-encoder reranker per BRD-OPEN-QUESTIONS section 27). The v1 *advisory tier* sits at ≥0.60/≥0.60 — empirically achievable on Atelier's own corpus, ships at v1 default.
+2. **CI gate informational at v1 (ADR-045):** the eval still runs on every PR (when `OPENAI_API_KEY` is set) and produces `last-run.json` + log output, but does not fail the workflow. Per-PR noise floor exceeds the original gate margin; blocking on noise was a discipline tax. Adopters who want strict gating opt in.
+
+The threshold is part of the spec. Whether the *blocking-tier* threshold is achievable with M7 polish (cross-encoder reranker landing) and what changes about Atelier's commercial story if it isn't is tracked in [`risks.md`](./risks.md). The spec stands regardless of how the bet resolves; the wedge framing already shifted from find_similar to the substrate-as-a-whole (per §7).
 
 ---
 

@@ -11,7 +11,7 @@
 
 Evidence and framing that backs the scope, positioning, and product-shape decisions in `../functional/PRD.md` and `NORTH-STAR.md`. **Not** a decision record — product decisions live in `../functional/PRD.md` and `../functional/PRD-COMPANION.md`. **Not** a roadmap.
 
-Read this when you want to know *why* Atelier takes the shape it does — why it's OSS not SaaS, why self-hosted not managed, why a template + protocol rather than a product replacement, and why find_similar is the load-bearing bet.
+Read this when you want to know *why* Atelier takes the shape it does — why it's OSS not SaaS, why self-hosted not managed, why a template + protocol rather than a product replacement, and why the coordination substrate (territories + contracts + locks + claim + broadcast + decisions + repo-canonical, with `find_similar` as one auxiliary capability) is the load-bearing differentiation.
 
 ---
 
@@ -78,7 +78,7 @@ Atelier's blackboard, territory, contract, and find_similar primitives overlap w
 | **CrewAI / AutoGen / LangGraph** | Shipping (mature) | Agent-to-agent orchestration within one composer's swarm | Atelier is one layer up — coordination between multiple composers, each of whom may use these frameworks internally. |
 | **OpenClaw Command Center** | Partial | Real-time dashboard for agent framework | Dashboard-only reference. Not a coordination primitive. |
 
-**Verdict on the coordination substrate: genuine category with gaps incumbents haven't closed.** Find_similar (semantic duplicate detection across composers) is novel. Territory + contract model with non-code artifact kinds is novel. Remote-composer (web agent) participation is novel. But Switchman and Agent Teams are closing file-level coordination fast.
+**Verdict on the coordination substrate: genuine category with gaps incumbents haven't closed.** The substrate as a whole — territories + contracts + atomic claim + fenced locks + broadcast + repo-canonical decisions + per-project committer + the methodology — is the load-bearing differentiation. Within that substrate, several primitives are individually novel: territory + contract model extended to non-code artifact kinds; remote-composer (web agent) participation as first-class; pre-claim file-overlap awareness via `get_context(scope_files)` per ADR-045; semantic similarity across non-code artifacts (decisions, contributions, BRD/PRD sections, research) via `find_similar`. `find_similar` was originally framed as the single most differentiated primitive (per ADR-006); M5 measurement + M6 strategic re-evaluation demoted it to "one auxiliary capability among several" — useful as an advisory search aid but not load-bearing for the wedge by itself. Switchman and Agent Teams are closing file-level coordination fast; Atelier's differentiation is the multi-surface multi-artifact substrate, not any single primitive.
 
 ---
 
@@ -130,7 +130,7 @@ Two focused red-team rounds were conducted, one per substrate, in the 2026-04-24
 Four engineering choices are baked into Atelier's v1 design. They shape the schema, the protocol, and the security model from day one — not as v2 hardenings to apply later.
 
 1. **Fencing tokens on every lock (per ADR-004).** Lease-based mutexes (Redlock-style) are vulnerable to Kleppmann's GC-pause-past-TTL pattern: a holder pauses past lease expiry, returns, and writes after the lease has been reassigned. Atelier ships per-resource monotonic fencing tokens validated server-side on every write to a locked artifact. Cheap at v1, expensive to retrofit.
-2. **find_similar at v1 with eval harness (per ADR-006).** Without semantic duplicate detection, the disconfirming test for the project's value proposition cannot run (see [`risks.md`](./risks.md) Bet 1). find_similar is not a v2 feature.
+2. **find_similar at v1 with eval harness (per ADR-006, ADR-042, ADR-043).** Ships as an advisory-tier capability — semantic search aid for "have we discussed this before?" across decisions, contributions, BRD/PRD sections, and research artifacts. The originally-framed wedge role (semantic duplicate detection as the differentiated primitive) was demoted at M5 measurement + M6 strategic re-evaluation: P=0.672, R=0.626 on Atelier's own corpus is useful as a search aid but does not deliver hands-off duplicate prevention. ADR-043 split the gate into advisory (v1 default; cleared) and blocking (v1.x opt-in; gated on cross-encoder reranker per BRD-OPEN-QUESTIONS §27). The substrate-as-a-whole (per §4 verdict above) is the load-bearing differentiation; find_similar is one capability within it. Pre-claim file-overlap awareness is `get_context(scope_files)`'s job per ADR-045, not find_similar's.
 3. **Decisions write repo-first (per ADR-005, ADR-030).** Graceful degradation requires the rationale archive to survive a coordination-datastore outage. `log_decision` writes a per-ADR file under `../architecture/decisions/` first; the datastore mirror is a read-model. A CI check validates the two stay in sync.
 4. **Per-composer signed tokens; no shared bearer (per ARCH §7.1).** Single shared bearer tokens make audit attribution impossible and reduce RLS to decoration (service-role bypass becomes too easy). Per-composer signed tokens from v1; service-role bypass is contained server-side.
 
@@ -175,11 +175,15 @@ Rationale:
 
 ---
 
-## 7. The find_similar threshold and its strategic role
+## 7. The find_similar gate-tier split (post-M5 calibration)
 
-The spec ships find_similar with an eval harness and CI gate enforcing **≥75% precision at ≥60% recall** on a labeled eval set (per ADR-006). The eval set ships with the template. The `atelier eval find_similar` CLI command produces the report.
+The original ADR-006 specification framed find_similar with a single CI gate at ≥75% precision and ≥60% recall, treating both clearance as the load-bearing strategic bet. M5 measurement (P=0.672, R=0.626 on Atelier's own corpus with hybrid retrieval + multi-author seeds, per ADR-042) and the subsequent M6 strategic re-evaluation produced two corrections:
 
-Both red-team rounds converged on this threshold as the load-bearing strategic bet. Whether the threshold is achievable with current embedding models — and what changes about Atelier's commercial story if it isn't — is tracked in [`risks.md`](./risks.md) Bet 1. The spec stands regardless of how the bet resolves; what changes is the commercial path forward, not the feature scope.
+1. **Gate-tier split (per ADR-043).** The original 0.75/0.60 threshold is now the *blocking-tier* target (hands-off duplicate prevention; v1.x opt-in; gated on cross-encoder reranker per BRD-OPEN-QUESTIONS §27). The v1 *advisory tier* sits at ≥0.60/≥0.60 — empirically achievable, ships at v1 default, surfaces warnings in claim flows + PR comments + `/atelier` panels but does not block.
+
+2. **Wedge-framing demotion (this section's revision).** The original framing of find_similar as "the load-bearing strategic bet" overstated what the capability delivers at v1 quality. The substrate as a whole is the wedge (per §4 verdict). find_similar is one auxiliary capability — useful as an advisory search aid for "have we discussed this kind of thing before?" — not the differentiated primitive in its own right. The CI gate is informational at v1 (see implementation in `.atelier/config.yaml: find_similar.ci_gate.enabled` + `.github/workflows/atelier-audit.yml`); blocking activation is opt-in for adopters who wire the cross-encoder reranker.
+
+The eval set still ships with the template. The `atelier eval find_similar` CLI command still produces the precision/recall report. Whether the *blocking-tier* threshold is achievable with M7 polish (cross-encoder reranker landing) and what changes about Atelier's commercial story if it isn't is tracked in [`risks.md`](./risks.md) Bet 1; the spec stands regardless. What changes is which surface within the substrate the commercial path foregrounds — not the feature scope.
 
 ---
 

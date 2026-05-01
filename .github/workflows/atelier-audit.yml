@@ -1,31 +1,38 @@
 name: atelier-audit
 
-# Per scripts/README.md "CI gate: runs on every PR; blocks merge if any
-# canonical doc fails round-trip." Wires the M1 + M2-substrate test suites
-# + the round-trip integrity test + the traceability validator as PR gates
-# against an ephemeral local Supabase.
+# Hybrid CI gate (post-2026-05-01 / BRD-OPEN-QUESTIONS section 29 deferred):
 #
-# Gates (any failure blocks merge):
-#   - typecheck
-#   - schema migrations apply cleanly (M1 + M2 entry)
-#   - schema-invariants smoke (ADR-005, RLS, ADR-036, fencing, ADR-035)
-#   - write-library smoke (ARCH 6.x mutation contracts)
-#   - sync-substrate smoke (event bus + 5 scripts + adapter dispatch)
-#   - GitHub-adapter smoke (mocked fetch + delivery_sync_state integration)
-#   - endpoint dispatcher smoke (12-tool surface + plan-review per ADR-039)
-#   - committer smoke (ARCH 7.8 / ADR-023 per-project git committer)
-#   - transport wire smoke (Streamable HTTP MCP + JWKS verifier + RFC 8414)
-#   - real-client smoke (real Supabase Auth -> production JWKS path; M2-mid #1)
-#   - broadcast smoke (M4 BroadcastService + real Supabase Realtime; ARCH 6.8)
-#   - lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
-#   - round-trip corpus (6 doc classes, M1 exit gate per scripts/README.md)
-#   - round-trip negative-case smoke (harness rejects synthetic drift)
-#   - traceability validator (--diff mode, scoped to PR-changed files; full
-#     repo failures persist in the M1-exit audit until the build-registry
-#     script lands at M2 entry)
+#   - PR trigger runs the FAST job only: typecheck + traceability validator
+#     (PR-scoped --diff). ~60-90 seconds; catches typos, broken trace IDs,
+#     TS compile errors. No Supabase setup, no substrate smokes.
 #
-# Informational (does not block):
-#   - validator --milestone-exit summary (full report; surfaced for review)
+#   - Push-to-main + workflow_dispatch run the FULL job: everything that
+#     was previously per-PR -- substrate smokes, real-client smoke,
+#     broadcast smoke, lens smoke, M5 smokes, round-trip corpus +
+#     negative-case, eval gate (informational per ADR-045). ~3-4 minutes;
+#     validates main-state after merge.
+#
+# Rationale: empirical observation across PRs #1-#12 (M1 through M6 entry)
+# is that the per-PR substrate gate caught ~0 substantive bugs that
+# real-use validation didn't also catch. Per-PR cost of full validation
+# (~3-4 min + OpenAI embedding charges + maintenance burden when smokes
+# drift from spec) exceeded the catch rate. Moving substrate validation
+# to post-merge keeps the validation (state-of-main is still verified)
+# without the per-PR overhead. Trade-off: main can be red for ~3-4 min
+# between merge and full-job completion if substrate breaks; recovery
+# model is "revert or hot-fix." Acceptable while there's one consumer
+# of main (the build sessions) and no production deploy.
+#
+# When this revisits: BRD-OPEN-QUESTIONS section 29 trigger -- adopters
+# arrive (their PRs need pre-merge validation), substrate complexity
+# grows past human-eyeball verification, or the revert-on-main-broken
+# model proves too costly empirically. Until then, hybrid is the
+# minimum-discipline-tax shape.
+#
+# Branch-protection note: if main has a required status check, update
+# the rule to reference "Fast checks (PR)" for PRs and (optionally)
+# "Substrate audit (merge)" as informational on main. The previous
+# single-name "M1 + M2 substrate audit gate" check no longer exists.
 
 on:
   pull_request:
@@ -43,15 +50,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  audit:
-    name: M1 + M2 substrate audit gate
+  # ---------------------------------------------------------------------
+  # Fast job (PR only): typecheck + traceability validator
+  # ---------------------------------------------------------------------
+  # Runs on every PR. ~60-90 seconds. Catches the cheap-to-find class:
+  # TS compile errors, broken trace IDs, malformed ADR frontmatter.
+  # GitGuardian (separate GitHub App) handles the secret-scanning gate.
+  fast:
+    name: Fast checks (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history so the validator can diff against base ref
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Traceability validator (PR-scoped; --diff against base)
+        run: |
+          npx tsx scripts/traceability/validate-refs.ts \
+            --diff --base origin/${{ github.base_ref }}
+
+  # ---------------------------------------------------------------------
+  # Full job (merge / manual only): all substrate smokes + eval gate
+  # ---------------------------------------------------------------------
+  # Runs after merge to main and on workflow_dispatch. ~3-4 minutes.
+  # Validates main-state. PRs do NOT trigger this; revert or hot-fix
+  # if it fails post-merge.
+  full:
+    name: Substrate audit (merge)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Need full history so the validator can diff against base ref
           fetch-depth: 0
 
       - name: Setup Node 22
@@ -157,14 +205,7 @@ jobs:
       - name: Round-trip negative-case smoke (harness rejects drift)
         run: npx tsx scripts/test/__smoke__/roundtrip.smoke.ts
 
-      - name: Traceability validator (PR-scoped; --diff against base)
-        if: github.event_name == 'pull_request'
-        run: |
-          npx tsx scripts/traceability/validate-refs.ts \
-            --diff --base origin/${{ github.base_ref }}
-
       - name: Traceability validator (full repo; informational on push to main)
-        if: github.event_name != 'pull_request'
         continue-on-error: true
         run: npx tsx scripts/traceability/validate-refs.ts --milestone-exit
 

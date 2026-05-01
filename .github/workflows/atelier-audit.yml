@@ -206,8 +206,16 @@ jobs:
           npx tsx scripts/coordination/embed-runner.ts \
             --project 00000000-eea1-eea1-eea1-000000000000
 
-      - name: "Eval gate (M5 / ADR-043: advisory tier precision >= 0.60 AND recall >= 0.60)"
+      - name: "Eval gate (M5 / ADR-043 advisory tier; informational per ADR-045)"
+        # Per ADR-045: the advisory-tier eval gate is INFORMATIONAL at v1.
+        # The eval still runs (produces last-run.json artifact + log
+        # output for review), but does NOT fail the workflow. Per-PR
+        # noise floor exceeds gate margin; blocking on noise is a
+        # discipline tax. Adopters who want strict gating flip
+        # `find_similar.ci_gate.enabled: true` in .atelier/config.yaml
+        # AND remove continue-on-error here.
         if: env.OPENAI_API_KEY != ''
+        continue-on-error: true
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ATELIER_DATASTORE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

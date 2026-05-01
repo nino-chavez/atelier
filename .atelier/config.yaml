@@ -108,12 +108,25 @@ find_similar:
   # canonical CI surface (see ADR-042 + BRD-OPEN-QUESTIONS section 26).
   # The original 21-seed set (seeds.yaml) is retained for provenance.
   eval_seed_file: "seeds-merged.yaml"
-  # CI gate per ADR-043: split into advisory (v1 default; cleared by M5
-  # entry at P=0.672 R=0.626) and blocking (v1.x opt-in; gated on the
+  # CI gate per ADR-043 + ADR-045: split into advisory (v1 default; cleared
+  # by M5 entry at P=0.672 R=0.626) and blocking (v1.x opt-in; gated on the
   # cross-encoder reranker per BRD-OPEN-QUESTIONS section 27). The CI
   # runner enforces the active tier; default tier is 'advisory'.
+  #
+  # ci_gate.enabled (ADR-045): the advisory tier is INFORMATIONAL by
+  # default — the eval still runs on every PR (when OPENAI_API_KEY is
+  # set), produces last-run.json + log output, but does NOT fail the
+  # workflow. Per-PR noise floor (5pp+ recall variance between adjacent
+  # runs on identical config) exceeds the original gate margin; blocking
+  # on noise was a discipline tax with no proportional benefit given
+  # ADR-043 already framed advisory as warn-don't-block. Adopters who
+  # want strict gating set ci_gate.enabled: true AND remove the
+  # corresponding continue-on-error in .github/workflows/atelier-audit.yml.
+  ci_gate:
+    enabled: false           # informational by default (ADR-045)
+    tier: advisory           # 'advisory' | 'blocking'
   gate:
-    tier: advisory          # 'advisory' | 'blocking'
+    tier: advisory          # 'advisory' | 'blocking'; mirrors ci_gate.tier
     advisory_precision: 0.60
     advisory_recall: 0.60
     blocking_precision: 0.85

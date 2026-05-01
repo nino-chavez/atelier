@@ -1149,7 +1149,8 @@ get_context(
   lens?:                  string,              // optional; analyst | dev | pm | designer | stakeholder
   kind_filter?:           string[],            // optional; filter contributions by kind (implementation | research | ...)
   charter_excerpts?:      boolean,             // optional, default false; include excerpts vs paths only
-  with_contract_schemas?: boolean              // optional; default false (true when lens=designer or lens=dev). Per ADR-040 contract body inclusion (replacing the former get_contracts tool)
+  with_contract_schemas?: boolean,             // optional; default false (true when lens=designer or lens=dev). Per ADR-040 contract body inclusion (replacing the former get_contracts tool)
+  scope_files?:           string[]             // optional; per ADR-045, file path patterns. When supplied, response carries `overlapping_active` section listing active contributions + locks intersecting the scope. Pre-claim file-overlap awareness; complementary to find_similar (semantic) and locks (post-claim mutex)
 ) → ContextResponse
 ```
 
@@ -1234,8 +1235,32 @@ When `lens` is omitted, the response uses unweighted defaults from the same conf
     entries: [ { trace_id, label, kind, doc_path, doc_url, prototype_pages }, ... ],   // entries touched by trace_id + epic siblings
     counts: { brd_epics, brd_stories, decisions, adrs }                                  // project-wide counts for orientation
   },
+  // The overlapping_active section is present only when scope_files was supplied (per ADR-045).
+  // Empty arrays (not absent) indicate "queried, no overlaps found" — composers can rely on the
+  // section's presence to confirm the query ran.
+  overlapping_active?: {
+    contributions: [
+      {
+        id, kind, state, composer_id, composer_display_name,
+        artifact_scope: string[],            // the contribution's full scope
+        overlapping_files: string[],         // intersection with the queried scope_files
+        since: "2026-04-30T14:12:00Z"        // when the contribution entered claimed/in-flight state
+      },
+      ...
+    ],
+    locks: [
+      {
+        id, contribution_id, holder_composer_id, holder_display_name,
+        artifact_scope: string[],
+        overlapping_files: string[],
+        acquired_at: "2026-04-30T14:14:00Z",
+        ttl_remaining_seconds: 6831
+      },
+      ...
+    ]
+  },
   stale_as_of: "2026-04-27T18:32:00Z",
-  cache_validity_ms: { charter: 3600000, recent_decisions: 60000, contributions_summary: 5000 }
+  cache_validity_ms: { charter: 3600000, recent_decisions: 60000, contributions_summary: 5000, overlapping_active: 2000 }
 }
 ```
 
@@ -1271,6 +1296,28 @@ The contract: `get_context` should fit comfortably within ~8K tokens for the def
 #### 6.7.4 Freshness and caching
 
 The response carries `stale_as_of` (server timestamp at query time) and `cache_validity_ms` per section so callers can implement client-side caching with appropriate cadence:
+
+#### 6.7.5 Pre-claim file-overlap awareness via `scope_files` (per ADR-045)
+
+The optional `scope_files: string[]` parameter answers "before I claim work touching these files, who else is currently active on them?" When supplied, the response carries an `overlapping_active` section listing contributions and locks whose `artifact_scope` intersects the supplied file scope.
+
+**Semantics.**
+
+- `scope_files` accepts the same glob shape as `acquire_lock`'s `artifact_scope` (per §6.x lock semantics): `picomatch`/`minimatch` rules; absolute or repo-relative paths.
+- Intersection is computed via Postgres `text[] && text[]` (array overlap operator) backed by the GIN index on `contributions.artifact_scope` + `locks.artifact_scope`. Single SQL query; deterministic; no external dependencies.
+- `overlapping_active.contributions` includes contributions in states `claimed | plan_review | in_progress` (not `open`, since open contributions have no holder; not `review | merged | rejected`, since those are terminal-ish).
+- `overlapping_active.locks` includes all currently-held locks whose `artifact_scope` intersects.
+- `overlapping_files` per entry is the file-set intersection (helpful for composers to see exactly which files overlap, not just that *something* does).
+
+**Why this lives on `get_context`, not as a separate tool.** The capability is structurally a "current coordination state" query — exactly `get_context`'s purpose, just with a new filter axis. Adding a 13th MCP tool would amend the ADR-013/040 surface lock; extending an existing tool's parameter set does not. The composer ergonomic is also better: composers already call `get_context` for "what's happening"; `scope_files` is a natural extension of that question, not a new concept.
+
+**Why this isn't `find_similar`.** `find_similar` answers "is the work I'm proposing semantically similar to existing work?" — embedding-based, advisory, useful as a search aid. `scope_files` answers "is anyone touching these specific files right now?" — SQL-based, deterministic, useful for pre-claim coordination. Both ship at v1; both surface different signals; neither replaces the other (per ADR-045 trade-off table).
+
+**Failure modes.**
+
+- Invalid glob pattern in `scope_files`: returns `BAD_REQUEST` with the offending pattern + reason.
+- Empty `scope_files: []`: treated as "no scope filter" — the `overlapping_active` section is absent (same as omitting the parameter). Callers that want "all active overlap" semantics use a broad glob like `["**"]`.
+- No overlaps found: `overlapping_active.contributions: []`, `overlapping_active.locks: []`. Section is present (composer relied on it).
 
 - **charter:** `3_600_000` ms (1 hour). Charter files change via PR, infrequently; an hour-stale snapshot is acceptable.
 - **recent_decisions:** `60_000` ms (1 minute). Decisions append; new ones matter quickly but the rate is low.

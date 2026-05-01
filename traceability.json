@@ -7,11 +7,11 @@
   "counts": {
     "brd-epics": 16,
     "brd-stories": 105,
-    "decisions": 46,
+    "decisions": 47,
     "open-questions": 28,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 44
+    "adrs": 45
   },
   "entries": [
     {
@@ -1467,6 +1467,17 @@
       "status": "DECIDED"
     },
     {
+      "id": "D47",
+      "label": "Extend get_context with scope_files parameter for pre-claim file-overlap awareness",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-045-extend-get-context-with-scope-files-for-pre-claim-overlap-awareness.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-045",
+      "source": "m6-strategic-call-2026-05-01",
+      "status": "DECIDED"
+    },
+    {
       "id": "BRD-OPEN-QUESTIONS:section-1",
       "label": "Territory-model validation on the analyst case",
       "kind": "open-question",
@@ -1938,6 +1949,11 @@
     {
       "from": "ADR-044",
       "to": "BRD:Epic-1",
+      "rel": "implements"
+    },
+    {
+      "from": "ADR-045",
+      "to": "BRD:Epic-2",
       "rel": "implements"
     }
   ]

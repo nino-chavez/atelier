@@ -429,6 +429,15 @@ async function main(): Promise<void> {
       Array.isArray((disc as unknown as { code_challenge_methods_supported: unknown }).code_challenge_methods_supported) &&
         ((disc as unknown as { code_challenge_methods_supported: string[] }).code_challenge_methods_supported.includes('S256')),
     );
+    // registration_endpoint is always emitted so MCP clients (notably
+    // Claude Code's MCP SDK) that probe it during OAuth discovery don't
+    // bail. Atelier doesn't support RFC 7591 DCR; the route at
+    // /oauth/register returns 405 with a documented error body.
+    check(
+      'discovery.registration_endpoint is set (always emitted)',
+      typeof disc.registration_endpoint === 'string' && disc.registration_endpoint.length > 0,
+      `actual: ${disc.registration_endpoint}`,
+    );
 
     // -------------------------------------------------------------------
     // [1] tools/list -- the locked v1 surface (12 tools per ADR-013/040)

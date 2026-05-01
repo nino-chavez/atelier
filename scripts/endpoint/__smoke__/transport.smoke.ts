@@ -41,7 +41,7 @@ import { createGitCommitter, type AdrCommitter } from '../lib/committer.ts';
 import { createJwksVerifier } from '../lib/jwks-verifier.ts';
 import { TOOL_NAMES } from '../lib/dispatch.ts';
 import { handleMcpRequest } from '../lib/transport.ts';
-import { oauthDiscoveryResponse } from '../lib/oauth-discovery.ts';
+import { oauthDiscoveryResponse, oauthRegistrationStubResponse } from '../lib/oauth-discovery.ts';
 
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
@@ -127,6 +127,12 @@ async function startMcpServer(deps: {
 
       if (req.method === 'GET' && url.pathname === '/.well-known/oauth-authorization-server') {
         const webRes = oauthDiscoveryResponse({ issuer: deps.oauthIssuer });
+        await pipeWebResponse(webRes, res);
+        return;
+      }
+
+      if (url.pathname === '/oauth/register') {
+        const webRes = oauthRegistrationStubResponse();
         await pipeWebResponse(webRes, res);
         return;
       }
@@ -347,6 +353,32 @@ async function main(): Promise<void> {
       Array.isArray((disc as unknown as { code_challenge_methods_supported: unknown }).code_challenge_methods_supported) &&
         ((disc as unknown as { code_challenge_methods_supported: string[] }).code_challenge_methods_supported.includes('S256')),
     );
+    // registration_endpoint is always emitted so MCP clients (notably
+    // Claude Code's MCP SDK) that probe it during OAuth discovery don't
+    // bail. Atelier doesn't support RFC 7591 DCR; the endpoint is a 405
+    // stub that tells clients to use the static bearer in headers.
+    check(
+      'discovery.registration_endpoint is set (always emitted)',
+      typeof disc.registration_endpoint === 'string' && disc.registration_endpoint.length > 0,
+      `actual: ${disc.registration_endpoint}`,
+    );
+
+    // [0a] OAuth registration stub returns 405 with documented error body
+    console.log('\n[0a] /oauth/register stub returns 405 + documented error body');
+    for (const method of ['GET', 'POST'] as const) {
+      const regRes = await fetch(`${mcp.url}/oauth/register`, { method });
+      check(`${method} /oauth/register returns 405`, regRes.status === 405);
+      const regBody = (await regRes.json()) as { error?: string; hint?: string };
+      check(
+        `${method} /oauth/register error = registration_not_supported`,
+        regBody.error === 'registration_not_supported',
+        `actual: ${regBody.error}`,
+      );
+      check(
+        `${method} /oauth/register hint references ADR-028`,
+        typeof regBody.hint === 'string' && regBody.hint.includes('ADR-028'),
+      );
+    }
 
     // -------------------------------------------------------------------
     // [1] Wire transport: GET /api/mcp returns 405 (POST-only at M2-mid)

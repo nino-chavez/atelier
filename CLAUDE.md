@@ -34,7 +34,7 @@ When you start a session in this repo:
 2. Read `docs/strategic/NORTH-STAR.md` — this is the destination.
 3. Scan `docs/architecture/decisions/README.md` (the ADR index) — these are load-bearing choices; don't re-litigate without cause.
 4. Check `docs/functional/BRD-OPEN-QUESTIONS.md` — you may be working on one of these.
-5. If an agent-facing endpoint is live for this project, call `get_context` to pull session + territory + recent decisions. **Pre-M2** (now), the equivalent is `.atelier/checkpoints/SESSION.md` — a thin session-state file that is retired the moment the M2 endpoint ships. See `docs/methodology/METHODOLOGY.md §6.1` for the canonical-vs-ephemeral split and the no-parallel-summary rule.
+5. Call `get_context` against the project's MCP endpoint to pull session + territory + recent decisions. The endpoint is live (Streamable HTTP MCP per ARCH 7.9 + ADR-013/040, verified end-to-end against real Supabase Auth by `scripts/endpoint/__smoke__/real-client.smoke.ts`). For local dev without an endpoint, read the canonical state precedence list directly: `docs/strategic/NORTH-STAR.md`, `docs/architecture/decisions/`, `docs/functional/BRD-OPEN-QUESTIONS.md`. See `docs/methodology/METHODOLOGY.md §6.1` for the canonical-vs-ephemeral split and the no-parallel-summary rule.
 
 ---
 

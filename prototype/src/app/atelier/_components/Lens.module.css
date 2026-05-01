@@ -1,0 +1,102 @@
+.shell {
+  --bg: #0e1014;
+  --surface: #161a22;
+  --surface-2: #1d222c;
+  --border: #2a303c;
+  --fg: #e6e9ef;
+  --fg-muted: #8a93a6;
+  --accent: #7aa6ff;
+  --accent-warm: #ffae73;
+  --danger: #ff7a8a;
+  --ok: #71d49a;
+
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
+  min-height: 100vh;
+  padding: 24px 32px 64px;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.identity {
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--fg-muted);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.title {
+  font: 600 22px/1.2 ui-sans-serif, system-ui, sans-serif;
+  margin: 4px 0 6px;
+}
+
+.description {
+  color: var(--fg-muted);
+  margin: 0;
+  max-width: 64ch;
+}
+
+.viewer {
+  text-align: right;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+.viewerName {
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.viewerMeta {
+  margin-top: 2px;
+}
+
+.staleness {
+  margin-top: 4px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.readonlyBanner {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-warm);
+  padding: 8px 14px;
+  border-radius: 4px;
+  margin: 12px 0 16px;
+  color: var(--fg-muted);
+  font-size: 13px;
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    padding: 16px 16px 48px;
+  }
+  .header {
+    grid-template-columns: 1fr;
+  }
+  .viewer {
+    text-align: left;
+  }
+}

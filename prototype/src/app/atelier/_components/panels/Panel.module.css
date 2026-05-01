@@ -1,0 +1,184 @@
+.panel {
+  background: #161a22;
+  border: 1px solid #2a303c;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.panelWide {
+  grid-column: 1 / -1;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.title {
+  font: 600 13px/1.25 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #c9d1e0;
+  margin: 0;
+}
+
+.count {
+  color: #8a93a6;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+}
+
+.empty {
+  color: #8a93a6;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  border: 1px solid #2a303c;
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: #1d222c;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.rowHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rowTitle {
+  font-weight: 500;
+  color: #e6e9ef;
+  word-break: break-word;
+}
+
+.rowMeta {
+  font-size: 11px;
+  color: #8a93a6;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  flex-shrink: 0;
+}
+
+.rowSub {
+  font-size: 12px;
+  color: #8a93a6;
+  word-break: break-word;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag {
+  display: inline-block;
+  border: 1px solid #2a303c;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: #c9d1e0;
+  background: #0e1014;
+}
+
+.tagAccent {
+  border-color: #7aa6ff;
+  color: #7aa6ff;
+}
+
+.tagWarm {
+  border-color: #ffae73;
+  color: #ffae73;
+}
+
+.tagDanger {
+  border-color: #ff7a8a;
+  color: #ff7a8a;
+}
+
+.tagOk {
+  border-color: #71d49a;
+  color: #71d49a;
+}
+
+.tagMine {
+  border-color: #c9d1e0;
+  color: #c9d1e0;
+  background: #2a303c;
+}
+
+.statePill {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: #2a303c;
+  color: #c9d1e0;
+}
+
+.statePillReview {
+  background: #ffae73;
+  color: #0e1014;
+}
+
+.statePillInProgress {
+  background: #7aa6ff;
+  color: #0e1014;
+}
+
+.kbd {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: #c9d1e0;
+}
+
+.degraded {
+  border-left: 3px solid #ffae73;
+  padding: 8px 12px;
+  background: #1d222c;
+  color: #c9d1e0;
+  font-size: 13px;
+}
+
+.affordance {
+  font-size: 12px;
+  color: #8a93a6;
+  border-top: 1px solid #2a303c;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.affordance code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  background: #0e1014;
+  border: 1px solid #2a303c;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #c9d1e0;
+}

@@ -1134,7 +1134,7 @@ Breaking-change classification on `component_variants`: removing a component, re
 
 ### 6.7 Get_context execution
 
-`get_context` is the post-M2 replacement for `.atelier/checkpoints/SESSION.md` (per `../methodology/METHODOLOGY.md §6.1`). It answers, in one call: what is the current state, where did the last session leave off, what decisions affect my work, what is open in my territory.
+`get_context` is the canonical session-continuity surface (per `../methodology/METHODOLOGY.md §6.1`; pre-M2 stand-in retired at M2-mid). It answers, in one call: what is the current state, where did the last session leave off, what decisions affect my work, what is open in my territory.
 
 **Project scope.** The session token already carries `project_id`. `get_context` is implicitly project-scoped — there is no `project_id` parameter. A composer in multiple projects (per ADR-015) holds multiple sessions, one per project, and queries each independently.
 
@@ -1288,7 +1288,7 @@ When `since_session_id` is provided, the response is a delta — each section re
 - `territories` — full (territories change rarely; deltas aren't useful)
 - `traceability_slice` — full (registry is small and the diff isn't worth computing)
 
-This is the explicit "what changed since I was last here" mode — the protocol primitive that finally retires `.atelier/checkpoints/SESSION.md`.
+This is the explicit "what changed since I was last here" mode — the protocol primitive that retired the pre-M2 `.atelier/checkpoints/SESSION.md` stand-in at M2-mid.
 
 ---
 

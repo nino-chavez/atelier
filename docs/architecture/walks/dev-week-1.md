@@ -1,6 +1,6 @@
 # Walk: Dev week-1 implementation scenario
 
-**Companion to:** `../../functional/BRD-OPEN-QUESTIONS.md` (no specific entry; see `../../../.atelier/checkpoints/SESSION.md` "What the next session should do first" for walk authorship guidance)
+**Companion to:** `../../functional/BRD-OPEN-QUESTIONS.md` (no specific entry; walks are authored alongside milestone exits per `../../strategic/BUILD-SEQUENCE.md`)
 **Status:** Authored 2026-04-27 with the latent-gaps re-examination discipline applied from the start (per the analyst-week-1 walk section 7 audit).
 **Owner:** Nino Chavez
 **Last updated:** 2026-04-27

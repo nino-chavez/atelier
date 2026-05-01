@@ -15,6 +15,8 @@ name: atelier-audit
 #   - endpoint dispatcher smoke (12-tool surface + plan-review per ADR-039)
 #   - committer smoke (ARCH 7.8 / ADR-023 per-project git committer)
 #   - transport wire smoke (Streamable HTTP MCP + JWKS verifier + RFC 8414)
+#   - real-client smoke (real Supabase Auth -> production JWKS path; M2-mid #1)
+#   - lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
 #   - round-trip corpus (6 doc classes, M1 exit gate per scripts/README.md)
 #   - round-trip negative-case smoke (harness rejects synthetic drift)
 #   - traceability validator (--diff mode, scoped to PR-changed files; full
@@ -97,6 +99,21 @@ jobs:
 
       - name: Transport wire smoke (Streamable HTTP MCP + JWKS + RFC 8414)
         run: npx tsx scripts/endpoint/__smoke__/transport.smoke.ts
+
+      - name: Real-client smoke (real Supabase Auth -> production JWKS path; M2-mid #1)
+        run: |
+          set -e
+          # Supabase exports API_URL / ANON_KEY / SERVICE_ROLE_KEY via
+          # `supabase status -o env`. Re-shape into the SUPABASE_* names the
+          # smoke prefers so it can also be run with pre-exported env outside CI.
+          eval "$(supabase status -o env --workdir .)"
+          export SUPABASE_URL="$API_URL"
+          export SUPABASE_ANON_KEY="$ANON_KEY"
+          export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          npx tsx scripts/endpoint/__smoke__/real-client.smoke.ts
+
+      - name: Lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
+        run: npx tsx prototype/__smoke__/lens.smoke.ts
 
       - name: Round-trip corpus (M1 exit gate; 6 doc classes)
         run: npx tsx scripts/test/roundtrip.ts

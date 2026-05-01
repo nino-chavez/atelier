@@ -620,19 +620,25 @@ async function main(): Promise<void> {
     );
 
     // -------------------------------------------------------------------
-    // [11] find_similar: stubbed at M2 entry per BUILD-SEQUENCE; degraded=true
+    // [11] find_similar: real handler per M5 (ADR-041/042/043). Wire smoke
+    // validates envelope shape only -- handler policy (degraded vs isError
+    // when embedder unavailable, primary/weak band partitioning, threshold
+    // semantics) is covered by scripts/endpoint/__smoke__/find_similar.smoke.ts
+    // and the eval harness. Without OPENAI_API_KEY in the env, the M5 handler
+    // returns isError with EMBEDDER_UNAVAILABLE; with the key set, it returns
+    // ok with primary_matches/weak_suggestions/degraded fields. Both are
+    // valid wire envelopes; the smoke just confirms a parseable result.
+    // Updated 2026-05-01 alongside the CI hotfix (the old stub-degraded
+    // assertions latently broke at PR #7 / M5 substrate landing; surfaced
+    // when CI parsing was restored).
     // -------------------------------------------------------------------
-    console.log('\n[11] find_similar degraded=true (gates on D24/M5)');
+    console.log('\n[11] find_similar returns a parseable wire envelope');
     const fs = await rpc(mcp.url, devToken, 'tools/call', {
       name: 'find_similar',
       arguments: { description: 'find similar things' },
     });
     const fsParsed = parseToolResult(fs.envelope);
-    check('find_similar returns ok (not isError; just degraded)', !fsParsed.isError);
-    check(
-      'find_similar.degraded = true',
-      (fsParsed.data as { degraded: boolean }).degraded === true,
-    );
+    check('find_similar returns a parseable tool-call envelope', typeof fsParsed.isError === 'boolean');
 
     // -------------------------------------------------------------------
     // [12] Auth: invalid signature rejected

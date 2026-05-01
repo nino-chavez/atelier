@@ -66,12 +66,12 @@ async function main(): Promise<void> {
   const config = loadFindSimilarConfig(REPO_ROOT);
   check('config has find_similar block', !!config.yaml.embeddings);
   check(
-    'thresholds match .atelier/config.yaml defaults',
-    config.thresholds.defaultThreshold === 0.8 && config.thresholds.weakSuggestionThreshold === 0.65,
+    'thresholds match .atelier/config.yaml defaults (RRF scale per ADR-042)',
+    config.thresholds.defaultThreshold === 0.032 && config.thresholds.weakSuggestionThreshold === 0.030,
   );
   check(
-    'CI gates reflect ADR-006',
-    config.ciPrecisionGate === 0.75 && config.ciRecallGate === 0.6,
+    'CI gates reflect ADR-043 advisory tier (v1 default; precision >= 0.60 AND recall >= 0.60)',
+    config.ciPrecisionGate === 0.60 && config.ciRecallGate === 0.60,
   );
   check(
     'eval set path is the canonical location',
@@ -129,10 +129,13 @@ async function main(): Promise<void> {
 
   console.log('\n[6] CI gate boundary cases');
   // Score below precision gate fails; score below recall gate fails.
-  // Sanity-check the comparison the runner uses.
-  const passingP = 0.76;
+  // Sanity-check the comparison the runner uses against the ADR-043
+  // advisory tier (0.60 / 0.60). Boundary values chosen to be just-above
+  // and just-below 0.60 so the assertions are robust to small gate
+  // adjustments without rewriting (within the 0.55-0.65 band).
+  const passingP = 0.61;
   const passingR = 0.61;
-  const failingP = 0.74;
+  const failingP = 0.59;
   const failingR = 0.59;
   check('passing scores clear gate', passingP >= config.ciPrecisionGate && passingR >= config.ciRecallGate);
   check('failing P fails gate', !(failingP >= config.ciPrecisionGate));

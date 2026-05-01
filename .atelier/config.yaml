@@ -73,12 +73,20 @@ integrations:
     owner: null
     repo: null
 
-# fit_check configuration. Embedding model is swappable per ADR-024 (open).
-fit_check:
-  embedding_model: "${ATELIER_EMBEDDING_MODEL}"
+# find_similar configuration. Embedding adapter is OpenAI-compatible per ADR-041;
+# default points at OpenAI text-embedding-3-small. Swap providers (vLLM, Ollama,
+# LocalAI, self-hosted Voyage) by overriding base_url + api_key_env without
+# touching adapter code. Swap procedure documented in ARCH 6.4.2.
+find_similar:
+  embeddings:
+    adapter: openai-compatible
+    base_url: "https://api.openai.com/v1"
+    model_name: "text-embedding-3-small"
+    dimensions: 1536
+    api_key_env: OPENAI_API_KEY
   default_threshold: 0.80
   weak_suggestion_threshold: 0.65
-  eval_set_path: "atelier/eval/fit_check"
+  eval_set_path: "atelier/eval/find_similar"
   ci_precision_gate: 0.75
   ci_recall_gate: 0.60
 

@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-04-30 (section 19 resolved as ADR-039 prior to M2 entry per the architect-of-record strategic call; sections 3, 7, 21, 22, 23 are the genuinely-open list)
+**Last updated:** 2026-05-01 (section 3 resolved as ADR-041 prior to M5 entry per the architect-of-record strategic call; section 25 filed as event-triggered cross-dimension swap migration question; sections 7, 21, 22, 23, 25 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,26 +10,7 @@
 
 ## Open
 
-Five entries remain genuinely open. Sections 3 and 7 require benchmark data; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. Section 19 (plan-review checkpoint) was resolved 2026-04-30 as ADR-039 -- accepted into v1 as a per-territory opt-in (default off) lifecycle gate -- prior to M2 entry per the architect-of-record strategic call; per ADR-011 (destination-first), defer-to-v1.x was rejected as the "Phase 2 / coming soon" pattern.
-
-### 3 · Embedding-model default + swappability for find_similar
-
-**Scenario.** Find_similar's precision depends on the embedding model's semantic representation of decisions + contributions + BRD/PRD sections + research artifacts.
-
-**Open questions:**
-- What's the default? Candidates:
-  - External API (OpenAI `text-embedding-3-small`, Cohere Embed v3) — adequate, cheap, but adds external dependency + data-egress concerns for regulated teams
-  - Self-hostable open model (BGE-large-en, E5, etc.) — eliminates external dependency but adds hosting cost
-- How does model choice affect the eval set? The eval set's labels assume a particular similarity behavior.
-- How is model swappability implemented? Re-embed the whole index on switch, or maintain multiple indices?
-
-**Recommendation.** Benchmark ≥3 candidates on the seed eval set. Default to a self-hostable model for regulated-team viability. Document swappability as a first-class config knob with a documented re-index procedure.
-
-**Hybrid fallback (per 2026-04-28 expert review).** The ADR-006 precision gate (>=75% precision at >=60% recall) is aggressive. If the M5 benchmark consistently shows <70% precision against the seed eval set, the duplication-detection value prop weakens. Recommendation: design `find_similar` from M5 onward with a keyword-heavy semantic-hybrid retrieval path (semantic vector search + BM25-or-equivalent keyword search, scores combined via reciprocal rank fusion or similar) so the system degrades gracefully when the embedding model alone underperforms. The existing `degraded=true` flag on `find_similar` responses already supports this -- the hybrid path is the fallback that fills the degraded path with usable results rather than pure keyword search. Decision on whether to ship hybrid as default vs. as a fallback lands with the embedding benchmark resolution.
-
-**Status.** OPEN. Pending benchmark per `../testing/embedding-model-benchmark-plan.md`. Resolution gates M5 entry per BUILD-SEQUENCE section 7 question 3.
-
----
+Five entries remain genuinely open. Section 7 requires benchmark data; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. Section 25 is event-triggered (lands when a second embedding adapter at a different dimension count is contributed). Section 3 (embedding model default) was resolved 2026-05-01 as ADR-041 -- OpenAI-compatible adapter, OpenAI text-embedding-3-small (1536-dim) at v1 -- prior to M5 entry. Section 19 (plan-review checkpoint) was resolved 2026-04-30 as ADR-039 prior to M2 entry per the architect-of-record strategic call; per ADR-011 (destination-first), defer-to-v1.x was rejected as the "Phase 2 / coming soon" pattern.
 
 ### 7 · Scale ceiling per guild
 
@@ -127,6 +108,22 @@ Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing m
 
 ---
 
+### 25 · Cross-dimension embedding-model swap migration path
+
+**Scenario.** ADR-041 fixes the v1 default at OpenAI `text-embedding-3-small` (1536-dim) and the pgvector column at `vector(1536)`. ARCH 6.4.2 documents the same-dimension swap procedure (`atelier eval find_similar --rebuild-index` + 30-day grace window). What's NOT specified: the swap procedure when the new model has a different native dimension (e.g. moving to `nomic-embed-text-v1.5` at 768-dim, or `text-embedding-3-large` at 3072-dim).
+
+**Open questions:**
+- Add a second `embedding_v2 vector(N)` column on the embeddings table during transition, swap the active pointer, drop the old column at end-of-grace-window?
+- Use pgvector's `halfvec` to compress without dimension change (only valid for some model pairs)?
+- Reduce all models to a common dimension via Matryoshka-style truncation (lossy; trade-off on quality)?
+- Force a full corpus re-embed under the new dimension, with read-only fallback during the rebuild window?
+
+**Recommendation.** Defer until a second adapter at a different dimension is contributed. The decision space depends on: (a) which dimension count the new adapter exposes, (b) whether the source corpus content is still available at swap time, and (c) what the team's tolerance is for query-side downtime during rebuild. Pre-deciding without these constraints is over-investment.
+
+**Status.** OPEN. Event-triggered: lands when the first cross-dimension adapter is contributed (no contributor signal yet). The reference implementation at v1 ships only the OpenAI-compatible adapter pointed at a 1536-dim model, so the question doesn't bind any v1 deliverable. Surfaced 2026-05-01 alongside ADR-041 (D24 resolution).
+
+---
+
 ## Resolved
 
 Each entry below is a one-line redirect to the canonical home where the decision now lives. Recommendations and full Q-and-A blocks have been removed to avoid parallel-summary drift per METHODOLOGY section 6.1; see git history for the original full-context entries.
@@ -144,6 +141,14 @@ Validate territory model end-to-end against an analyst's web-surface week-1 rese
 Decide whether to integrate Switchman or build Atelier's own lock + fencing implementation.
 
 **Status.** RESOLVED 2026-04-25. See ADR-026. Own-implementation; Switchman lacks a fencing-token API, disqualifying under ADR-004.
+
+---
+
+### 3 - Embedding-model default + swappability for find_similar
+
+Decide the v1 default embedding model + adapter shape for `find_similar`, and the swap procedure across providers.
+
+**Status.** RESOLVED 2026-05-01. See ADR-041. OpenAI-compatible adapter ships as the only named adapter at v1; default config points at OpenAI `text-embedding-3-small` (1536-dim). Swap to vLLM / Ollama / LocalAI / self-hosted by overriding `find_similar.embeddings.base_url` + `api_key_env`. Swap procedure across same-dimension models documented in ARCH 6.4.2; cross-dimension swap filed as section 25 (event-triggered).
 
 ---
 

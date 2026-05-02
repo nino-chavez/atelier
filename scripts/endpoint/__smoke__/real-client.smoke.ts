@@ -562,6 +562,71 @@ async function main(): Promise<void> {
       (ghostParsed.data as { code?: string }).code === 'FORBIDDEN',
     );
 
+    // -------------------------------------------------------------------
+    // [5] Bearer rotation: substrate is stateless on bearer churn.
+    // -------------------------------------------------------------------
+    // Closes M7 follow-up F6.4 (substrate-side half). Signs in AGAIN as
+    // the same Supabase user to get bearer B (fresh JWT, different exp,
+    // same `sub`). Asserts:
+    //   (a) substrate accepts bearer B (heartbeat returns ok)
+    //   (b) substrate STILL accepts bearer A within its TTL (rotation
+    //       does not invalidate prior tokens; Supabase JWTs are stateless
+    //       until exp). This proves rotation does not break the
+    //       in-flight session model.
+    //   (c) both bearers resolve to the same composer (no identity drift)
+    //
+    // What this smoke CANNOT test (out of scope; documented in
+    // scripts/bootstrap/rotate-bearer.ts header): Claude Code's MCP HTTP
+    // client caches the bearer in process memory across .mcp.json edits,
+    // /mcp Disable->Enable, and `exit`+relaunch. That cache is purely
+    // client-side; the substrate has no role. The rotate-bearer.ts
+    // operator script makes the workflow ergonomic; the actual cache
+    // detection requires running Claude Code itself in CI which is
+    // intentionally deferred (see cc-mcp-client.smoke.ts header).
+    console.log('\n[5] bearer rotation: substrate accepts both A and B within TTL (F6.4)');
+    const reSignIn = await publicClient.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword,
+    });
+    if (reSignIn.error || !reSignIn.data.session) {
+      throw new Error(`re-signIn failed: ${reSignIn.error?.message}`);
+    }
+    const bearerB = reSignIn.data.session.access_token;
+    check('bearer B is distinct from bearer A', bearerB !== accessToken);
+
+    // Re-register with bearer B to obtain a fresh session_id (the previous
+    // session was deregistered in [2]). Bearer A's identity is the same
+    // user, so the composer-resolution path returns the same composer
+    // regardless of which bearer signs the request.
+    const regB = await rpc(mcp.url, bearerB, 'tools/call', {
+      name: 'register',
+      arguments: { project_id: projectId, surface: 'terminal' },
+    });
+    const regBParsed = parseToolResult(regB.envelope);
+    check('register with bearer B returns ok', !regBParsed.isError);
+    if (!regBParsed.isError) {
+      const sessionB = (regBParsed.data as { session_id: string }).session_id;
+      // Heartbeat with bearer A against the session created under bearer B:
+      // proves substrate auth is per-request stateless, not session-scoped
+      // to a specific bearer instance.
+      const hbA = await rpc(mcp.url, accessToken, 'tools/call', {
+        name: 'heartbeat',
+        arguments: { session_id: sessionB },
+      });
+      check('heartbeat with bearer A on session-from-B returns ok', !parseToolResult(hbA.envelope).isError);
+      // And heartbeat with bearer B against the same session.
+      const hbB = await rpc(mcp.url, bearerB, 'tools/call', {
+        name: 'heartbeat',
+        arguments: { session_id: sessionB },
+      });
+      check('heartbeat with bearer B returns ok', !parseToolResult(hbB.envelope).isError);
+      // Cleanup: deregister session B before user-delete.
+      await rpc(mcp.url, bearerB, 'tools/call', {
+        name: 'deregister',
+        arguments: { session_id: sessionB },
+      }).catch(() => {});
+    }
+
     // Cleanup the auth users we created so reruns stay clean.
     await admin.auth.admin.deleteUser(supabaseUserId).catch(() => {});
     await admin.auth.admin.deleteUser(ghostCreate.data.user.id).catch(() => {});

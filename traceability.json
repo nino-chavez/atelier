@@ -1478,6 +1478,17 @@
       "status": "DECIDED"
     },
     {
+      "id": "D48",
+      "label": "Deploy strategy: Vercel + Supabase Cloud + rootDirectory=prototype + URL split inheritance",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-046-deploy-strategy-vercel-supabase-cloud.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-046",
+      "source": "m7-track-2-deploy-strategy",
+      "status": "DECIDED"
+    },
+    {
       "id": "BRD-OPEN-QUESTIONS:section-1",
       "label": "Territory-model validation on the analyst case",
       "kind": "open-question",

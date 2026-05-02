@@ -275,7 +275,7 @@ You're now bootstrapped. Subsequent work uses the substrate:
 - Watch `/atelier` to see live presence, active locks, contracts, and the contribution queue
 - Run `find_similar` from the lens panel or directly via the tool to check for prior coverage of any topic
 
-When a network-access need surfaces (a teammate joining, a remote agent peer composer, multi-machine review), see `docs/user/tutorials/first-deploy.md` for the deploy runbook (planned at v1.x; the Vercel + cloud Supabase path will mirror the local steps with the URLs swapped).
+When a network-access need surfaces (a teammate joining, a remote agent peer composer, multi-machine review), see `docs/user/tutorials/first-deploy.md` for the deploy runbook. The Vercel + cloud Supabase path mirrors the local steps with the URLs swapped.
 
 ---
 

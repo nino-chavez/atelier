@@ -49,7 +49,7 @@ M6 substantially expanded the substrate's correctness baseline (URL split, JSON-
 | `atelier audit` | (validator IS the raw form) | M7 |
 | `atelier review` | (manual via PRs) | M7 |
 
-**Sub-question:** does `atelier dev` (a wrapper around `supabase start && npm run dev` per the polish item from M6 conversation) belong as a 13th CLI command? If yes, it lands here. If no, it stays a polish-time convenience script.
+**Sub-question (RESOLVED 2026-05-02):** `atelier dev` lands as a v1 CLI command. Bootstrap friction has been the most consistent operational pain through M2-M6 (4+ runbook drift findings, 2 bearer-cache incidents, 1 port-mismatch fix); adoption-readiness depends on bootstrap being one command. File as US-11.X. Doesn't touch the ADR-013/040 12-tool MCP surface lock (CLI surface, not MCP tool).
 
 ### Runbook condensation
 
@@ -82,33 +82,33 @@ Currently `vercel deploy --prod` is manual. Wiring git integration so push-to-ma
 
 7 entries open in BRD-OPEN-QUESTIONS. M7 strategic call needed on each:
 
-### §7 — Scale ceiling per guild
+### §7 — Scale ceiling per guild (RESOLVED 2026-05-02: M7 with bounded scope)
 
-Real benchmark required (per the entry). Status: OPEN since M0; M5/M6 didn't generate the data. M7 candidate IF the team has 1-2 weeks for benchmark setup. **Strategic call needed:** does Atelier need scale data before public announcement, or is "documented envelope, benchmark deferred" acceptable for v1?
+M7 is hardening; scale-ceiling IS hardening. But the full benchmark is substantial; don't try to do all of it. M7 ships: (a) load-generation harness, (b) observability hooks for per-component perf measurement, (c) document the empirically-measured envelope (vs the v1 hypothesis committed in §7). Defer "find the actual ceiling" to whenever real load demands it. Net M7 cost: ~3-5 days, not 1-2 weeks.
 
-### §21 — AI auto-reviewers as `review_role` type
+### §21 — AI auto-reviewers as `review_role` type (RESOLVED 2026-05-02: V1.x defer)
 
-Highest-leverage v1.x feature per the 2026-04-28 AI-speed pivot. M7 strategic call: does this land at v1, or v1.x? Recommendation in the entry: v1.x. **My read:** keep at v1.x; M7 reserves the config surface (`territories.<name>.ai_review_policy: null`) so the structural slot exists. Adding the actual AI-review path expands M7 budget materially.
+Too big for M7 + crowds out hardening. Per ADR-011 destination-first: schema reservation (`territories.<name>.ai_review_policy: null`) already covered at v1; ship the implementation at v1.x. M7 should tighten what we have, not add new feature surfaces.
 
-### §22 — Semantic contradiction validator
+### §22 — Semantic contradiction validator (RESOLVED 2026-05-02: V1.x defer)
 
-"Hallucinated decision debt" check class. M7 entry candidate. **My read:** can land as a `validate-refs.ts` extension that calls find_similar against new ADRs to surface "this contradicts ADR-XYZ" warnings. Bounded scope; ~1 day of work.
+Same reasoning as §21 — feature-add, not hardening. The OpenAI-compatible adapter pattern (ADR-041) is the substrate hook for the semantic check; the validator implementation is v1.x scope. M7 doesn't need new analysis surfaces; it needs to harden what's there.
 
-### §23 — Annotation surface
+### §23 — Annotation surface (RESOLVED 2026-05-02: V1.x with adopter-signal bar held)
 
-PR-style line-level comments on canonical state. M7 entry candidate. Larger scope. **My read:** strategic call — does Atelier ship inline annotation at v1, or do we keep PRs as the annotation surface and document the workflow?
+The 2026-04-28 update on §23 already softened to "defer to v1.x M6 with a higher bar to land (concrete pre-M6 user request needed, not speculative coordination-surface gap)." That bar was never met. M7 should not pull this forward absent a concrete adopter request. PR comments + chatbot pattern (per `docs/user/connectors/chatbot-pattern.md`) cover the practical need.
 
-### §26 — Multi-corpus eval (find_similar)
+### §26 — Multi-corpus eval (find_similar) — M7 explicit scope
 
-M7 explicit scope per the entry. Wider eval against synthetic + real corpora; cross-encoder reranker is gated on this data per §27.
+M7 explicit scope per the entry. Wider eval against ≥1 external corpus; data informs §27 blocking-tier flip per the rule below.
 
-### §27 — Cross-encoder reranker (find_similar)
+### §27 — Cross-encoder reranker (find_similar) — gated on §26 + flip rule
 
-Gated on §26 data. **If §26 reveals find_similar precision/recall is below blocking-tier:** §27 lands. **If §26 reveals the heuristic is enough:** §27 deferred indefinitely. The advisory/blocking gate-tier split (per the memory entry) holds the optionality.
+Gated on §26 data. Activation rule (per the resolved blocking-tier flip below): if 2-of-2 corpora clear blocking-tier with ≥50% margin above noise floor → §27 lands as the activation. If 1-of-2 → §27 stays opt-in. If 0-of-2 → §27 deferred indefinitely (advisory becomes the v1 destination, not a way station).
 
-### §28 — Deploy strategy ADR
+### §28 — Deploy strategy ADR — M7 entry deliverable
 
-Trigger #2 fired during M6; deploy executed; ADR-NNN authoring is overdue. M7 entry includes filing this ADR — it documents the choices made empirically (Vercel + cloud Supabase + rootDirectory=prototype + URL split inheritance) so adopters can replicate.
+Trigger #2 fired during M6; deploy executed; ADR authoring is overdue. M7 entry includes filing the ADR — it documents the choices made empirically (Vercel + cloud Supabase + rootDirectory=prototype + URL split inheritance) so adopters can replicate.
 
 ---
 
@@ -118,9 +118,21 @@ Trigger #2 fired during M6; deploy executed; ADR-NNN authoring is overdue. M7 en
 
 Memory entry "smoke-vs-real-client divergence is the reliable bug class" predicts the new PR #20 smoke catches divergences at PR time. M7 verifies: how many PRs through the M7 cycle catch a divergence via PR #20's smoke vs. surface at operator handoff? **If smoke catches them:** retire the memory entry as resolved (a real verification rather than just a hypothesis). **If divergences slip through:** expand the smoke's probe coverage.
 
-### Blocking-tier eval gate flip
+### Blocking-tier eval gate flip (RESOLVED 2026-05-02 — concrete rule below)
 
-Per ADR-043 the eval gate is currently advisory (precision >= 0.60, recall >= 0.60; cleared at M5). Blocking tier (precision >= 0.85, recall >= 0.70) is reserved. **Decision rule:** if M7 wider eval (§26) shows precision/recall consistently above blocking thresholds across multiple corpora, flip the gate to blocking. **Sub-question:** what's the threshold for "consistently"? 3 of 3? 2 of 3? File as a sub-decision when M7 wider eval lands.
+Per ADR-043 the eval gate is currently advisory (precision >= 0.60, recall >= 0.60; cleared at M5). Blocking tier (precision >= 0.85, recall >= 0.70) is reserved.
+
+**Activation rule (file in M7 wider-eval ADR when it lands):**
+
+> Blocking tier flips from opt-in to v1.x default when, in M7 wider eval (per BRD §26):
+> - At least 2 distinct corpora measured (Atelier's own + ≥1 external)
+> - 2-of-2 clear blocking-tier with ≥50% margin above measured noise floor (~5pp recall variance per ADR-045 calibration)
+>
+> If 2-of-2 cleared: ship blocking as v1.x default; cross-encoder reranker (BRD §27) lands as the activation
+> If 1-of-2 cleared: blocking stays opt-in; document the corpus-class generalization gap
+> If 0-of-2 cleared: reverse the blocking-tier framing entirely — advisory IS the v1 destination, not a way station
+
+Without a defined rule, "consistent" stays subjective and the flip never happens. The rule above gives M7 a concrete go/no-go criterion against measurable data.
 
 ### Lint rule for proprietary imports outside named adapters
 
@@ -147,17 +159,23 @@ Identified during M6 but deferred:
 
 ---
 
-## Open strategic calls for the user
+## Strategic calls — RESOLVED 2026-05-02
 
-These I cannot autonomously decide:
+The 7 calls were resolved at M6 close-out via Nino + Claude conversation. Resolutions folded into the section bodies above; summary here:
 
-1. **`atelier dev` wrapper as 13th CLI command, or polish-time convenience?** Affects CLI polish scope.
-2. **§7 (scale ceiling) benchmark — M7 scope or deferred to post-v1?** Affects M7 budget by 1-2 weeks.
-3. **§21 (AI auto-reviewers) — v1 or v1.x?** Recommendation in the BRD entry is v1.x; my read concurs. User confirms.
-4. **§22 (semantic contradiction validator) — M7 or v1.x?** Bounded scope (~1 day); recommend M7.
-5. **§23 (annotation surface) — v1 inline annotations, or PR-only?** Strategic call.
-6. **Find_similar blocking-tier flip rule — what counts as "consistent" across corpora?** Sub-decision when §26 wider-eval data lands.
-7. **Lens panel for `overlapping_active` (deferred from M6 task #12) — M7 polish or wait for adopter signal?** Default per memory: wait for signal. User confirms.
+| # | Question | Resolution | Affects |
+|---|---|---|---|
+| 1 | `atelier dev` as 13th CLI command vs convenience | **V1 CLI command** | Track 1 CLI polish scope |
+| 2 | §7 scale-ceiling benchmark — M7 or post-v1 | **M7 with bounded scope** (harness + observability + measured envelope; not "find the ceiling") | Track 2 §7; M7 budget +3-5 days, not +1-2 weeks |
+| 3 | §21 AI auto-reviewers — v1 or v1.x | **V1.x defer**; schema slot already reserved at v1 | Track 2 §21 |
+| 4 | §22 semantic contradiction — M7 or v1.x | **V1.x defer**; feature-add not hardening | Track 2 §22 |
+| 5 | §23 annotation surface — v1 inline or PR-only | **V1.x with adopter-signal bar held**; PR comments + chatbot pattern cover need | Track 2 §23 |
+| 6 | Blocking-tier flip rule — what counts as "consistent" | **2-of-2 corpora clear with ≥50% margin above noise floor** (concrete rule above) | Track 3 blocking-tier flip; M7 wider-eval ADR |
+| 7 | Lens panel for overlapping_active — M7 polish or wait | **Wait for adopter signal**; M7 IF concrete affordance surfaces during adopter-readiness work | Track 3 polish (conditional) |
+
+**Net M7 scope per resolutions:** Adopter-readiness (Track 1) + Hardening polish (Track 3) + §26 wider eval + §27 conditional + §28 ADR + §22 schema reservation. Defers to v1.x: §21, §22 implementation, §23. Defers conditional on signal: lens panel for overlapping_active.
+
+**Net effect:** M7 stays tight on hardening; doesn't crowd with feature-adds.
 
 ---
 
@@ -225,12 +243,10 @@ Do NOT:
 
 ## Refinement asks for the user
 
-When ready, please:
+The 7 strategic calls are resolved (above); Tracks 1/2/3 framing stands; success criteria stand. Remaining refinements before opening the M7 session:
 
-1. **Pick a side on each of the 7 open strategic calls** above (or defer explicitly with rationale)
-2. **Confirm or adjust the three-track framing** — does this match your priorities, or is one track outsized for M7's budget?
-3. **Confirm the success criteria** — anything to add or remove?
-4. **Edit the suggested prompt structure inline** in this draft file; I'll fold your edits + open the M7 session against the final
-5. **Indicate cadence preference** — back-to-back from M6 close, or a deliberate cool-down before M7 starts?
+1. **Confirm or adjust the resolutions** above if any read missed something
+2. **Cadence preference** — back-to-back from M6 close, or a deliberate cool-down before M7 starts?
+3. **Public-reference-implementation announcement plan** — when M7 substrate is done + a clean `atelier init` produces the demoable, does the announcement happen via README + repo description update only, or also via external surfaces (HN / Twitter / blog)?
 
-This draft is meant to be edited freely. Not load-bearing as written; load-bearing once you sign off.
+This draft is now closer to canonical than draft. The M7 session opens against this version + any refinements you fold inline before opening.

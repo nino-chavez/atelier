@@ -205,7 +205,7 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 ### M6 — Remote-principal composers + triage
 
-**Status:** Planned
+**Status:** Done (2026-05-02; see `../architecture/audits/milestone-M6-exit.md`)
 
 **Produces.** External web-agent composers (Claude Code, Cursor, custom MCP clients) as first-class actors per ADR-009. Triage queue requiring human approval for all external-sourced content per ADR-018. Auth/authz scoped to remote-principal class.
 

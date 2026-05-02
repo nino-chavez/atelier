@@ -73,7 +73,15 @@ In an AI-speed reality, agents may generate ADRs at scale that pass syntactic ch
 
 The check is advisory at v1.x (warns, never blocks). Promoting to blocking is a per-project policy decision based on observed false-positive rate.
 
-**Status.** OPEN. Strategic call: does the cost (LLM calls per PR + calibration overhead) justify the catch (catching subtle AI-generated drift that syntactic checks miss)? Recommendation is yes for ADR-touching PRs at M5, no for code PRs at v1. Surfaced by 2026-04-28 AI-speed red-team pivot.
+**Status.** OPEN -- v1.x defer with schema reservation landed at M7. The v1 reservation per the M7 strategic call (kickoff Track 2):
+
+- `.atelier/config.yaml: review.semantic_contradiction` block exists with `enabled: false` default. All fields the v1.x implementation needs (scope_paths, mode, base_url, api_key_env, model_name, anchor_paths, confidence_threshold) are present. Adopters who fork at v1 do not need a schema migration to enable the v1.x validator.
+- `scripts/README.md "Extended cross-doc consistency"` table includes the `semantic_contradiction` check-class row marking it RESERVED. The validator has not implemented the check yet; the row documents where the v1.x implementation will plug in.
+- Adapter pattern matches ADR-041 (OpenAI-compatible `/v1/chat/completions`); adopters override `base_url` + `model_name` to swap providers (Anthropic, Mistral, vLLM, Ollama, etc.) without changing adapter code.
+
+The strategic call (does this land at v1?) was answered no per the M7 kickoff -- "schema reservation only -- not implementation." Reasons: (a) v1 is hardening, not feature-add; (b) the LLM-call cost + calibration overhead is genuinely substantial; (c) adopter signal for the feature has not surfaced; (d) destination-first per ADR-011 admits "scope deferred to v1.x" only when the v1 reservation makes the v1.x landing migration-free, which the schema reservation accomplishes.
+
+The remaining open work is the v1.x implementation when an adopter signals need OR when AI-generated ADRs cross a noise threshold that empirically warrants the validator's catch. Filed 2026-04-28; schema reservation landed 2026-05-02. Surfaced by the AI-speed red-team pivot.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-05-02 (sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; sections 21, 22, 23 are the genuinely-open list)
+**Last updated:** 2026-05-02 (sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral alongside the 12-command CLI polish PR; sections 21, 22, 23, 29 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -133,6 +133,48 @@ Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing m
 ---
 
 _(Sections 26, 27, 28 moved to **Resolved** below — see the redirects.)_
+
+---
+
+### 29 · `atelier upgrade` template-upgrade flow (scope-deferred to v1.x)
+
+**Scenario.** BRD US-11.10 + BUILD-SEQUENCE §9 list `atelier upgrade` as a v1 CLI command for pulling a new Atelier template version into an existing project. ARCH 9.7 specifies the semantics: additive-preferred migrations, idempotent, N/N-1 schema co-existence, conflict reports without auto-resolution, decision-log preservation. The 12-command CLI polish PR (M7 Track 1 / 2026-05-02) ships `atelier upgrade` as a **scope-deferred stub** — distinct from the 6 timeline-deferred stubs (init, datastore init, deploy, invite, territory add, doctor) which all have working raw equivalents. `atelier upgrade` has **no v1 raw form** because the underlying capability (semver-aware template upgrade with migration tracking) is not built at v1.
+
+This files the deferral so the gap doesn't get lost.
+
+**Why scope-deferred (not timeline-deferred):**
+
+- Timeline-deferred stubs (the other 6): the substrate capability exists at v1; only the CLI wrapper polish lands in v1.x. Adopters using the raw form get the full capability.
+- Scope-deferred `atelier upgrade`: there is no raw substrate command that does what ARCH 9.7 specifies. Operator practice at v1 is the manual workaround:
+
+  ```bash
+  cd <your-atelier-project>
+  git remote add upstream https://github.com/Signal-x-Studio-LLC/atelier.git
+  git fetch upstream main
+  git log HEAD..upstream/main -- .atelier/ docs/strategic/ docs/architecture/ | less
+  # Review what changed
+  git merge upstream/main   # or cherry-pick what applies
+  ```
+
+This works for adopters who cloned recently and have minimal local divergence. It does NOT scale to:
+
+- Adopters with custom territories that need to be preserved across upgrades
+- Adopters tracking a non-`main` branch
+- Adopters with custom config that conflicts with new template defaults
+- Adopters with locally-applied schema migrations (ARCH 9.7's N/N-1 co-existence requirement)
+
+**v1 reservation:** none beyond the CLI stub. No schema migration system exists at v1; no version-tracking metadata is stored in adopter projects; no migration-script registry is shipped. v1.x adds all of these.
+
+**Trigger to land:** first adopter requests semver-aware template upgrade. Until then, the manual git-pull workflow + the CHANGELOG (when it exists) are sufficient.
+
+**v1.x deliverables (when triggered):**
+
+1. Per-project version metadata: `.atelier/version.lock` records the template version the project was scaffolded from + the version of every subsequent upgrade
+2. Migration script registry: `tools/atelier-template/migrations/v1.0-to-v1.1/` style directories with idempotent migration scripts
+3. `atelier upgrade` polished implementation: discovers the registry, applies migrations in order, reports conflicts with the team's local divergence, preserves the decision log per ARCH 9.7
+4. CHANGELOG convention enforcement: every template change that affects adopter projects requires a corresponding migration script + CHANGELOG entry
+
+**Status.** OPEN. Scope-deferred to v1.x with the trigger above. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form ships as a scope-deferred stub).
 
 ---
 

@@ -236,3 +236,36 @@ Teams may add project-specific check classes by dropping a script under `scripts
 ### Implementation note on adr_reeval_trigger_check
 
 The `Re-evaluation triggers` section format in ADRs is intentionally human-readable, not machine-parseable. The check's MVP at M1 is: enumerate ADRs with a `Re-evaluation triggers` section and surface the list to the architect with a prompt -- "review whether any of these triggers have fired." Automated trigger detection (parsing trigger conditions and polling external sources) is a v1.x extension. The reminder is the value at v1; the automation is a stretch.
+
+## YAML lint (`scripts/lint/yaml-lint.ts`)
+
+A Node-only YAML 1.2 linter that runs in the PR CI gate. Closes the PR #10 follow-up: a colon-in-step-name silently broke `.github/workflows/atelier-audit.yml` parsing on GitHub Actions for several weeks before the hot-fix landed. The linter catches the class.
+
+**Scope:**
+
+- `.github/workflows/*.yml` and `*.yaml`
+- `.atelier/*.yaml` and `*.yml`
+
+The target list is an explicit allowlist in `scripts/lint/yaml-lint.ts:TARGETS` -- when a new YAML surface lands in the repo, add the glob there.
+
+**What it catches:**
+
+- YAML 1.2 syntax errors (the colon-in-unquoted-value class generally; the PR #10 specific case verified)
+- Empty YAML files (almost always an unfinished commit)
+- Tab characters in indentation (forbidden by spec; some editors silently insert them)
+
+**What it doesn't catch:**
+
+- Schema validation (per-config validators handle shape; e.g., `loadConfig` for `.atelier/config.yaml`)
+- Style rules (line length, key ordering -- no opinion at v1)
+- YAML 1.1-vs-1.2 quirks (the parser defaults to 1.2 which matches every consumer Atelier touches)
+
+**Invocation:**
+
+- `npm run lint:yaml` -- runs the linter; exits 0 on clean, 1 on findings
+- CI: the `Fast checks (PR)` job runs it on every PR before the traceability validator
+- Local pre-commit hook: optional. Adopters who want enforcement at `git commit` time wire a hook themselves (the repo doesn't ship a forced pre-commit framework dependency to keep adopter setup minimal). Suggested `.git/hooks/pre-commit`:
+  ```sh
+  #!/bin/sh
+  npm run lint:yaml || { echo "yaml-lint failed; fix or 'git commit --no-verify' to bypass"; exit 1; }
+  ```

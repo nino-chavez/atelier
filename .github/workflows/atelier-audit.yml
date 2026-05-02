@@ -177,6 +177,16 @@ jobs:
       - name: Lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
         run: npx tsx prototype/__smoke__/lens.smoke.ts
 
+      - name: Triage smoke (M6 / migration 9 / ADR-018)
+        # Exercises the M6 triage_pending lifecycle end-to-end:
+        # below-threshold route-proposal -> triage_pending insert,
+        # idempotent re-route, triagePendingApprove (creates contribution),
+        # triagePendingReject, already-decided guard, cross-project
+        # approver rejection. Uses the heuristic classifier for the
+        # routing flow + a mocked ChatService for the LlmClassifier
+        # registry-seam test (deterministic; no live LLM call).
+        run: npx tsx scripts/sync/triage/__smoke__/triage.smoke.ts
+
       - name: Embeddings adapter smoke (M5 / ADR-041; mocked fetch + Noop)
         # Pure unit-shaped smoke that exercises the EmbeddingService surface
         # contract: Noop, formatModelVersion validation, OpenAI-compatible

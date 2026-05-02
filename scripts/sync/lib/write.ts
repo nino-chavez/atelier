@@ -241,6 +241,151 @@ export interface LogDecisionResult {
 }
 
 // =========================================================================
+// Triage pending (ADR-018 / migration 9 / ARCH 6.5.2)
+// =========================================================================
+
+export type TriagePendingCommentSource =
+  | 'github'
+  | 'jira'
+  | 'linear'
+  | 'figma'
+  | 'confluence'
+  | 'notion'
+  | 'manual';
+
+export interface TriagePendingClassification {
+  category: string;
+  confidence: number;
+  signals: string[];
+}
+
+export interface TriagePendingDraftedProposal {
+  category: string;
+  confidence: number;
+  bodyMarkdown: string;
+  suggestedAction: string;
+  discipline: 'implementation' | 'research' | 'design';
+}
+
+export interface TriagePendingInsertInput {
+  projectId: string;
+  commentSource: TriagePendingCommentSource;
+  externalCommentId: string;
+  externalAuthor: string;
+  commentText: string;
+  commentContext?: Record<string, unknown>;
+  receivedAt: Date | string;
+  classification: TriagePendingClassification;
+  draftedProposal: TriagePendingDraftedProposal;
+  territoryId: string;
+  triageSessionId?: string | null;
+}
+
+export interface TriagePendingInsertResult {
+  triagePendingId: string;
+}
+
+export interface TriagePendingListInput {
+  projectId: string;
+  includeDecided?: boolean;
+  limit?: number;
+}
+
+export interface TriagePendingRow {
+  id: string;
+  projectId: string;
+  commentSource: TriagePendingCommentSource;
+  externalCommentId: string;
+  externalAuthor: string;
+  commentText: string;
+  commentContext: Record<string, unknown>;
+  receivedAt: Date;
+  classification: TriagePendingClassification;
+  draftedProposal: TriagePendingDraftedProposal;
+  territoryId: string;
+  territoryName: string | null;
+  territoryReviewRole: string | null;
+  triageSessionId: string | null;
+  createdAt: Date;
+  routedToContributionId: string | null;
+  rejectedAt: Date | null;
+  rejectionReason: string | null;
+  decidedByComposerId: string | null;
+  decidedByDisplayName: string | null;
+}
+
+interface TriagePendingRowRaw {
+  id: string;
+  project_id: string;
+  comment_source: TriagePendingCommentSource;
+  external_comment_id: string;
+  external_author: string;
+  comment_text: string;
+  comment_context: Record<string, unknown>;
+  received_at: Date;
+  classification: TriagePendingClassification;
+  drafted_proposal: TriagePendingDraftedProposal;
+  territory_id: string;
+  territory_name: string | null;
+  territory_review_role: string | null;
+  triage_session_id: string | null;
+  created_at: Date;
+  routed_to_contribution_id: string | null;
+  rejected_at: Date | null;
+  rejection_reason: string | null;
+  decided_by_composer_id: string | null;
+  decided_by_display_name: string | null;
+}
+
+function rowToTriagePending(r: TriagePendingRowRaw): TriagePendingRow {
+  return {
+    id: r.id,
+    projectId: r.project_id,
+    commentSource: r.comment_source,
+    externalCommentId: r.external_comment_id,
+    externalAuthor: r.external_author,
+    commentText: r.comment_text,
+    commentContext: r.comment_context,
+    receivedAt: r.received_at,
+    classification: r.classification,
+    draftedProposal: r.drafted_proposal,
+    territoryId: r.territory_id,
+    territoryName: r.territory_name,
+    territoryReviewRole: r.territory_review_role,
+    triageSessionId: r.triage_session_id,
+    createdAt: r.created_at,
+    routedToContributionId: r.routed_to_contribution_id,
+    rejectedAt: r.rejected_at,
+    rejectionReason: r.rejection_reason,
+    decidedByComposerId: r.decided_by_composer_id,
+    decidedByDisplayName: r.decided_by_display_name,
+  };
+}
+
+export interface TriagePendingApproveInput {
+  triagePendingId: string;
+  approverComposerId: string;
+  /** Override the synthetic ATELIER-TRIAGE trace_ids if the approver
+   *  knows the right linkage. */
+  traceIds?: string[];
+}
+
+export interface TriagePendingApproveResult {
+  triagePendingId: string;
+  contributionId: string;
+}
+
+export interface TriagePendingRejectInput {
+  triagePendingId: string;
+  rejecterComposerId: string;
+  reason?: string;
+}
+
+export interface TriagePendingRejectResult {
+  triagePendingId: string;
+}
+
+// =========================================================================
 // scope_files validation (ADR-045 / ARCH 6.7.5)
 // =========================================================================
 
@@ -1789,6 +1934,184 @@ export class AtelierClient {
       await this.publishEvent(ev.projectId, ev.kind, ev.payload);
     }
     return result;
+  }
+
+  // =======================================================================
+  // Triage pending (M6 / migration 9 / ADR-018)
+  // =======================================================================
+  //
+  // Below-threshold drafts from route-proposal flow into this table.
+  // The FeedbackQueuePanel reads pending rows; human approval/rejection
+  // updates the row and (on approval) creates a contribution.
+
+  async triagePendingInsert(input: TriagePendingInsertInput): Promise<TriagePendingInsertResult> {
+    return this.tx(async (client) => {
+      const { rows } = await client.query<{ id: string }>(
+        `INSERT INTO triage_pending (
+           project_id, comment_source, external_comment_id, external_author,
+           comment_text, comment_context, received_at,
+           classification, drafted_proposal, territory_id, triage_session_id
+         )
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9::jsonb, $10, $11)
+         ON CONFLICT (project_id, comment_source, external_comment_id)
+           DO UPDATE SET
+             classification = EXCLUDED.classification,
+             drafted_proposal = EXCLUDED.drafted_proposal,
+             comment_text = EXCLUDED.comment_text,
+             comment_context = EXCLUDED.comment_context
+         RETURNING id`,
+        [
+          input.projectId,
+          input.commentSource,
+          input.externalCommentId,
+          input.externalAuthor,
+          input.commentText,
+          JSON.stringify(input.commentContext ?? {}),
+          input.receivedAt,
+          JSON.stringify(input.classification),
+          JSON.stringify(input.draftedProposal),
+          input.territoryId,
+          input.triageSessionId ?? null,
+        ],
+      );
+      const id = rows[0]?.id;
+      if (!id) throw new AtelierError('INTERNAL', 'triage_pending insert returned no id');
+      return { triagePendingId: id };
+    });
+  }
+
+  async triagePendingList(input: TriagePendingListInput): Promise<TriagePendingRow[]> {
+    return this.tx(async (client) => {
+      const includeDecided = input.includeDecided === true;
+      const filter = includeDecided
+        ? ''
+        : ' AND tp.routed_to_contribution_id IS NULL AND tp.rejected_at IS NULL';
+      const { rows } = await client.query<TriagePendingRowRaw>(
+        `SELECT tp.id, tp.project_id, tp.comment_source, tp.external_comment_id,
+                tp.external_author, tp.comment_text, tp.comment_context,
+                tp.received_at, tp.classification, tp.drafted_proposal,
+                tp.territory_id, t.name AS territory_name,
+                t.review_role::text AS territory_review_role,
+                tp.triage_session_id, tp.created_at,
+                tp.routed_to_contribution_id, tp.rejected_at, tp.rejection_reason,
+                tp.decided_by_composer_id,
+                cm.display_name AS decided_by_display_name
+           FROM triage_pending tp
+           LEFT JOIN territories t ON t.id = tp.territory_id
+           LEFT JOIN composers cm ON cm.id = tp.decided_by_composer_id
+          WHERE tp.project_id = $1${filter}
+          ORDER BY tp.created_at DESC
+          LIMIT $2`,
+        [input.projectId, input.limit ?? 50],
+      );
+      return rows.map(rowToTriagePending);
+    });
+  }
+
+  async triagePendingApprove(input: TriagePendingApproveInput): Promise<TriagePendingApproveResult> {
+    return this.tx(async (client) => {
+      const { rows: pendingRows } = await client.query<{
+        project_id: string;
+        territory_id: string;
+        external_comment_id: string;
+        comment_source: string;
+        drafted_proposal: { discipline: 'implementation' | 'research' | 'design' };
+        decided: boolean;
+      }>(
+        `SELECT project_id, territory_id, external_comment_id, comment_source,
+                drafted_proposal,
+                (routed_to_contribution_id IS NOT NULL OR rejected_at IS NOT NULL) AS decided
+           FROM triage_pending WHERE id = $1 FOR UPDATE`,
+        [input.triagePendingId],
+      );
+      const pending = pendingRows[0];
+      if (!pending) throw new AtelierError('NOT_FOUND', 'triage_pending row not found');
+      if (pending.decided) {
+        throw new AtelierError('CONFLICT', 'triage_pending row already decided');
+      }
+
+      // Resolve approver -> composer_id (for author_composer_id on the new
+      // contribution). The approver is the human signing off on the
+      // triage; the contribution's author is the same composer (they're
+      // adopting the drafted proposal).
+      const { rows: composerRows } = await client.query<{ id: string; project_id: string }>(
+        `SELECT id, project_id FROM composers WHERE id = $1`,
+        [input.approverComposerId],
+      );
+      const composer = composerRows[0];
+      if (!composer || composer.project_id !== pending.project_id) {
+        throw new AtelierError('FORBIDDEN', 'approver is not a composer in the project');
+      }
+
+      const traceIds = input.traceIds && input.traceIds.length > 0 ? input.traceIds : ['ATELIER-TRIAGE'];
+      const contentRef = `triage/${pending.comment_source}-${pending.external_comment_id}.md`;
+      const artifactScope = [contentRef];
+
+      const { rows: contribRows } = await client.query<{ id: string }>(
+        `INSERT INTO contributions (
+           project_id, author_composer_id, trace_ids, territory_id,
+           artifact_scope, state, kind, requires_owner_approval, content_ref
+         )
+         VALUES ($1, $2, $3, $4, $5, 'claimed', $6::contribution_kind, false, $7)
+         RETURNING id`,
+        [
+          pending.project_id,
+          input.approverComposerId,
+          traceIds,
+          pending.territory_id,
+          artifactScope,
+          pending.drafted_proposal.discipline,
+          contentRef,
+        ],
+      );
+      const contributionId = contribRows[0]?.id;
+      if (!contributionId) throw new AtelierError('INTERNAL', 'contribution insert returned no id');
+
+      await client.query(
+        `UPDATE triage_pending
+            SET routed_to_contribution_id = $1, decided_by_composer_id = $2
+          WHERE id = $3`,
+        [contributionId, input.approverComposerId, input.triagePendingId],
+      );
+
+      return { triagePendingId: input.triagePendingId, contributionId };
+    });
+  }
+
+  async triagePendingReject(input: TriagePendingRejectInput): Promise<TriagePendingRejectResult> {
+    return this.tx(async (client) => {
+      const { rows: pendingRows } = await client.query<{ project_id: string; decided: boolean }>(
+        `SELECT project_id,
+                (routed_to_contribution_id IS NOT NULL OR rejected_at IS NOT NULL) AS decided
+           FROM triage_pending WHERE id = $1 FOR UPDATE`,
+        [input.triagePendingId],
+      );
+      const pending = pendingRows[0];
+      if (!pending) throw new AtelierError('NOT_FOUND', 'triage_pending row not found');
+      if (pending.decided) {
+        throw new AtelierError('CONFLICT', 'triage_pending row already decided');
+      }
+
+      const { rows: composerRows } = await client.query<{ project_id: string }>(
+        `SELECT project_id FROM composers WHERE id = $1`,
+        [input.rejecterComposerId],
+      );
+      const composer = composerRows[0];
+      if (!composer || composer.project_id !== pending.project_id) {
+        throw new AtelierError('FORBIDDEN', 'rejecter is not a composer in the project');
+      }
+
+      await client.query(
+        `UPDATE triage_pending
+            SET rejected_at = now(),
+                rejection_reason = $1,
+                decided_by_composer_id = $2
+          WHERE id = $3`,
+        [input.reason ?? null, input.rejecterComposerId, input.triagePendingId],
+      );
+
+      return { triagePendingId: input.triagePendingId };
+    });
   }
 }
 

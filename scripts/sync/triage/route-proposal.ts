@@ -28,6 +28,7 @@ import { AtelierClient } from '../lib/write.ts';
 interface Args {
   commentJsonPath: string;
   classifier: string;
+  projectId: string;
   triageSessionId: string;
   territoryId: string;
   contentRef: string | null;
@@ -41,6 +42,7 @@ function parseArgs(argv: string[]): Args {
   const args: Args = {
     commentJsonPath: '',
     classifier: 'heuristic-v1',
+    projectId: '',
     triageSessionId: '',
     territoryId: '',
     contentRef: null,
@@ -51,13 +53,14 @@ function parseArgs(argv: string[]): Args {
     const a = argv[i]!;
     if (a === '--comment-json') args.commentJsonPath = argv[++i]!;
     else if (a === '--classifier') args.classifier = argv[++i]!;
+    else if (a === '--project') args.projectId = argv[++i]!;
     else if (a === '--triage-session') args.triageSessionId = argv[++i]!;
     else if (a === '--territory') args.territoryId = argv[++i]!;
     else if (a === '--content-ref') args.contentRef = argv[++i]!;
     else if (a === '--threshold') args.threshold = Number(argv[++i]);
     else if (a === '--dry-run') args.dryRun = true;
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: route-proposal --comment-json PATH --triage-session UUID --territory UUID [--classifier NAME] [--threshold N] [--dry-run]');
+      console.log('Usage: route-proposal --comment-json PATH --project UUID --triage-session UUID --territory UUID [--classifier NAME] [--threshold N] [--dry-run]');
       process.exit(0);
     }
   }
@@ -65,8 +68,11 @@ function parseArgs(argv: string[]): Args {
 }
 
 export interface RoutingDecision {
-  outcome: 'contribution_created' | 'routed_to_human_queue';
+  outcome: 'contribution_created' | 'routed_to_human_queue' | 'dry_run';
   contributionId: string | null;
+  /** Set when outcome is 'routed_to_human_queue': the triage_pending row
+   *  the human will approve/reject in FeedbackQueuePanel. */
+  triagePendingId: string | null;
   category: string;
   confidence: number;
   reason: string;
@@ -76,6 +82,7 @@ export async function routeProposal(opts: {
   client: AtelierClient;
   comment: ExternalComment;
   classifierName: string;
+  projectId: string;
   triageSessionId: string;
   territoryId: string;
   contentRef: string;
@@ -87,22 +94,63 @@ export async function routeProposal(opts: {
   const proposal = draftProposal({ comment: opts.comment, classification });
 
   if (classification.confidence < opts.threshold) {
+    if (opts.dryRun) {
+      return {
+        outcome: 'dry_run',
+        contributionId: null,
+        triagePendingId: null,
+        category: classification.category,
+        confidence: classification.confidence,
+        reason: `dry-run (would route to human queue: confidence ${classification.confidence.toFixed(2)} < threshold ${opts.threshold})`,
+      };
+    }
+    // Below-threshold drafts persist in triage_pending per migration 9 +
+    // ADR-018 (triage never auto-merges; every external-sourced item
+    // requires human approval). FeedbackQueuePanel reads pending rows;
+    // the human approver routes via triagePendingApprove (creates a
+    // contribution from the drafted proposal) or rejects via
+    // triagePendingReject.
+    const insertResult = await opts.client.triagePendingInsert({
+      projectId: opts.projectId,
+      commentSource: opts.comment.source,
+      externalCommentId: opts.comment.externalCommentId,
+      externalAuthor: opts.comment.externalAuthor,
+      commentText: opts.comment.text,
+      commentContext: opts.comment.context,
+      receivedAt: opts.comment.receivedAt,
+      classification: {
+        category: classification.category,
+        confidence: classification.confidence,
+        signals: classification.signals,
+      },
+      draftedProposal: {
+        category: proposal.category,
+        confidence: proposal.confidence,
+        bodyMarkdown: proposal.bodyMarkdown,
+        suggestedAction: proposal.suggestedAction,
+        discipline: proposal.discipline,
+      },
+      territoryId: opts.territoryId,
+      triageSessionId: opts.triageSessionId,
+    });
     return {
       outcome: 'routed_to_human_queue',
       contributionId: null,
+      triagePendingId: insertResult.triagePendingId,
       category: classification.category,
       confidence: classification.confidence,
-      reason: `confidence ${classification.confidence.toFixed(2)} < threshold ${opts.threshold}`,
+      reason: `confidence ${classification.confidence.toFixed(2)} < threshold ${opts.threshold}; persisted to triage_pending`,
     };
   }
 
   if (opts.dryRun) {
     return {
-      outcome: 'contribution_created',
+      outcome: 'dry_run',
       contributionId: null,
+      triagePendingId: null,
       category: classification.category,
       confidence: classification.confidence,
-      reason: 'dry-run',
+      reason: 'dry-run (would create contribution)',
     };
   }
 
@@ -125,6 +173,7 @@ export async function routeProposal(opts: {
   return {
     outcome: 'contribution_created',
     contributionId: result.contributionId,
+    triagePendingId: null,
     category: classification.category,
     confidence: classification.confidence,
     reason: `requires_owner_approval=${result.requiresOwnerApproval}`,
@@ -141,8 +190,8 @@ function extractTraceIds(comment: ExternalComment, fallback: string[]): string[]
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  if (!args.commentJsonPath || !args.triageSessionId || !args.territoryId) {
-    console.error('error: --comment-json, --triage-session, and --territory are required');
+  if (!args.commentJsonPath || !args.projectId || !args.triageSessionId || !args.territoryId) {
+    console.error('error: --comment-json, --project, --triage-session, and --territory are required');
     process.exit(1);
   }
 
@@ -157,6 +206,7 @@ async function main(): Promise<void> {
       client,
       comment,
       classifierName: args.classifier,
+      projectId: args.projectId,
       triageSessionId: args.triageSessionId,
       territoryId: args.territoryId,
       contentRef,

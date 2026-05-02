@@ -231,6 +231,7 @@ async function main(): Promise<void> {
         receivedAt: new Date().toISOString(),
       },
       classifierName: 'heuristic-v1',
+      projectId: PROJECT_ID,
       triageSessionId: triageSession.id,
       territoryId: TERRITORY_ID,
       contentRef: 'triage/github-comment-1.md',
@@ -268,6 +269,7 @@ async function main(): Promise<void> {
         receivedAt: new Date().toISOString(),
       },
       classifierName: 'heuristic-v1',
+      projectId: PROJECT_ID,
       triageSessionId: triageSession.id,
       territoryId: TERRITORY_ID,
       contentRef: 'triage/github-comment-2.md',
@@ -276,6 +278,7 @@ async function main(): Promise<void> {
     });
     check('low-confidence comment routed to human queue', lowConfidence.outcome === 'routed_to_human_queue');
     check('no contribution created for low-confidence', lowConfidence.contributionId === null);
+    check('low-confidence persisted in triage_pending (M6 / migration 9)', typeof lowConfidence.triagePendingId === 'string' && lowConfidence.triagePendingId.length > 0);
   } finally {
     await triageClient.close();
   }

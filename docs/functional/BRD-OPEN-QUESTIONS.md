@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-05-01 (section 28 filed as event-triggered deploy decision per ADR-044; sections 25 and 26 partially resolved by M5-entry calibration; section 27 added as cross-encoder reranker v1.x option; sections 7, 21, 22, 23, 26, 27, 28 are the genuinely-open list)
+**Last updated:** 2026-05-02 (section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; sections 7, 21, 22, 23, 26, 27 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +10,7 @@
 
 ## Open
 
-Seven entries remain genuinely open. Section 7 requires benchmark data; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. Section 26 is event-triggered on M7 wider eval (M5 mitigation closed within-Atelier seed-author bias; cross-corpus generalization remains for M7). Section 27 is event-triggered on adopter need or M7 hardening for the cross-encoder reranker that would lift find_similar to the blocking tier. Section 28 is event-triggered on the first network-access need for the deployed endpoint (multi-machine team, remote-agent peer composer, etc.). Section 3 (embedding model default) was resolved 2026-05-01 as ADR-041 -- OpenAI-compatible adapter, OpenAI text-embedding-3-small (1536-dim) at v1 -- prior to M5 entry. Section 25 (cross-dimension embedding swap) was resolved 2026-05-01 within 24 hours of filing -- the trigger fired during M5 calibration, surfacing the methodology lesson that "event-triggered" filings should require evidence the trigger is genuinely distant. Section 19 (plan-review checkpoint) was resolved 2026-04-30 as ADR-039 prior to M2 entry per the architect-of-record strategic call; per ADR-011 (destination-first), defer-to-v1.x was rejected as the "Phase 2 / coming soon" pattern.
+Six entries remain genuinely open. Section 7 requires benchmark data; sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot and require strategic calls on whether to extend the v1 surface (auto-reviewers, semantic validator, contribution annotations) or defer to v1.x. Section 26 is event-triggered on M7 wider eval (M5 mitigation closed within-Atelier seed-author bias; cross-corpus generalization remains for M7). Section 27 is event-triggered on adopter need or M7 hardening for the cross-encoder reranker that would lift find_similar to the blocking tier. Section 28 (deploy trigger conditions) was resolved 2026-05-02 as ADR-046 -- trigger #2 (claude.ai Connectors blocked on local-only) fired empirically at M6 entry; ADR codifies the empirical Vercel + Supabase Cloud choices that landed `atelier-three-coral.vercel.app`. Section 3 (embedding model default) was resolved 2026-05-01 as ADR-041 -- OpenAI-compatible adapter, OpenAI text-embedding-3-small (1536-dim) at v1 -- prior to M5 entry. Section 25 (cross-dimension embedding swap) was resolved 2026-05-01 within 24 hours of filing -- the trigger fired during M5 calibration, surfacing the methodology lesson that "event-triggered" filings should require evidence the trigger is genuinely distant. Section 19 (plan-review checkpoint) was resolved 2026-04-30 as ADR-039 prior to M2 entry per the architect-of-record strategic call; per ADR-011 (destination-first), defer-to-v1.x was rejected as the "Phase 2 / coming soon" pattern.
 
 ### 7 · Scale ceiling per guild
 
@@ -186,46 +186,6 @@ The recall improvement validated the seed-author-bias hypothesis directionally: 
 
 ---
 
-### 28 · Deploy trigger conditions for the Atelier endpoint
-
-**Scenario.** ADR-044 commits Atelier's bootstrap inflection at M5-exit with local-stack scope only -- build sessions become MCP clients of `localhost:3030/api/mcp` against a `supabase start` instance. Deploy was deliberately deferred from the bootstrap because the smoke suite already proves the local config works end-to-end and adding cloud infrastructure conflates first-deploy bug surface (TLS, OAuth callback URLs, Vercel function cold starts, env-var mismatches) with substrate bugs during the inflection.
-
-This question scopes WHEN the deploy decision revisits.
-
-**Genuine triggers (event-triggered evidence per the methodology lesson from section 25):**
-
-1. **Second human composer joins the build team and needs network access** to the endpoint. The local-bootstrap configuration only serves `localhost`; teammates on different machines cannot reach it. Plausible trigger: a co-architect or PM joining the Atelier build team for M6 or M7 work, needing `/atelier` URL access for review purposes.
-2. **Remote agent wired as a peer composer** (claude.ai Connectors, ChatGPT Connectors, or any web-based agent). These clients run in the cloud and cannot reach localhost. Plausible trigger: M6 remote-principal-composer work that wants to validate the surface against a real claude.ai Connectors session, not just the smoke harness.
-   - **Empirical confirmation 2026-05-01.** Trigger #2 fired at M6 entry. The original M6 prompt called for wiring claude.ai Connectors as a peer composer; that path is blocked on a publicly-reachable endpoint URL (Connectors run in the cloud and can't probe `localhost:3030`). Decision at the time: drop the Connectors validation from the M6 PR, capture the gap as a deferred work block, and execute the deploy as a parallel workstream that lands ahead of M6 main. The deploy + cloud Supabase + Vercel rootDirectory + URL split + bearer-rotation friction documented in `docs/user/tutorials/local-bootstrap.md` Step 0 + Troubleshooting all surfaced as part of executing the trigger. The substrate split (PR #14 / ADR-009 + ADR-028 architectural conflict) was the load-bearing finding. ADR-NNN authoring (deploy strategy) sequenced AFTER the empirical first-deploy work landed at `https://atelier-three-coral.vercel.app`.
-3. **Continuous availability becomes a real need.** Sessions opening at random times need an always-up endpoint. Plausible trigger: when `/atelier` becomes a tool the team checks throughout the day rather than only when actively in a build session.
-4. **External demo / adopter walkthrough.** Someone outside the build team (a candidate adopter, a stakeholder, an investor, a security reviewer) needs hands-on access to the running system on their own machine. Local-bootstrap requires the demo recipient to install dependencies + run the substrate themselves; deploy lets them just visit a URL.
-5. **CI / auto-deploy validation.** When the team wants the merge-to-main flow to publish a fresh deploy automatically (Vercel preview URLs per branch, etc.), the deploy infrastructure has to exist as a baseline.
-
-**Non-triggers (do NOT fire this question):**
-
-- A milestone landing -- M6, M7, M8 are not in themselves triggers; what matters is whether the milestone needs network access in practice
-- A feature getting "polished enough" -- polish is M7's scope; deploy is independent
-- Discomfort with the local-stack restart cycle -- if the local stack is the friction, the answer is automation (`atelier dev` script that wraps `supabase start && npm run dev`), not deploy
-- Wanting to "test in production" -- the local stack IS the test environment; production deploys are about availability and access, not validation
-
-**What lands when a trigger fires:**
-
-A peer ADR (`ADR-NNN: Deploy strategy when [trigger]`) covers the choice of:
-
-1. **Hosting platform** -- the reference impl per ADR-027 names Vercel; alternatives are Cloud Run (per ADR-029 GCP-portability), self-hosted Node with reverse proxy, or any platform that runs Next.js + Postgres-with-pgvector + Realtime
-2. **Identity provider config** -- whether to use Supabase Cloud or self-host Supabase (per ADR-028 BYO via OIDC); whether to wire OAuth callback URLs for one or many clients
-3. **Secrets management** -- which secrets manager hosts `OPENAI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, the per-project committer deploy key (per `docs/user/guides/rotate-secrets.md`)
-4. **CI/CD wiring** -- per-PR preview deploys vs main-only; smoke gates vs health checks
-5. **DNS + TLS** -- custom domain vs platform-default subdomain; cert management
-
-The deploy ADR does NOT reverse ADR-044; it adds a peer mode. Local-bootstrap remains the documented development flow and the offline / disconnected fallback even after deploy.
-
-**Recommendation.** Do not deploy speculatively. Wait for a genuine trigger from the list above. The local-stack substrate is already proven by every smoke test; deploy adds operational debt without proportional benefit until a trigger creates the need. When a trigger fires, the deploy ADR + companion runbook (`docs/user/tutorials/first-deploy.md`, planned at v1.x) lands as a focused work block; the local-bootstrap runbook (`docs/user/tutorials/local-bootstrap.md`) stays canonical for development.
-
-**Status.** OPEN. Event-triggered: any of the five triggers above. The triggers are concrete (not "lands when an adopter wants it") and timed (each requires a specific condition that doesn't currently obtain). Per the section 25 lesson, this filing has the trigger evidence the methodology requires -- the current state genuinely doesn't have a network-access need, and the foreseeable triggers are M6+ work items, not within-24-hours surprises. Filed 2026-05-01 alongside ADR-044 (M5-exit bootstrap inflection).
-
----
-
 ## Resolved
 
 Each entry below is a one-line redirect to the canonical home where the decision now lives. Recommendations and full Q-and-A blocks have been removed to avoid parallel-summary drift per METHODOLOGY section 6.1; see git history for the original full-context entries.
@@ -379,3 +339,11 @@ Split into `composers.discipline` (5 values including newly-added `architect`) +
 Extend `reconcile.ts` with a branch-reaping pass guarded by a config flag; default off at v1.
 
 **Status.** RESOLVED 2026-04-28. See `../../scripts/sync/reconcile.ts` M1 step 4.iii implementation (`reapBranches` pass guarded by `ATELIER_RECONCILE_BRANCH_REAPING_ENABLED`, default false; `--reap-branches --apply` CLI override) and `../../scripts/README.md` reconcile section. Recommendation confirmed during M1 step 4.iii; strategic-call gate from SESSION.md closed by execution.
+
+---
+
+### 28 · Deploy trigger conditions for the Atelier endpoint
+
+Decide WHEN to deploy the Atelier endpoint to a network-reachable host (vs the local-stack default per ADR-044).
+
+**Status.** RESOLVED 2026-05-02. See [ADR-046](../architecture/decisions/ADR-046-deploy-strategy-vercel-supabase-cloud.md). Trigger #2 (claude.ai Connectors blocked on local-only) fired empirically at M6 entry; the deploy executed as a parallel workstream and landed `https://atelier-three-coral.vercel.app`. ADR-046 codifies the empirical choices (Vercel + Supabase Cloud + rootDirectory=prototype + URL split inheritance from PR #14 + Supabase Auth bearer with operator-driven rotation) and points at `docs/user/tutorials/first-deploy.md` (PR #24) as the procedural twin.

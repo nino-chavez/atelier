@@ -10,6 +10,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint:yaml": "tsx scripts/lint/yaml-lint.ts",
+    "lint:portability": "tsx scripts/lint/portability-lint.ts",
     "smoke:endpoint": "tsx scripts/endpoint/__smoke__/endpoint.smoke.ts",
     "smoke:committer": "tsx scripts/endpoint/__smoke__/committer.smoke.ts",
     "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts",

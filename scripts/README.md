@@ -269,3 +269,23 @@ The target list is an explicit allowlist in `scripts/lint/yaml-lint.ts:TARGETS` 
   #!/bin/sh
   npm run lint:yaml || { echo "yaml-lint failed; fix or 'git commit --no-verify' to bypass"; exit 1; }
   ```
+
+## Portability lint (`scripts/lint/portability-lint.ts`)
+
+Enforces ADR-029's GCP-portability constraint: proprietary backend surfaces stay in named adapters.
+
+**Rules:**
+
+| Rule | What it bans | Where it's allowed |
+|---|---|---|
+| `banned_outright` | `@vercel/edge`, `@vercel/kv`, `@vercel/edge-config` imports | Nowhere -- no Cloud Run equivalent for these surfaces |
+| `adapter_only` | `RealtimeChannel` (and other Realtime API symbols) imports from `@supabase/supabase-js` | `scripts/coordination/adapters/*` (server-side adapter modules) + specific listed prototype client-side files (`prototype/src/app/atelier/_components/LiveUpdater.tsx`) |
+| `code_pattern` | `.rpc(` calls (Supabase Postgres RPC; not on Cloud SQL) | `scripts/coordination/adapters/*` only |
+
+**Not banned (intentional):** Next.js framework imports, `@vercel/analytics`, standard `@supabase/supabase-js` query/mutation calls (`.from`, `.select`, `.insert`, `.update`, `.delete` -- portable via Postgrest or trivially replaced with `pg`), `@supabase/ssr` cookie reads in the prototype.
+
+**Invocation:**
+
+- `npm run lint:portability` -- runs the linter; exits 0 on clean, 1 on findings
+- CI: the `Fast checks (PR)` job runs it after typecheck + yaml-lint
+- Adopters customizing the reference impl: when a new client-side file legitimately needs Realtime, add it to `ADAPTER_ALLOWLIST_PATTERNS` in the linter source with a one-line rationale comment. Don't blanket-allow directories -- the linter's value depends on staying surgical.

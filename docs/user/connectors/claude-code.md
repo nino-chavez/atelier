@@ -73,7 +73,7 @@ For teams using a static-bearer-only IdP, or where OAuth dynamic-client-registra
 
 ### Steps
 
-1. **Add the MCP server entry** with `auth.type: "bearer"`:
+1. **Add the MCP server entry** with `headers.Authorization`:
 
    ```json
    {
@@ -81,16 +81,17 @@ For teams using a static-bearer-only IdP, or where OAuth dynamic-client-registra
        "atelier-<project-name>": {
          "type": "http",
          "url": "https://atelier-<project>.vercel.app/api/mcp",
-         "auth": {
-           "type": "bearer",
-           "token_env": "ATELIER_BEARER_TOKEN"
+         "headers": {
+           "Authorization": "Bearer <your-static-token>"
          }
        }
      }
    }
    ```
 
-2. **Export the token in your shell.** Add `ATELIER_BEARER_TOKEN=<your-static-token>` to your shell profile (`.zshrc`, `.bash_profile`) or `.env` file Claude Code reads. The smoke runbook in `scripts/endpoint/__smoke__/real-client.smoke.ts` uses this exact pattern.
+   This is the canonical static-bearer shape per Claude Code's MCP config schema. (Earlier versions of this runbook documented an `auth.type: "bearer"` field — that field does not exist in the published schema; the `headers` map is the supported path.)
+
+2. **Save the token in your password manager.** Bearer tokens are short-lived (1 hour for Supabase Auth defaults). Re-issue per the rotation runbook (`docs/user/guides/rotate-secrets.md`) when expired.
 
 3. **Verify** with `claude code mcp list` -- entry should report `connected`.
 

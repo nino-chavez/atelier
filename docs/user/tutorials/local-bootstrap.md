@@ -34,6 +34,35 @@ You'll also need a clone of the Atelier repo (this one or your fork) and the abi
 
 ---
 
+## Step 0: Pre-flight checks
+
+Before starting a session, verify the substrate is in a clean state. These checks catch the most common operator slip-ups (stale dev server, expired bearer, ports held by orphaned processes).
+
+```bash
+# 1. Supabase is up
+supabase status > /dev/null && echo "supabase: ok" || echo "supabase: DOWN -- run 'supabase start'"
+
+# 2. Dev server is reachable on :3030
+curl -s -o /dev/null -w "dev: %{http_code}\n" --max-time 2 http://localhost:3030/api/mcp
+# expect: 405 (POST-only). 000 = not running. Other code (403/500) = misconfig.
+
+# 3. Bearer in .mcp.json is not expired
+[ -f .mcp.json ] && python3 -c "
+import json, base64, time
+b = json.load(open('.mcp.json'))['mcpServers']['atelier']['headers']['Authorization'].split()[1]
+p = json.loads(base64.urlsafe_b64decode(b.split('.')[1] + '==='))
+remaining = p['exp'] - int(time.time())
+print(f'bearer: {remaining}s left' if remaining > 0 else f'bearer: EXPIRED {-remaining}s ago -- reissue per Step 4')
+"
+
+# 4. Nothing else on port 3030 that would force Next to fall back
+lsof -i :3030 2>/dev/null | tail +2 | head -3
+```
+
+If any of (1)-(3) reports DOWN/EXPIRED, jump back to the relevant step (1, 4, or 5) before continuing. If (4) shows a non-Atelier process holding :3030, kill it or pick a different port (and update `.mcp.json` to match — see Troubleshooting).
+
+---
+
 ## Step 1: Start the local Supabase stack
 
 From the repo root:
@@ -125,17 +154,41 @@ The token has a default lifetime per Supabase Auth (1 hour for access tokens). F
 In a fresh terminal (Supabase keeps running in the background from step 1):
 
 ```bash
-cd prototype
-ATELIER_DATASTORE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
-ATELIER_OIDC_ISSUER="http://127.0.0.1:54321/auth/v1" \
-ATELIER_JWT_AUDIENCE="authenticated" \
-OPENAI_API_KEY="sk-proj-..." \
-npm run dev
+cp prototype/.env.example prototype/.env.local
+# Edit prototype/.env.local: set OPENAI_API_KEY (from step 5b below).
+# The other ATELIER_* + NEXT_PUBLIC_SUPABASE_URL defaults already match
+# the local-bootstrap stack; leave them as-is unless you've customized.
+
+cd prototype && npm run dev
 ```
 
-The endpoint is now serving at `http://localhost:3030/api/mcp` and the dashboard at `http://localhost:3030/atelier`.
+`npm run dev` is pre-pinned to `next dev -p 3030` per `prototype/package.json`. The dev server auto-loads `prototype/.env.local`; no inline env vars needed.
 
-Sanity check: visit `http://localhost:3030/.well-known/oauth-authorization-server` in a browser. You should see a JSON document referencing your local Supabase Auth issuer. (This is the RFC 8414 metadata MCP clients use for OAuth discovery; we'll use direct bearer headers below, which is faster for local-bootstrap.)
+The endpoint serves on TWO URLs (per the substrate split in PR #14):
+
+- `http://localhost:3030/api/mcp` — **static-bearer auth**. Use this URL when configuring local Claude Code (CLI) per Step 6. No OAuth discovery published here.
+- `http://localhost:3030/oauth/api/mcp` — **OAuth flow**. Reserved for remote OAuth-only clients (claude.ai Connectors, ChatGPT Connectors). Discovery metadata is published at `/.well-known/oauth-authorization-server/oauth/api/mcp`.
+
+The dashboard remains at `http://localhost:3030/atelier`.
+
+> **Why two URLs?** Claude Code's MCP SDK preferentially does OAuth flow when discovery is reachable from the URL it connects to, ignoring static `Authorization` headers. Atelier doesn't support RFC 7591 Dynamic Client Registration (per ADR-028 — adopters provision long-lived bearer tokens out-of-band and supply them as static headers), so the static-bearer URL must NOT have discovery findable. Discovery is published only path-prefixed under the OAuth-flow URL. See `docs/architecture/decisions/ADR-013.md` for the surface lock and PR #14 for the split rationale.
+
+Sanity check (static-bearer URL):
+
+```bash
+curl -i http://localhost:3030/.well-known/oauth-authorization-server
+# expect: 404 with body {"error":"not_found"}; clean JSON 404 confirms the
+# catch-all route from PR #16 is wired (Claude Code's SDK requires JSON-not-HTML
+# 404 bodies when probing discovery)
+```
+
+Sanity check (OAuth-flow URL):
+
+```bash
+curl http://localhost:3030/.well-known/oauth-authorization-server/oauth/api/mcp | jq
+# expect: 200 + RFC 8414 OAuth 2.0 Authorization Server Metadata referencing
+# your local Supabase Auth issuer + a registration_endpoint URL
+```
 
 ---
 
@@ -175,7 +228,7 @@ Edit `.mcp.json` at the repo root (create it if absent):
 }
 ```
 
-Note: do NOT commit `.mcp.json` with your bearer token in it. Add `.mcp.json` to `.gitignore` if you used Path B with the actual token. The CLI path with `--scope project` does not store the literal token in the file (it stores a reference); check the resulting file before committing.
+Note: `.mcp.json` is already in `.gitignore` at the repo root (line 64). Bearer tokens written via either Path A or Path B never reach git history as long as you don't move/rename the file or strip the gitignore entry.
 
 ---
 
@@ -241,6 +294,14 @@ When a network-access need surfaces (a teammate joining, a remote agent peer com
 **`/atelier` shows "no composer found" or similar.** The bearer token's `sub` claim doesn't match any row in `composers.identity_subject`. Re-run step 3 (it's idempotent on `email`).
 
 **Claude Code says "no MCP servers configured."** The `.mcp.json` or settings file isn't being read. `claude mcp list` should show the entry. If absent, re-run step 6's CLI command or check that you're in the right project directory.
+
+**`npm run dev` falls back to port 3001 (or any non-3030 port).** Port :3030 is held by another process. Diagnose with `lsof -i :3030`. If it's a stale Atelier dev server, kill it (`kill <pid>`) and retry. If it's another project's dev server you want to keep, run Atelier on a different port: `npx next dev -p <other-port>` and update `.mcp.json`'s `url` field to match. Note: changing the port also changes the `registration_endpoint` URL emitted in OAuth discovery (it's derived from the request origin per the substrate's lib).
+
+**Bearer rotation: editing `.mcp.json` doesn't update Claude Code's running connection.** Empirically observed: Claude Code's MCP HTTP client caches the bearer in process state that survives both `/mcp` Disable→Enable AND `exit`+relaunch. Direct curl with the new bearer works (substrate sees fresh value); MCP tool calls from the Claude Code session continue sending the OLD cached bearer. Workaround: validate substrate operations via direct curl after rotation. The MCP-tool-from-this-session path is unreliable for any flow requiring fresh credentials. Tracked as M7 polish — investigation of where the cache lives + a real Claude Code MCP-client smoke that catches this class of divergence at CI time.
+
+**`/mcp` dialog defaults to "Authenticate" (option 1) but Atelier requires "Reconnect" (option 2).** Atelier doesn't implement RFC 7591 Dynamic Client Registration per ADR-028; the `registration_endpoint` returns a 405 stub telling clients to use the static bearer in headers instead. Picking "Authenticate" attempts the OAuth code flow against Supabase Auth, which fails downstream (Supabase doesn't support DCR for unknown client_ids). "Reconnect" uses the static bearer in `.mcp.json` headers — that's the supported path.
+
+**SDK auth failed: HTTP 404: Invalid OAuth error response: SyntaxError: JSON Parse error: Unrecognized token '<'.** Claude Code's MCP SDK probed a `/.well-known/*` path that returned Next.js's HTML 404 page instead of a JSON 404. Verify PR #16's catch-all route exists: `curl http://localhost:3030/.well-known/oauth-authorization-server` should return `{"error":"not_found"}` with `Content-Type: application/json`. If you see HTML, your local checkout is missing the `prototype/src/app/.well-known/[...slug]/route.ts` file from PR #16 — pull main.
 
 ---
 

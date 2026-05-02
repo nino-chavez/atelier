@@ -535,6 +535,197 @@ async function main(): Promise<void> {
       'empty bearer -> FORBIDDEN',
       noBearer.ok === false && (noBearer as { error: { code: string } }).error.code === 'FORBIDDEN',
     );
+
+    // -------------------------------------------------------------
+    // [9] get_context.scope_files (ADR-045 / ARCH 6.7.5)
+    //
+    // Pre-claim file-overlap awareness: when scope_files is supplied,
+    // the response carries an overlapping_active section listing
+    // active contributions + currently-held locks whose artifact_scope
+    // intersects the supplied file scope.
+    //
+    // Behavior matrix:
+    //   scope_files undefined          -> overlapping_active absent
+    //   scope_files: []                -> overlapping_active absent (treated as omitted)
+    //   scope_files: ["x"] (no match)  -> section present, both arrays empty
+    //   scope_files: ["x"] (matching)  -> section present, populated
+    //   scope_files: ["{bad"]          -> BAD_REQUEST (unbalanced { })
+    // -------------------------------------------------------------
+    console.log('\n[9] get_context.scope_files (ADR-045 / ARCH 6.7.5)');
+
+    // Set up a fresh session for this section + claim a contribution
+    // (simple territory; no plan-review required). Use an artifact
+    // scope unique to this section so prior sections' state doesn't
+    // bleed into the assertions.
+    const ctxSessionResult = await dispatch(
+      { tool: 'register', bearer: devBearer, body: { surface: 'ide' } },
+      deps,
+    );
+    if (!ctxSessionResult.ok) throw new Error('section [9] register failed');
+    const ctxSessionId = (ctxSessionResult.data as { session_id: string }).session_id;
+
+    const ctxClaim = await dispatch(
+      {
+        tool: 'claim',
+        bearer: devBearer,
+        body: {
+          contribution_id: null,
+          session_id: ctxSessionId,
+          kind: 'implementation',
+          trace_ids: ['US-9.1'],
+          territory_id: simpleTerritoryId,
+          content_ref: 'ep-smoke/sim/scope-test.md',
+          artifact_scope: ['ep-smoke/sim/scope-test.md'],
+        },
+      },
+      deps,
+    );
+    if (!ctxClaim.ok) throw new Error('section [9] claim failed: ' + JSON.stringify(ctxClaim.error));
+    const ctxContribId = (ctxClaim.data as { contributionId: string }).contributionId;
+
+    const ctxLock = await dispatch(
+      {
+        tool: 'acquire_lock',
+        bearer: devBearer,
+        body: {
+          contribution_id: ctxContribId,
+          session_id: ctxSessionId,
+          artifact_scope: ['ep-smoke/sim/scope-test.md'],
+        },
+      },
+      deps,
+    );
+    if (!ctxLock.ok) throw new Error('section [9] acquire_lock failed: ' + JSON.stringify(ctxLock.error));
+
+    // [9a] No scope_files: section absent (backward compat)
+    const noScopeRes = await dispatch(
+      { tool: 'get_context', bearer: devBearer, body: { session_id: ctxSessionId } },
+      deps,
+    );
+    check('[9a] no scope_files -> overlapping_active absent', noScopeRes.ok === true);
+    if (noScopeRes.ok) {
+      check(
+        '[9a] response has no overlapping_active key',
+        !('overlapping_active' in (noScopeRes.data as Record<string, unknown>)),
+      );
+    }
+
+    // [9b] Empty scope_files: treated as omitted (section absent)
+    const emptyScopeRes = await dispatch(
+      { tool: 'get_context', bearer: devBearer, body: { session_id: ctxSessionId, scope_files: [] } },
+      deps,
+    );
+    check('[9b] empty scope_files -> overlapping_active absent', emptyScopeRes.ok === true);
+    if (emptyScopeRes.ok) {
+      check(
+        '[9b] response has no overlapping_active key',
+        !('overlapping_active' in (emptyScopeRes.data as Record<string, unknown>)),
+      );
+    }
+
+    // [9c] No matching files: section present, both arrays empty
+    const noMatchRes = await dispatch(
+      {
+        tool: 'get_context',
+        bearer: devBearer,
+        body: { session_id: ctxSessionId, scope_files: ['ep-smoke/sim/no-such-file.md'] },
+      },
+      deps,
+    );
+    check('[9c] no-match scope_files returns ok', noMatchRes.ok === true);
+    if (noMatchRes.ok) {
+      const data = noMatchRes.data as { overlapping_active?: { contributions: unknown[]; locks: unknown[] } };
+      check('[9c] overlapping_active section present', data.overlapping_active !== undefined);
+      check('[9c] overlapping_active.contributions empty', data.overlapping_active?.contributions.length === 0);
+      check('[9c] overlapping_active.locks empty', data.overlapping_active?.locks.length === 0);
+    }
+
+    // [9d] Matching files: section populated with the contribution + lock
+    const matchRes = await dispatch(
+      {
+        tool: 'get_context',
+        bearer: devBearer,
+        body: { session_id: ctxSessionId, scope_files: ['ep-smoke/sim/scope-test.md'] },
+      },
+      deps,
+    );
+    check('[9d] matching scope_files returns ok', matchRes.ok === true);
+    if (matchRes.ok) {
+      const data = matchRes.data as {
+        overlapping_active?: {
+          contributions: Array<{ id: string; state: string; overlapping_files: string[] }>;
+          locks: Array<{ contribution_id: string; overlapping_files: string[] }>;
+        };
+      };
+      check('[9d] overlapping_active section present', data.overlapping_active !== undefined);
+      const matchedContrib = data.overlapping_active?.contributions.find((c) => c.id === ctxContribId);
+      check('[9d] matched contribution surfaced', matchedContrib !== undefined);
+      check(
+        '[9d] contribution.state is claimed (not open|review|merged|rejected)',
+        matchedContrib?.state === 'claimed' || matchedContrib?.state === 'in_progress' || matchedContrib?.state === 'plan_review',
+        `actual state: ${matchedContrib?.state}`,
+      );
+      check(
+        '[9d] contribution.overlapping_files contains the queried file',
+        matchedContrib?.overlapping_files.includes('ep-smoke/sim/scope-test.md') === true,
+      );
+      const matchedLock = data.overlapping_active?.locks.find((l) => l.contribution_id === ctxContribId);
+      check('[9d] matched lock surfaced', matchedLock !== undefined);
+      check(
+        '[9d] lock.overlapping_files contains the queried file',
+        matchedLock?.overlapping_files.includes('ep-smoke/sim/scope-test.md') === true,
+      );
+    }
+
+    // [9e] Invalid glob pattern -> BAD_REQUEST
+    const badGlobRes = await dispatch(
+      {
+        tool: 'get_context',
+        bearer: devBearer,
+        body: { session_id: ctxSessionId, scope_files: ['{unbalanced'] },
+      },
+      deps,
+    );
+    check(
+      '[9e] unbalanced { in scope_files -> BAD_REQUEST',
+      badGlobRes.ok === false &&
+        (badGlobRes as { error: { code: string } }).error.code === 'BAD_REQUEST',
+    );
+    check(
+      '[9e] BAD_REQUEST surfaces offending_pattern',
+      badGlobRes.ok === false &&
+        ((badGlobRes as { error: { details?: { offending_pattern?: string } } }).error.details?.offending_pattern === '{unbalanced'),
+    );
+
+    const emptyEntryRes = await dispatch(
+      {
+        tool: 'get_context',
+        bearer: devBearer,
+        body: { session_id: ctxSessionId, scope_files: [''] },
+      },
+      deps,
+    );
+    check(
+      '[9e] empty-string entry -> BAD_REQUEST',
+      emptyEntryRes.ok === false &&
+        (emptyEntryRes as { error: { code: string } }).error.code === 'BAD_REQUEST',
+    );
+
+    // Cleanup: release the lock + the contribution to keep state tidy
+    // (the smoke's process exit would also cover this; explicit is
+    // better hygiene for the post-test DB inspection case).
+    await dispatch(
+      {
+        tool: 'release_lock',
+        bearer: devBearer,
+        body: { contribution_id: ctxContribId, session_id: ctxSessionId, fencing_token: 0 },
+      },
+      deps,
+    );
+    await dispatch(
+      { tool: 'release', bearer: devBearer, body: { contribution_id: ctxContribId, session_id: ctxSessionId } },
+      deps,
+    );
   } finally {
     await client.close();
   }

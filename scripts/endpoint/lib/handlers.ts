@@ -101,6 +101,11 @@ export interface GetContextRequest {
   trace_id?: string | string[];
   lens?: string;
   with_contract_schemas?: boolean;
+  // Per ADR-045 / ARCH 6.7.5: file-scope filter for pre-claim overlap
+  // awareness. When supplied (non-empty), the response carries an
+  // `overlapping_active` section listing active contributions + locks
+  // whose artifact_scope intersects the supplied file scope.
+  scope_files?: string[];
 }
 
 export async function getContext(
@@ -108,7 +113,10 @@ export async function getContext(
   _auth: AuthContext,
   req: GetContextRequest,
 ) {
-  return client.getContext({ sessionId: req.session_id });
+  return client.getContext({
+    sessionId: req.session_id,
+    ...(req.scope_files !== undefined ? { scopeFiles: req.scope_files } : {}),
+  });
 }
 
 // =========================================================================

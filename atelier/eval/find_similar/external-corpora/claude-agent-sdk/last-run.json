@@ -1,0 +1,2490 @@
+{
+  "ran_at": "2026-05-02T16:04:56.564Z",
+  "corpus_dir": "/Users/nino/Workspace/dev/wip/atelier/atelier/eval/find_similar/external-corpora/claude-agent-sdk",
+  "project_id": "11111111-cad7-cad7-cad7-000000000001",
+  "seeds_total": 117,
+  "embedded_items": 14,
+  "thresholds": {
+    "default": 0.032,
+    "weak": 0.03,
+    "topKPerBand": 5
+  },
+  "aggregate": {
+    "tp": 77,
+    "fp": 62,
+    "fn": 65,
+    "precision": 0.5539568345323741,
+    "recall": 0.5422535211267606
+  },
+  "adr_043_tier": {
+    "advisory_clear": false,
+    "blocking_clear": false
+  },
+  "per_seed": [
+    {
+      "id": "cas-hand-001",
+      "query": "When picking between the higher-level autonomous loop wrapper and the lower-level message-streaming client, what does the wrapper handle for me that I'd otherwise implement myself?",
+      "expected": [
+        "overview.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "agent-loop.md",
+        "streaming-output.md",
+        "python-2.md",
+        "sessions.md",
+        "streaming-vs-single-mode.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-002",
+      "query": "What renames and breaking shifts apply when moving an existing project off the previous Claude Code SDK package onto the new Agent SDK package name?",
+      "expected": [
+        "migration-guide.md"
+      ],
+      "primary_returned": [
+        "migration-guide.md"
+      ],
+      "weak_returned": [
+        "overview.md",
+        "subagents.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-003",
+      "query": "How do I get from zero to a running agent that finds and fixes a bug in a sample file, including the install + API key + first invocation?",
+      "expected": [
+        "quickstart.md"
+      ],
+      "primary_returned": [
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "quickstart.md",
+        "agent-loop.md",
+        "overview.md",
+        "file-checkpointing.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-004",
+      "query": "What's the pip install and import shape for the Python package, and where does the canonical README live with the minimal hello-world example?",
+      "expected": [
+        "github-python-README.md",
+        "python-1.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "github-python-README.md",
+        "migration-guide.md",
+        "file-checkpointing.md",
+        "python-6.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-005",
+      "query": "How do I add the npm package to a Node project and what's the shortest TypeScript snippet to issue a query and iterate the message stream?",
+      "expected": [
+        "github-typescript-README.md",
+        "typescript-1.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "streaming-output.md",
+        "overview.md",
+        "mcp.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-006",
+      "query": "What's changing in the next-generation TypeScript API surface that's currently in preview, and where do I see the new type shapes before they ship as default?",
+      "expected": [
+        "typescript-v2-preview.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "typescript-4.md",
+        "structured-outputs.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-007",
+      "query": "Walk me through the request-tool-response cycle the agent runs internally — when the model emits a tool call, when context window compaction triggers, and when the loop exits.",
+      "expected": [
+        "agent-loop.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "custom-tools.md",
+        "subagents.md",
+        "user-input.md",
+        "tool-search.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-008",
+      "query": "How do I capture a session identifier from one query and pass it to a subsequent call so the agent retains memory of files it already read and analysis it already performed?",
+      "expected": [
+        "sessions.md"
+      ],
+      "primary_returned": [
+        "sessions.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "python-1.md",
+        "file-checkpointing.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-009",
+      "query": "Where do I plug in custom code that runs before a tool executes, after it returns, when the user submits a prompt, or when the session starts and stops?",
+      "expected": [
+        "hooks.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "hooks.md",
+        "modifying-system-prompts.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-010",
+      "query": "If the agent modifies several files during a session and I want to roll back to a known-good snapshot mid-session, what's the file-state tracking + restore mechanism?",
+      "expected": [
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "file-checkpointing.md",
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "python-1.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-011",
+      "query": "How do I wire a third-party MCP server (database, browser, custom API surface) into my agent so its tools become callable alongside the built-in ones?",
+      "expected": [
+        "mcp.md"
+      ],
+      "primary_returned": [
+        "mcp.md",
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "tool-search.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-012",
+      "query": "When the canonical built-in tools and the available MCP servers don't cover my domain, how do I define an in-process function that the agent can call as if it were a tool?",
+      "expected": [
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "mcp.md",
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "tool-search.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-013",
+      "query": "If I'm connecting to MCP servers that expose hundreds or thousands of tools, what's the pagination/search/filtering surface that keeps the model's tool catalog manageable?",
+      "expected": [
+        "tool-search.md"
+      ],
+      "primary_returned": [
+        "mcp.md",
+        "tool-search.md",
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "python-6.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 2,
+      "fn": 0,
+      "precision": 0.3333333333333333,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-014",
+      "query": "How does the main agent delegate a focused sub-task to a specialized agent with its own prompt, allowed tools, and result reporting back to the parent?",
+      "expected": [
+        "subagents.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-015",
+      "query": "Where do I drop markdown files that become invokable shortcuts within an agent session, the way Claude Code's `/audit` or `/review` work?",
+      "expected": [
+        "slash-commands.md"
+      ],
+      "primary_returned": [
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "overview.md",
+        "file-checkpointing.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-016",
+      "query": "How do I package a domain-specific capability as a reusable artifact the agent loads from the project's `.claude/` directory and applies as needed?",
+      "expected": [
+        "skills.md"
+      ],
+      "primary_returned": [
+        "claude-code-features.md"
+      ],
+      "weak_returned": [
+        "secure-deployment.md",
+        "subagents.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-017",
+      "query": "What's the API for adding custom commands, sub-agents, and MCP servers programmatically (not via filesystem config) when the SDK is embedded in a larger application?",
+      "expected": [
+        "plugins.md"
+      ],
+      "primary_returned": [
+        "mcp.md"
+      ],
+      "weak_returned": [
+        "custom-tools.md",
+        "overview.md",
+        "slash-commands.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-018",
+      "query": "How does the SDK pick up the same project-level instructions, hooks, and skills that Claude Code reads from `.claude/` and `~/.claude/`, and how do I restrict which sources load?",
+      "expected": [
+        "claude-code-features.md"
+      ],
+      "primary_returned": [
+        "claude-code-features.md",
+        "skills.md"
+      ],
+      "weak_returned": [
+        "hooks.md",
+        "github-python-README.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-019",
+      "query": "I want to override or append to the default agent persona — what are the three approaches (output styles, systemPrompt append, full custom prompt) and when do I pick each?",
+      "expected": [
+        "modifying-system-prompts.md"
+      ],
+      "primary_returned": [
+        "modifying-system-prompts.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "agent-loop.md",
+        "quickstart.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-020",
+      "query": "When my application wants to render the agent's tokens as they arrive (not wait for the full response), what's the streaming output shape and how does it differ from the single-shot mode?",
+      "expected": [
+        "streaming-output.md",
+        "streaming-vs-single-mode.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "subagents.md",
+        "streaming-output.md",
+        "streaming-vs-single-mode.md",
+        "agent-loop.md",
+        "structured-outputs.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-021",
+      "query": "How do I constrain the agent's final answer to match a specific JSON schema so my downstream code can parse the result without runtime validation overhead?",
+      "expected": [
+        "structured-outputs.md"
+      ],
+      "primary_returned": [
+        "structured-outputs.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-022",
+      "query": "How do I restrict an agent to read-only operations, block specific tools, or force interactive approval before the agent runs anything that mutates state?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "subagents.md",
+        "agent-loop.md",
+        "secure-deployment.md",
+        "user-input.md",
+        "permissions.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-023",
+      "query": "When the agent needs human input mid-task — disambiguating a request, confirming an action, picking from multiple choices — what's the surface for issuing an interactive question and receiving the answer?",
+      "expected": [
+        "user-input.md"
+      ],
+      "primary_returned": [
+        "user-input.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-024",
+      "query": "When I take the SDK from local prototype to production, what hosting topologies are documented, and what's the security posture for sandboxing the agent process?",
+      "expected": [
+        "hosting.md",
+        "secure-deployment.md"
+      ],
+      "primary_returned": [
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "hosting.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-hand-025",
+      "query": "How do I export agent traces, tool-call metrics, and lifecycle events to my OpenTelemetry-compatible observability stack so I can debug production agent behavior?",
+      "expected": [
+        "observability.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "observability.md",
+        "agent-loop.md",
+        "streaming-output.md",
+        "hooks.md",
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-hand-026",
+      "query": "How do I monitor per-session token usage, estimate the dollar cost of agent runs, and configure prompt caching to reduce repeat-call cost?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "cost-tracking.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "sessions.md",
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-hand-027",
+      "query": "What's the canonical pattern for the agent to maintain its own task list across multi-step work, surfacing progress to the caller without re-emitting full state each step?",
+      "expected": [
+        "todo-tracking.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-001",
+      "query": "How does the agent-loop wrapper position itself against the lower-level direct-API client on one side and the Anthropic-hosted sandbox-per-session offering on the other, and which deployment shape is each best for?",
+      "expected": [
+        "overview.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "overview.md",
+        "secure-deployment.md",
+        "agent-loop.md",
+        "subagents.md",
+        "sessions.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-002",
+      "query": "Why was the package family rebranded away from the coding-specific name, and what broader agent categories does the new framing cover that the old name implicitly excluded?",
+      "expected": [
+        "migration-guide.md"
+      ],
+      "primary_returned": [
+        "overview.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "migration-guide.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-003",
+      "query": "When the same underlying capabilities are exposed through both a terminal binary and a programmatic library, what use-case axis decides which surface a team should pick — interactive vs CI/CD vs production automation?",
+      "expected": [
+        "overview.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "user-input.md",
+        "overview.md",
+        "claude-code-features.md",
+        "secure-deployment.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-004",
+      "query": "Which agent capabilities are bundled and immediately callable out of the box (file ops, web fetch, shell), and which ones require the developer to wire up external infrastructure or code their own definitions?",
+      "expected": [
+        "overview.md",
+        "agent-loop.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "secure-deployment.md",
+        "subagents.md",
+        "overview.md",
+        "claude-code-features.md",
+        "quickstart.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-005",
+      "query": "What's the substantive design shift from the async-generator stable interface to the session-based send-and-stream preview, and what blocks an analyst from defaulting to the newer surface for a greenfield project today?",
+      "expected": [
+        "typescript-v2-preview.md"
+      ],
+      "primary_returned": [
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "streaming-output.md",
+        "typescript-v2-preview.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-006",
+      "query": "Did the v0.1.0 isolation default of not loading filesystem settings actually stick, and what's the current-release behavior an analyst should plan against for predictable CI/CD environments?",
+      "expected": [
+        "migration-guide.md",
+        "claude-code-features.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "secure-deployment.md",
+        "typescript-2-c.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-007",
+      "query": "After the breaking change that stopped using Claude Code's persona by default, what are the three options for re-establishing a system prompt and how do they compose with project CLAUDE.md content?",
+      "expected": [
+        "migration-guide.md",
+        "modifying-system-prompts.md"
+      ],
+      "primary_returned": [
+        "modifying-system-prompts.md"
+      ],
+      "weak_returned": [
+        "migration-guide.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-analyst-008",
+      "query": "Can a delegated specialized agent itself spawn further specialized agents below it, or is the delegation hierarchy capped at one level — and what's the rationale for whichever constraint applies?",
+      "expected": [
+        "subagents.md"
+      ],
+      "primary_returned": [
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "secure-deployment.md",
+        "claude-code-features.md",
+        "agent-loop.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-009",
+      "query": "When the main agent delegates to a focused subagent, does the subagent inherit the parent's conversation transcript, prior tool results, or system prompt — and what is the only channel the parent can use to pass information in?",
+      "expected": [
+        "subagents.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-010",
+      "query": "When a tool call comes in, in what order are the various gates evaluated — hooks, deny lists, mode rules, allow lists, and the runtime approval callback — and which gates can a 'bypass everything' mode actually override?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "permissions.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "hooks.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-011",
+      "query": "Does pre-approving a narrow allow-list of tools constrain the unrestricted permission mode to that subset, or does the unrestricted mode approve every tool regardless of what was allow-listed?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "permissions.md"
+      ],
+      "weak_returned": [
+        "custom-tools.md",
+        "user-input.md",
+        "tool-search.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-012",
+      "query": "If the parent agent runs under acceptEdits or bypassPermissions, do delegated subagents inherit that posture automatically, and can each subagent override its own permission mode independently of the parent?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "permissions.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "claude-code-features.md",
+        "quickstart.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-013",
+      "query": "When extending the agent with new behavior, what's the discriminator between defining a model-invoked filesystem capability, spawning a focused agent instance with its own prompt, and registering an in-process function-as-tool?",
+      "expected": [
+        "skills.md",
+        "subagents.md",
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "claude-code-features.md",
+        "overview.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 2,
+      "precision": 1,
+      "recall": 0.3333333333333333
+    },
+    {
+      "id": "cas-analyst-014",
+      "query": "Can a host application register a specialized capability purely in code at query time, or must that capability be materialized as a SKILL.md filesystem artifact that the SDK discovers via setting sources?",
+      "expected": [
+        "skills.md"
+      ],
+      "primary_returned": [
+        "skills.md",
+        "claude-code-features.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-015",
+      "query": "What does packaging commands, agents, hooks, and MCP servers as a loadable plugin bundle give a host app that simply passing the same items inline to query options does not?",
+      "expected": [
+        "plugins.md"
+      ],
+      "primary_returned": [
+        "mcp.md",
+        "plugins.md"
+      ],
+      "weak_returned": [
+        "claude-code-features.md",
+        "hooks.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-016",
+      "query": "What's the empirical justification for dynamically loading tool definitions on-demand instead of preloading them all — both the context-budget cost and the model-accuracy degradation curve as tool counts grow?",
+      "expected": [
+        "tool-search.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md",
+        "tool-search.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-017",
+      "query": "Which Claude model families actually support the on-demand tool-loading mechanism, and which generations or tiers (e.g., smaller/older models) are excluded from using it?",
+      "expected": [
+        "tool-search.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "tool-search.md",
+        "user-input.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-018",
+      "query": "Across the three ways to return to an existing conversation — picking up the most recent in the directory, jumping to a specific stored ID, or branching off a copy — which one fits multi-user apps where many parallel sessions exist?",
+      "expected": [
+        "sessions.md"
+      ],
+      "primary_returned": [
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "python-1.md",
+        "file-checkpointing.md",
+        "typescript-v2-preview.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-019",
+      "query": "Does every invocation write conversation state to local disk by default, and is there a stateless mode where the session lives only in memory for ephemeral or lambda-style deployments?",
+      "expected": [
+        "sessions.md"
+      ],
+      "primary_returned": [
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "python-1.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-020",
+      "query": "What's the conceptual split between snapshotting the conversation history versus snapshotting the filesystem mutations the agent made, and why are the two persistence layers kept separate rather than fused?",
+      "expected": [
+        "sessions.md",
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "secure-deployment.md",
+        "sessions.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-021",
+      "query": "If the agent edits files via the structured Edit/Write tools the system tracks revertible snapshots, but what happens to mutations performed indirectly through shell redirection or sed — are those captured in the rollback graph?",
+      "expected": [
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "file-checkpointing.md",
+        "hooks.md",
+        "agent-loop.md",
+        "typescript-3.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-022",
+      "query": "How reliable are the per-call cost estimates the SDK exposes in the result message, and where should an analyst look for ground-truth billing numbers when those client-side estimates can drift?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "cost-tracking.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "typescript-4.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-023",
+      "query": "When the SDK exports OpenTelemetry traces and metrics, is the SDK process itself producing the spans, or is it passing configuration through to a child process that owns the instrumentation?",
+      "expected": [
+        "observability.md"
+      ],
+      "primary_returned": [
+        "observability.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-024",
+      "query": "When choosing a production deployment shape, what workload signal pushes a team toward spinning up a fresh container per task versus maintaining persistent agent containers handling many requests over time?",
+      "expected": [
+        "hosting.md"
+      ],
+      "primary_returned": [
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "hosting.md",
+        "agent-loop.md",
+        "subagents.md",
+        "claude-code-features.md",
+        "observability.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-025",
+      "query": "Across the spectrum of OS-level sandbox runtimes, plain Docker containers, syscall-intercepting userspace kernels, and microVMs, what's the security-vs-performance trade-off curve a multi-tenant operator should reason about?",
+      "expected": [
+        "secure-deployment.md"
+      ],
+      "primary_returned": [
+        "hosting.md",
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "typescript-5.md",
+        "python-7.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-026",
+      "query": "Why is the recommended production pattern to inject API keys via an external proxy rather than handing them to the agent process, and what specific risks does keeping credentials outside the agent's security boundary mitigate?",
+      "expected": [
+        "secure-deployment.md"
+      ],
+      "primary_returned": [
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "overview.md",
+        "claude-code-features.md",
+        "observability.md",
+        "hooks.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-027",
+      "query": "Which agent capabilities — image attachments, mid-flight interruption, message queueing, hook integration — are exclusive to the long-lived streaming session and outright unavailable to the simpler one-shot invocation?",
+      "expected": [
+        "streaming-vs-single-mode.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "sessions.md",
+        "subagents.md",
+        "hooks.md",
+        "streaming-vs-single-mode.md",
+        "streaming-output.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-analyst-028",
+      "query": "Even when a deployment passes an empty setting-sources list to opt out of user/project/local config, which host-level inputs (managed policy, global config, auto-memory) are still read regardless and require separate disable steps?",
+      "expected": [
+        "claude-code-features.md"
+      ],
+      "primary_returned": [
+        "claude-code-features.md"
+      ],
+      "weak_returned": [
+        "typescript-2-c.md",
+        "python-3-b.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-analyst-029",
+      "query": "Across the available permission postures, what's the use-case fit between a no-execution analyze-only mode, a hard-deny-anything-unlisted mode, and the standard mode that defers unmatched calls to a runtime callback?",
+      "expected": [
+        "permissions.md",
+        "agent-loop.md"
+      ],
+      "primary_returned": [
+        "permissions.md"
+      ],
+      "weak_returned": [
+        "user-input.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-analyst-030",
+      "query": "When the conversation grows past the context-window limit, the SDK summarizes old turns to free space — what's the rationale for doing this automatically, and what categories of early-conversation instruction risk being dropped in the summary?",
+      "expected": [
+        "agent-loop.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "sessions.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-001",
+      "query": "If three PreToolUse hooks return different permissionDecision values for the same call, which one wins and where is the tie-break documented — does deny always beat ask, defer, allow?",
+      "expected": [
+        "hooks.md"
+      ],
+      "primary_returned": [
+        "user-input.md"
+      ],
+      "weak_returned": [
+        "python-5.md",
+        "hooks.md",
+        "permissions.md",
+        "typescript-3.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-dev-002",
+      "query": "How do I return from a hook callback so the agent doesn't wait on my logging webhook to finish — what's the exact field name (async_ vs async) and timeout argument I emit?",
+      "expected": [
+        "hooks.md"
+      ],
+      "primary_returned": [
+        "python-5.md",
+        "hooks.md"
+      ],
+      "weak_returned": [
+        "claude-code-features.md",
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-003",
+      "query": "When the parent agent invokes a subagent through the Agent tool, what does the subagent see from the parent's conversation — does it inherit tool results, the parent system prompt, or only the prompt string the parent passed?",
+      "expected": [
+        "subagents.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "custom-tools.md",
+        "hooks.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-004",
+      "query": "When iterating the message stream, which field on a message tells me it came from a subagent's execution context rather than the main agent — and what's the rename history of the tool name (Task vs Agent) I need to handle?",
+      "expected": [
+        "subagents.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "hooks.md",
+        "streaming-output.md",
+        "typescript-3.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-005",
+      "query": "What's the difference between throwing from my tool handler and returning isError true — which one keeps the agent loop alive and lets Claude react to the failure?",
+      "expected": [
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "hooks.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-dev-006",
+      "query": "The Python @tool decorator treats every key in the schema dict as required — what's the recommended workaround to mark a parameter optional (use args.get with a default and mention in description, or pass full JSON Schema)?",
+      "expected": [
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "structured-outputs.md",
+        "user-input.md",
+        "python-3-a.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-007",
+      "query": "When my custom tool produces a PNG, what shape does the content array block need — base64 data field, mimeType, and is there a data URL prefix to include or strip?",
+      "expected": [
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "typescript-4.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-008",
+      "query": "What's the difference between omitting a built-in from the tools option versus listing it in disallowedTools — does one remove it from Claude's context entirely while the other just denies the call after Claude attempts it?",
+      "expected": [
+        "custom-tools.md",
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "tool-search.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-dev-009",
+      "query": "When Claude requests a tool, walk me through the rule-precedence pipeline the SDK runs — hooks first, then deny rules, then permission mode, then allow rules, then canUseTool — and where does bypassPermissions slot in?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "permissions.md"
+      ],
+      "weak_returned": [
+        "hooks.md",
+        "user-input.md",
+        "agent-loop.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-010",
+      "query": "I set allowedTools to Read only and permissionMode to bypassPermissions expecting a read-only agent — why does Claude still get to run Bash and Write, and what's the right combination to lock it down?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "subagents.md",
+        "secure-deployment.md",
+        "quickstart.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-dev-011",
+      "query": "I want to start in default permission behavior, observe Claude's first few turns, then loosen to acceptEdits without restarting the query — what method (set_permission_mode / setPermissionMode) and which input mode supports it?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "user-input.md",
+        "permissions.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-012",
+      "query": "Inside the partial-message stream, where exactly do I find the actual text chunks — what's the nested type-check sequence (StreamEvent then content_block_delta then text_delta) and which event field carries the chars?",
+      "expected": [
+        "streaming-output.md"
+      ],
+      "primary_returned": [
+        "streaming-output.md"
+      ],
+      "weak_returned": [
+        "typescript-4.md",
+        "python-4.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-013",
+      "query": "When tool input streams in piece by piece, what's the right accumulation pattern — listen for content_block_start to grab the tool name, then concat partial_json from input_json_delta deltas until content_block_stop?",
+      "expected": [
+        "streaming-output.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md",
+        "streaming-output.md"
+      ],
+      "weak_returned": [
+        "user-input.md",
+        "typescript-3.md",
+        "hooks.md",
+        "python-5.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-014",
+      "query": "My Python can_use_tool callback never fires even though Claude is requesting tools that aren't in allowed_tools — does the Python SDK require streaming-input mode plus a dummy PreToolUse hook returning continue_ True to keep the channel open?",
+      "expected": [
+        "user-input.md",
+        "streaming-vs-single-mode.md"
+      ],
+      "primary_returned": [
+        "user-input.md"
+      ],
+      "weak_returned": [
+        "hooks.md",
+        "python-6.md",
+        "python-5.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-dev-015",
+      "query": "When AskUserQuestion fires, what shape does my callback return — keys are the question text, values are the selected option's label, multi-select joined by comma — and do I need to echo the original questions array back?",
+      "expected": [
+        "user-input.md"
+      ],
+      "primary_returned": [
+        "user-input.md"
+      ],
+      "weak_returned": [
+        "typescript-v2-preview.md",
+        "hooks.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-016",
+      "query": "I pass resume with a known-good session ID and the agent starts fresh with no history instead — what's the most common cause (mismatched cwd because session files live under a path-encoded ~/.claude/projects/ directory)?",
+      "expected": [
+        "sessions.md"
+      ],
+      "primary_returned": [
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "file-checkpointing.md",
+        "subagents.md",
+        "python-1.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-017",
+      "query": "If I pass forkSession true alongside resume, do I get a fresh session ID I have to capture separately, or does it overwrite the original's history — and which message do I read the new ID from?",
+      "expected": [
+        "sessions.md"
+      ],
+      "primary_returned": [
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "file-checkpointing.md",
+        "python-1.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-018",
+      "query": "To pick up a session on a CI worker, where on disk do I copy the transcript file from and to — what's the exact path template under ~/.claude/projects/ and how is the cwd encoded?",
+      "expected": [
+        "sessions.md"
+      ],
+      "primary_returned": [
+        "sessions.md",
+        "python-1.md"
+      ],
+      "weak_returned": [
+        "file-checkpointing.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-019",
+      "query": "My UserMessage objects come back with an undefined uuid even though I enabled enableFileCheckpointing — what extraArgs option do I need to pass so the checkpoint UUIDs actually appear in the response stream?",
+      "expected": [
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "file-checkpointing.md"
+      ],
+      "weak_returned": [
+        "streaming-output.md",
+        "sessions.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-020",
+      "query": "Calling rewindFiles() right after the for-await loop finishes throws ProcessTransport not ready for writing — what's the canonical fix (resume the session with an empty prompt, then call rewind on the new query handle)?",
+      "expected": [
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "sessions.md",
+        "file-checkpointing.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-021",
+      "query": "I told the agent to use sed -i to fix a config file and now rewindFiles isn't restoring it — does file checkpointing only track Write/Edit/NotebookEdit and ignore changes made through Bash entirely?",
+      "expected": [
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "file-checkpointing.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "sessions.md",
+        "hooks.md",
+        "quickstart.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-022",
+      "query": "When I list MCP tools in allowedTools, what's the exact prefix string — three underscores or two — and what segments come between the server key and the tool's own name?",
+      "expected": [
+        "mcp.md",
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md",
+        "mcp.md"
+      ],
+      "weak_returned": [
+        "typescript-4.md",
+        "typescript-3.md",
+        "tool-search.md"
+      ],
+      "degraded": false,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-023",
+      "query": "After I complete an OAuth2 dance in my app and have an access token, where in the mcpServers config object does the Authorization Bearer header go for an http transport server?",
+      "expected": [
+        "mcp.md"
+      ],
+      "primary_returned": [
+        "mcp.md",
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "python-3-b.md",
+        "typescript-4.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-024",
+      "query": "Why am I double-counting tokens — Claude ran four tools in parallel and I'm seeing four assistant messages with identical usage; what's the ID-based dedup pattern the docs recommend?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "cost-tracking.md",
+        "subagents.md",
+        "hooks.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-dev-025",
+      "query": "My main agent runs Opus and subagents run Sonnet — which field on the result message gives me the per-model token and cost split (modelUsage / model_usage), and what fields does each entry carry?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "cost-tracking.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-026",
+      "query": "Short sessions against the same system prompt keep paying full input price because the cache expires — what environment variable extends the prompt-cache TTL, and what's the trade-off on write cost?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "cost-tracking.md"
+      ],
+      "weak_returned": [
+        "modifying-system-prompts.md",
+        "sessions.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-027",
+      "query": "I exported OTEL_EXPORTER_OTLP_ENDPOINT but my collector never receives any spans — what's the master enable flag (CLAUDE_CODE_ENABLE_TELEMETRY) and which extra env var lights up traces specifically (the beta one)?",
+      "expected": [
+        "observability.md"
+      ],
+      "primary_returned": [
+        "observability.md"
+      ],
+      "weak_returned": [
+        "mcp.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-028",
+      "query": "Why does the docs explicitly warn against setting OTEL_TRACES_EXPORTER to console when running under the Agent SDK — does the SDK use stdout as its message channel and the console exporter would corrupt it?",
+      "expected": [
+        "observability.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "subagents.md",
+        "observability.md",
+        "hooks.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-dev-029",
+      "query": "If my Node service has an active OpenTelemetry span when it calls query(), do the agent's claude_code.interaction spans automatically nest under it — what env var (TRACEPARENT) does the SDK propagate into the CLI subprocess?",
+      "expected": [
+        "observability.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "observability.md"
+      ],
+      "weak_returned": [
+        "overview.md",
+        "agent-loop.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-dev-030",
+      "query": "I want tool search to stay off when my MCP servers are tiny but kick in once tool definitions exceed 5 percent of the context window — what's the exact env var value syntax (auto:5) and where do I set it (env option on query)?",
+      "expected": [
+        "tool-search.md"
+      ],
+      "primary_returned": [
+        "mcp.md"
+      ],
+      "weak_returned": [
+        "tool-search.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-001",
+      "query": "If we adopt the SDK, what's the production-readiness checklist and at what stage do we typically commit to wiring telemetry exporters and a sandbox provider?",
+      "expected": [
+        "hosting.md",
+        "observability.md"
+      ],
+      "primary_returned": [
+        "observability.md"
+      ],
+      "weak_returned": [
+        "hosting.md",
+        "overview.md",
+        "typescript-5.md",
+        "python-7.md",
+        "migration-guide.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-002",
+      "query": "How much per-agent-run dollar cost should we budget at typical workload, and which option in the SDK config caps spend before the loop runs away?",
+      "expected": [
+        "cost-tracking.md",
+        "agent-loop.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "cost-tracking.md",
+        "subagents.md",
+        "overview.md",
+        "claude-code-features.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-003",
+      "query": "If the agent modifies production files unexpectedly during a run, what's the rollback mechanism and which tools are actually tracked by it versus silently bypassed?",
+      "expected": [
+        "file-checkpointing.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "file-checkpointing.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-004",
+      "query": "If we want non-engineers to invoke the agent via custom shortcuts they author themselves, where do those shortcuts live in the repo and who maintains the file format?",
+      "expected": [
+        "slash-commands.md"
+      ],
+      "primary_returned": [
+        "overview.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "quickstart.md",
+        "claude-code-features.md",
+        "secure-deployment.md",
+        "hooks.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-005",
+      "query": "What do we give up by running the agent with all permission prompts disabled for unattended workloads, and which deny-rule path still holds even in that mode?",
+      "expected": [
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "permissions.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "secure-deployment.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-006",
+      "query": "Which observability backends does the SDK's exporter target out of the box without locking us to one vendor, and what protocol does the export speak?",
+      "expected": [
+        "observability.md"
+      ],
+      "primary_returned": [
+        "observability.md"
+      ],
+      "weak_returned": [
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-007",
+      "query": "How much engineering work is the package rename actually — is it just an import swap and a package.json bump, or are there code-shape changes my team needs to budget?",
+      "expected": [
+        "migration-guide.md"
+      ],
+      "primary_returned": [
+        "migration-guide.md"
+      ],
+      "weak_returned": [
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-008",
+      "query": "Our team has both Python and Node people; what's the feature parity between the two language SDKs and are there capabilities that only one of them supports today?",
+      "expected": [
+        "python-1.md",
+        "typescript-1.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "overview.md",
+        "hooks.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-009",
+      "query": "Is the next-gen TypeScript surface stable enough to build production code against, or should we wait for the preview label to come off before adopting?",
+      "expected": [
+        "typescript-v2-preview.md"
+      ],
+      "primary_returned": [
+        "modifying-system-prompts.md"
+      ],
+      "weak_returned": [
+        "overview.md",
+        "migration-guide.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-010",
+      "query": "If our deployment moves a user's conversation from one container to another between turns, can the agent pick up where it left off, or do sessions only resume on the same host?",
+      "expected": [
+        "sessions.md",
+        "hosting.md"
+      ],
+      "primary_returned": [
+        "sessions.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "file-checkpointing.md",
+        "agent-loop.md",
+        "hosting.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-011",
+      "query": "For our SOC2 audit story, where do I plug in code that logs every tool the agent calls and can block destructive ones before they execute?",
+      "expected": [
+        "hooks.md",
+        "permissions.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "hooks.md",
+        "secure-deployment.md",
+        "python-5.md",
+        "agent-loop.md",
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-012",
+      "query": "If we let teams plug in third-party tool servers, how do we constrain which servers the agent actually reaches and pre-approve only the tool patterns we trust?",
+      "expected": [
+        "mcp.md",
+        "permissions.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md"
+      ],
+      "weak_returned": [
+        "mcp.md",
+        "tool-search.md",
+        "subagents.md",
+        "secure-deployment.md",
+        "user-input.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-013",
+      "query": "If we write our own in-process tool functions for our domain logic, who owns the schema definitions long-term and what's the upgrade path when the SDK ships a new tool API shape?",
+      "expected": [
+        "custom-tools.md"
+      ],
+      "primary_returned": [
+        "custom-tools.md"
+      ],
+      "weak_returned": [],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-014",
+      "query": "At what tool-count does it become worth turning on the dynamic tool-discovery feature instead of loading every definition into the model context every turn?",
+      "expected": [
+        "tool-search.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md",
+        "custom-tools.md",
+        "tool-search.md"
+      ],
+      "weak_returned": [
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 2,
+      "fn": 0,
+      "precision": 0.3333333333333333,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-015",
+      "query": "Running multiple specialized helper agents in parallel speeds up complex workflows but how does that affect our token budget compared to a single sequential agent?",
+      "expected": [
+        "subagents.md",
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "cost-tracking.md",
+        "secure-deployment.md",
+        "overview.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0.5,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-016",
+      "query": "How do we package and ship a bundle of custom commands, hooks, and tool integrations across multiple projects in our org without copy-pasting them into each repo?",
+      "expected": [
+        "plugins.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "claude-code-features.md",
+        "hooks.md",
+        "slash-commands.md",
+        "python-5.md",
+        "custom-tools.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-017",
+      "query": "Once a teammate authors a domain-specific capability as a SKILL.md, what determines whether the agent finds it automatically or whether we have to wire it up explicitly?",
+      "expected": [
+        "skills.md",
+        "claude-code-features.md"
+      ],
+      "primary_returned": [
+        "skills.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "claude-code-features.md",
+        "overview.md",
+        "plugins.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-018",
+      "query": "How do I prevent the agent from picking up a developer's personal user-level config when it runs in CI, and limit it to only the project-level settings we've vetted?",
+      "expected": [
+        "claude-code-features.md"
+      ],
+      "primary_returned": [
+        "claude-code-features.md",
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "typescript-2-c.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-019",
+      "query": "Marketing wants every agent response to follow our tone guide; which of the three system-prompt approaches gives us a persistent file-based config we can version-control across projects?",
+      "expected": [
+        "modifying-system-prompts.md"
+      ],
+      "primary_returned": [
+        "modifying-system-prompts.md"
+      ],
+      "weak_returned": [
+        "overview.md",
+        "claude-code-features.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-020",
+      "query": "Our product team is debating whether to render tokens as they arrive or wait for the full answer; what do we lose on the single-shot path that streaming gives us, and what's the implementation tax for streaming?",
+      "expected": [
+        "streaming-output.md",
+        "streaming-vs-single-mode.md"
+      ],
+      "primary_returned": [
+        "streaming-output.md"
+      ],
+      "weak_returned": [
+        "cost-tracking.md",
+        "agent-loop.md",
+        "streaming-vs-single-mode.md",
+        "user-input.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-021",
+      "query": "If our application logic reads the agent's output, what guarantee do we get that the response shape won't drift across model versions, and what happens when validation fails?",
+      "expected": [
+        "structured-outputs.md"
+      ],
+      "primary_returned": [
+        "structured-outputs.md",
+        "subagents.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "quickstart.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-022",
+      "query": "When the agent surfaces a clarifying question or approval prompt, how long can the user take to respond before the SDK times out, and is there a way to defer the answer across a process restart?",
+      "expected": [
+        "user-input.md"
+      ],
+      "primary_returned": [
+        "user-input.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "agent-loop.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-023",
+      "query": "Walk me through the order of decisions when we're moving the agent off a developer laptop into a multi-tenant production environment — what isolation tier do we pick first, then what credential pattern?",
+      "expected": [
+        "hosting.md",
+        "secure-deployment.md"
+      ],
+      "primary_returned": [
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "hosting.md",
+        "quickstart.md",
+        "claude-code-features.md",
+        "subagents.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1,
+      "recall": 0.5
+    },
+    {
+      "id": "cas-pm-024",
+      "query": "We need to cap dollar spend per session and want the cache to stick around between short sessions; what's the option for a longer cache TTL and what's the trade-off for enabling it?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "sessions.md",
+        "cost-tracking.md"
+      ],
+      "weak_returned": [
+        "python-1.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-025",
+      "query": "When a single agent task spans many minutes, how do we surface step-by-step progress to the user without re-emitting full state — what's the canonical pattern the SDK provides?",
+      "expected": [
+        "todo-tracking.md"
+      ],
+      "primary_returned": [
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "subagents.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-026",
+      "query": "What's the SDK option that stops the loop when spend or turn count crosses a threshold, and how does that interact with the session that's already mid-task?",
+      "expected": [
+        "agent-loop.md"
+      ],
+      "primary_returned": [
+        "sessions.md",
+        "agent-loop.md"
+      ],
+      "weak_returned": [
+        "file-checkpointing.md",
+        "typescript-v2-preview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    },
+    {
+      "id": "cas-pm-027",
+      "query": "If our agent ingests content from external sources like webpages or user-submitted files, what's the prompt-injection threat model and what isolation layers does the SDK recommend in defense-in-depth?",
+      "expected": [
+        "secure-deployment.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "secure-deployment.md",
+        "claude-code-features.md",
+        "subagents.md",
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-028",
+      "query": "What does day-one look like for a developer evaluating the SDK — install plus API key plus first running agent — so I can scope a one-day spike?",
+      "expected": [
+        "quickstart.md",
+        "overview.md"
+      ],
+      "primary_returned": [],
+      "weak_returned": [
+        "overview.md",
+        "agent-loop.md",
+        "quickstart.md",
+        "subagents.md",
+        "secure-deployment.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-029",
+      "query": "Our agent workload is bursty and intermittent rather than continuous; which of the documented deployment patterns fits that shape best, and how does it differ from a long-running daemon shape?",
+      "expected": [
+        "hosting.md"
+      ],
+      "primary_returned": [
+        "subagents.md",
+        "secure-deployment.md"
+      ],
+      "weak_returned": [
+        "agent-loop.md",
+        "hosting.md",
+        "quickstart.md"
+      ],
+      "degraded": false,
+      "tp": 0,
+      "fp": 2,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0
+    },
+    {
+      "id": "cas-pm-030",
+      "query": "Can we bill our customers based on the cost field the SDK returns, or is that an estimate that drifts from what Anthropic actually invoices us for — and where do we pull authoritative usage numbers?",
+      "expected": [
+        "cost-tracking.md"
+      ],
+      "primary_returned": [
+        "cost-tracking.md",
+        "typescript-4.md"
+      ],
+      "weak_returned": [
+        "overview.md"
+      ],
+      "degraded": false,
+      "tp": 1,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.5,
+      "recall": 1
+    }
+  ]
+}

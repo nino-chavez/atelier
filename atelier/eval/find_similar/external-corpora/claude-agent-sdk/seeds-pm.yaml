@@ -1,0 +1,206 @@
+# claude-agent-sdk PM-lens seeds (per ADR-017)
+# Authored by Claude Opus 4.7 (1M context), 2026-05-02. Methodology + priming
+# per parent prompt; corpus + hand-baseline at sibling files.
+#
+# Reasoning shape: outcome-driven ("what does my team get from X"), trade-off
+# ("if I pick X over Y, what do I lose"), scope ("is X bundled or do I pay
+# extra"), stakeholder ("who needs to approve / who'll use this"), commitment
+# ("what's the maintenance burden after we adopt"), sequencing ("what's the
+# order to roll this out"). Vocabulary leans on adoption decisions, team
+# boundaries, contract surface, cost framing.
+#
+# Avoids duplication of the 27 hand seeds; overlapping topics get a different
+# angle (e.g., hand-022 covers "how do I lock down permissions"; pm equivalent
+# asks "what do I lose by going dontAsk for an autonomous rollout").
+
+seeds:
+  - id: cas-pm-001
+    description: "Production readiness checklist sequencing — when to commit to OpenTelemetry"
+    query: "If we adopt the SDK, what's the production-readiness checklist and at what stage do we typically commit to wiring telemetry exporters and a sandbox provider?"
+    expected:
+      - hosting.md
+      - observability.md
+
+  - id: cas-pm-002
+    description: "Per-agent-run cost budgeting and which knob enforces it"
+    query: "How much per-agent-run dollar cost should we budget at typical workload, and which option in the SDK config caps spend before the loop runs away?"
+    expected:
+      - cost-tracking.md
+      - agent-loop.md
+
+  - id: cas-pm-003
+    description: "Rollback path when the agent edits files unexpectedly"
+    query: "If the agent modifies production files unexpectedly during a run, what's the rollback mechanism and which tools are actually tracked by it versus silently bypassed?"
+    expected:
+      - file-checkpointing.md
+
+  - id: cas-pm-004
+    description: "Stakeholder ownership of slash commands authored by non-engineers"
+    query: "If we want non-engineers to invoke the agent via custom shortcuts they author themselves, where do those shortcuts live in the repo and who maintains the file format?"
+    expected:
+      - slash-commands.md
+
+  - id: cas-pm-005
+    description: "Trade-off of running with bypassPermissions for autonomous workloads"
+    query: "What do we give up by running the agent with all permission prompts disabled for unattended workloads, and which deny-rule path still holds even in that mode?"
+    expected:
+      - permissions.md
+
+  - id: cas-pm-006
+    description: "Vendor-neutral observability — choosing a backend"
+    query: "Which observability backends does the SDK's exporter target out of the box without locking us to one vendor, and what protocol does the export speak?"
+    expected:
+      - observability.md
+
+  - id: cas-pm-007
+    description: "Engineering effort to migrate from old SDK package"
+    query: "How much engineering work is the package rename actually — is it just an import swap and a package.json bump, or are there code-shape changes my team needs to budget?"
+    expected:
+      - migration-guide.md
+
+  - id: cas-pm-008
+    description: "Picking Python vs TypeScript for the team"
+    query: "Our team has both Python and Node people; what's the feature parity between the two language SDKs and are there capabilities that only one of them supports today?"
+    expected:
+      - python-1.md
+      - typescript-1.md
+
+  - id: cas-pm-009
+    description: "Commitment to a preview API that may break before GA"
+    query: "Is the next-gen TypeScript surface stable enough to build production code against, or should we wait for the preview label to come off before adopting?"
+    expected:
+      - typescript-v2-preview.md
+
+  - id: cas-pm-010
+    description: "Cross-host session resumption commitment"
+    query: "If our deployment moves a user's conversation from one container to another between turns, can the agent pick up where it left off, or do sessions only resume on the same host?"
+    expected:
+      - sessions.md
+      - hosting.md
+
+  - id: cas-pm-011
+    description: "Compliance posture of intercepting every tool call"
+    query: "For our SOC2 audit story, where do I plug in code that logs every tool the agent calls and can block destructive ones before they execute?"
+    expected:
+      - hooks.md
+      - permissions.md
+
+  - id: cas-pm-012
+    description: "Governance over which MCP servers our agents may reach"
+    query: "If we let teams plug in third-party tool servers, how do we constrain which servers the agent actually reaches and pre-approve only the tool patterns we trust?"
+    expected:
+      - mcp.md
+      - permissions.md
+
+  - id: cas-pm-013
+    description: "Maintenance burden of in-house custom tool definitions"
+    query: "If we write our own in-process tool functions for our domain logic, who owns the schema definitions long-term and what's the upgrade path when the SDK ships a new tool API shape?"
+    expected:
+      - custom-tools.md
+
+  - id: cas-pm-014
+    description: "When to flip on tool search for context efficiency"
+    query: "At what tool-count does it become worth turning on the dynamic tool-discovery feature instead of loading every definition into the model context every turn?"
+    expected:
+      - tool-search.md
+
+  - id: cas-pm-015
+    description: "Trade-off of subagent parallelization vs token spend"
+    query: "Running multiple specialized helper agents in parallel speeds up complex workflows but how does that affect our token budget compared to a single sequential agent?"
+    expected:
+      - subagents.md
+      - cost-tracking.md
+
+  - id: cas-pm-016
+    description: "Distribution shape for shared agent extensions"
+    query: "How do we package and ship a bundle of custom commands, hooks, and tool integrations across multiple projects in our org without copy-pasting them into each repo?"
+    expected:
+      - plugins.md
+
+  - id: cas-pm-017
+    description: "Skill ownership and discoverability across the team"
+    query: "Once a teammate authors a domain-specific capability as a SKILL.md, what determines whether the agent finds it automatically or whether we have to wire it up explicitly?"
+    expected:
+      - skills.md
+      - claude-code-features.md
+
+  - id: cas-pm-018
+    description: "Locking down which filesystem settings load at runtime"
+    query: "How do I prevent the agent from picking up a developer's personal user-level config when it runs in CI, and limit it to only the project-level settings we've vetted?"
+    expected:
+      - claude-code-features.md
+
+  - id: cas-pm-019
+    description: "Brand-voice consistency across agent-generated text"
+    query: "Marketing wants every agent response to follow our tone guide; which of the three system-prompt approaches gives us a persistent file-based config we can version-control across projects?"
+    expected:
+      - modifying-system-prompts.md
+
+  - id: cas-pm-020
+    description: "UX trade-off of streaming output vs single response"
+    query: "Our product team is debating whether to render tokens as they arrive or wait for the full answer; what do we lose on the single-shot path that streaming gives us, and what's the implementation tax for streaming?"
+    expected:
+      - streaming-output.md
+      - streaming-vs-single-mode.md
+
+  - id: cas-pm-021
+    description: "Downstream contract stability via schema-validated output"
+    query: "If our application logic reads the agent's output, what guarantee do we get that the response shape won't drift across model versions, and what happens when validation fails?"
+    expected:
+      - structured-outputs.md
+
+  - id: cas-pm-022
+    description: "Human-in-the-loop SLA for approval prompts"
+    query: "When the agent surfaces a clarifying question or approval prompt, how long can the user take to respond before the SDK times out, and is there a way to defer the answer across a process restart?"
+    expected:
+      - user-input.md
+
+  - id: cas-pm-023
+    description: "Sequencing the move from prototype to hardened production"
+    query: "Walk me through the order of decisions when we're moving the agent off a developer laptop into a multi-tenant production environment — what isolation tier do we pick first, then what credential pattern?"
+    expected:
+      - hosting.md
+      - secure-deployment.md
+
+  - id: cas-pm-024
+    description: "Cost-cap enforcement and prompt-cache TTL trade-off"
+    query: "We need to cap dollar spend per session and want the cache to stick around between short sessions; what's the option for a longer cache TTL and what's the trade-off for enabling it?"
+    expected:
+      - cost-tracking.md
+
+  - id: cas-pm-025
+    description: "Progress visibility for long-running agent runs"
+    query: "When a single agent task spans many minutes, how do we surface step-by-step progress to the user without re-emitting full state — what's the canonical pattern the SDK provides?"
+    expected:
+      - todo-tracking.md
+
+  - id: cas-pm-026
+    description: "Budget cap as a guard against runaway agent loops"
+    query: "What's the SDK option that stops the loop when spend or turn count crosses a threshold, and how does that interact with the session that's already mid-task?"
+    expected:
+      - agent-loop.md
+
+  - id: cas-pm-027
+    description: "Threat-model framing for letting the agent process untrusted content"
+    query: "If our agent ingests content from external sources like webpages or user-submitted files, what's the prompt-injection threat model and what isolation layers does the SDK recommend in defense-in-depth?"
+    expected:
+      - secure-deployment.md
+
+  - id: cas-pm-028
+    description: "First-touch developer experience for evaluating the SDK"
+    query: "What does day-one look like for a developer evaluating the SDK — install plus API key plus first running agent — so I can scope a one-day spike?"
+    expected:
+      - quickstart.md
+      - overview.md
+
+  - id: cas-pm-029
+    description: "Picking the right hosting pattern by workload shape"
+    query: "Our agent workload is bursty and intermittent rather than continuous; which of the documented deployment patterns fits that shape best, and how does it differ from a long-running daemon shape?"
+    expected:
+      - hosting.md
+
+  - id: cas-pm-030
+    description: "Authoritative billing reconciliation vs SDK cost estimates"
+    query: "Can we bill our customers based on the cost field the SDK returns, or is that an estimate that drifts from what Anthropic actually invoices us for — and where do we pull authoritative usage numbers?"
+    expected:
+      - cost-tracking.md

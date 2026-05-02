@@ -1489,6 +1489,17 @@
       "status": "DECIDED"
     },
     {
+      "id": "D49",
+      "label": "find_similar wider-eval (claude-agent-sdk corpus): blocking-tier framing reversed; advisory's universality demoted to corpus-dependent; cross-encoder reranker resolved as v1.x opt-in",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-047-find-similar-wider-eval-claude-agent-sdk-and-blocking-tier-reversal.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-047",
+      "source": "m7-track-2-section-26-wider-eval",
+      "status": "DECIDED"
+    },
+    {
       "id": "BRD-OPEN-QUESTIONS:section-1",
       "label": "Territory-model validation on the analyst case",
       "kind": "open-question",

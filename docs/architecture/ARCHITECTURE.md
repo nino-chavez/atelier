@@ -1720,6 +1720,33 @@ A team running Atelier template `vN.M` can adopt `vN.(M+1)` (or `v(N+1).0`) via 
 - **Independent per-project upgrades within a guild.** Projects do not have to upgrade in lockstep. Each project's `template_version` in `.atelier/config.yaml` is independent. A guild may legitimately host projects on `v1.0` and `v1.1` simultaneously during the grace window.
 - **Decision-log preservation.** No ADR file is rewritten by an upgrade. New canonical conventions introduced by the new template version are documented as fresh ADRs (committed by the upgrade tool with the team's review) rather than retroactive edits.
 
+### 9.8 Scale envelope (BRD-OPEN-QUESTIONS §7)
+
+The v1 reference impl supports the following per-guild scale on Supabase Pro + Vercel Pro. Below the envelope, the documented NFRs (endpoint p95 <500ms, broadcast latency <2s, find_similar p95 <50ms) hold. Beyond, behavior is undefined-but-not-broken: things will work but may degrade past the NFRs. Free tier ~1/4 these limits; Enterprise tier ~10x.
+
+| Dimension | v1 envelope |
+|---|---|
+| Projects per guild | 10 |
+| Composers per project | 20 |
+| Composers per guild (sum) | 100 |
+| Contributions per project (lifetime) | 10,000 |
+| Contributions per guild (sum) | 50,000 |
+| Concurrent active sessions per project | 20 |
+| Concurrent active sessions per guild | 100 |
+| Decisions (ADRs) per project (lifetime) | 500 |
+| BRD stories per project | 200 |
+| Research artifacts per project | 1,000 |
+| Vector index rows per guild | 100,000 |
+| Pub/sub messages per minute per project (peak) | 60 |
+| Pub/sub subscribers per project | 20 |
+| Find_similar QPS per project (peak) | 10 |
+
+**Total guild-level row count target: ~2M.**
+
+**Beyond envelope.** Tier upgrade (Supabase Enterprise + Vercel Enterprise; ~10x headroom) is the recommended first response. Sharding across multiple guilds per team is the second; the cross-guild coordination cost (no shared `/atelier`, separate decision logs, separate find_similar indexes) is real but bounded — adopters with two cohesive sub-teams already benefit from this separation.
+
+**Measurement.** The harness at `scripts/test/scale/load-runner.ts` drives synthetic load against a deployed substrate and writes per-operation timings to the `telemetry` table tagged `action='scale_test.<scenario>.<op>'`. Operators run the harness against their deploy; the empirical numbers replace the architectural prediction in `docs/architecture/audits/scale-ceiling-envelope-v1.md` §4. Per the M7 bounded scope: the harness ships with Scenario A (endpoint sustained load) and B (reaper cycle time) implemented; C (broadcast fanout), D (vector kNN at scale), and E (cross-dimension stress) ship as documented stubs that follow the same shape when an operator wants empirical data.
+
 ---
 
 ## 10. Open architectural decisions

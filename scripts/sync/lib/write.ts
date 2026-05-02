@@ -241,6 +241,83 @@ export interface LogDecisionResult {
 }
 
 // =========================================================================
+// scope_files validation (ADR-045 / ARCH 6.7.5)
+// =========================================================================
+
+/**
+ * Validate scope_files entries against basic glob-syntax rules so callers
+ * who pass malformed patterns get a clear BAD_REQUEST instead of a
+ * silently-empty result. The substrate uses Postgres `text[] && text[]`
+ * (literal-array overlap) for the actual intersection at v1; full
+ * picomatch/minimatch expansion lands at v1.x hardening (ARCH 6.7.5
+ * notes "same glob shape as acquire_lock's artifact_scope" -- the
+ * acquire_lock implementation has the same v1 limitation per
+ * write.ts:25-28).
+ *
+ * What we catch:
+ *   - non-string or empty entries
+ *   - unbalanced { } and [ ] (the common malformed-glob cases)
+ *   - null bytes (a Postgres text[] hard fail)
+ *
+ * What we don't catch (deferred to picomatch swap):
+ *   - escape-sequence validity inside character classes
+ *   - extended-glob !(pat) malformedness
+ *
+ * Throws AtelierError(BAD_REQUEST) per ARCH 6.7.5's documented failure mode.
+ */
+function validateScopeFiles(scopeFiles: string[]): void {
+  if (!Array.isArray(scopeFiles)) {
+    throw new AtelierError('BAD_REQUEST', 'scope_files must be an array of strings');
+  }
+  for (const pattern of scopeFiles) {
+    if (typeof pattern !== 'string' || pattern.length === 0) {
+      throw new AtelierError('BAD_REQUEST', 'scope_files entries must be non-empty strings', {
+        offending_pattern: pattern,
+      });
+    }
+    if (pattern.includes('\0')) {
+      throw new AtelierError('BAD_REQUEST', 'scope_files pattern contains null byte', {
+        offending_pattern: pattern,
+      });
+    }
+    let braceDepth = 0;
+    let bracketDepth = 0;
+    for (let i = 0; i < pattern.length; i++) {
+      const c = pattern[i];
+      const prev = i > 0 ? pattern[i - 1] : '';
+      if (prev === '\\') continue;
+      if (c === '{') braceDepth++;
+      else if (c === '}') {
+        braceDepth--;
+        if (braceDepth < 0) {
+          throw new AtelierError('BAD_REQUEST', 'unbalanced { } in scope_files pattern', {
+            offending_pattern: pattern,
+          });
+        }
+      } else if (c === '[') bracketDepth++;
+      else if (c === ']') {
+        bracketDepth--;
+        if (bracketDepth < 0) {
+          throw new AtelierError('BAD_REQUEST', 'unbalanced [ ] in scope_files pattern', {
+            offending_pattern: pattern,
+          });
+        }
+      }
+    }
+    if (braceDepth !== 0) {
+      throw new AtelierError('BAD_REQUEST', 'unbalanced { } in scope_files pattern', {
+        offending_pattern: pattern,
+      });
+    }
+    if (bracketDepth !== 0) {
+      throw new AtelierError('BAD_REQUEST', 'unbalanced [ ] in scope_files pattern', {
+        offending_pattern: pattern,
+      });
+    }
+  }
+}
+
+// =========================================================================
 // Client
 // =========================================================================
 
@@ -428,7 +505,7 @@ export class AtelierClient {
    * referenced by smoke. Lens defaults, since_session_id deltas, contract
    * schema bodies, and the full traceability_slice are M2-mid work.
    */
-  async getContext(input: { sessionId: string }): Promise<{
+  async getContext(input: { sessionId: string; scopeFiles?: string[] }): Promise<{
     charter: { paths: string[]; excerpts: null };
     recent_decisions: {
       direct: Array<{ id: string; summary: string; trace_ids: string[]; timestamp: Date; repo_path: string | null }>;
@@ -445,8 +522,38 @@ export class AtelierClient {
       active: never[];
       truncated: boolean;
     };
+    // Per ADR-045 / ARCH 6.7.5. Present only when scopeFiles was supplied
+    // and non-empty; absent otherwise (preserves backward-compat for
+    // callers that don't use scope_files). Empty arrays inside the
+    // section indicate "queried, no overlaps found" -- composers can
+    // rely on the section's presence to confirm the query ran.
+    overlapping_active?: {
+      contributions: Array<{
+        id: string;
+        kind: string;
+        state: string;
+        composer_id: string;
+        composer_display_name: string;
+        artifact_scope: string[];
+        overlapping_files: string[];
+        since: Date;
+      }>;
+      locks: Array<{
+        id: string;
+        contribution_id: string;
+        holder_composer_id: string;
+        holder_display_name: string;
+        artifact_scope: string[];
+        overlapping_files: string[];
+        acquired_at: Date;
+        ttl_remaining_seconds: number;
+      }>;
+    };
     stale_as_of: Date;
   }> {
+    if (input.scopeFiles !== undefined) {
+      validateScopeFiles(input.scopeFiles);
+    }
     return this.tx(async (client) => {
       const ctx = await loadSessionContext(client, input.sessionId);
 
@@ -526,6 +633,117 @@ export class AtelierClient {
       const byState: Record<string, number> = {};
       for (const r of stateRows) byState[r.state] = Number(r.n);
 
+      // Per ADR-045 / ARCH 6.7.5. Empty array is treated as "no scope
+      // filter" per the spec -- the overlapping_active section is
+      // absent (same as omitting the parameter). Callers that want
+      // "all active overlap" semantics use a broad glob like ["**"].
+      let overlappingActive:
+        | {
+            contributions: Array<{
+              id: string;
+              kind: string;
+              state: string;
+              composer_id: string;
+              composer_display_name: string;
+              artifact_scope: string[];
+              overlapping_files: string[];
+              since: Date;
+            }>;
+            locks: Array<{
+              id: string;
+              contribution_id: string;
+              holder_composer_id: string;
+              holder_display_name: string;
+              artifact_scope: string[];
+              overlapping_files: string[];
+              acquired_at: Date;
+              ttl_remaining_seconds: number;
+            }>;
+          }
+        | undefined;
+      if (input.scopeFiles !== undefined && input.scopeFiles.length > 0) {
+        // Active contributions: states claimed | plan_review | in_progress
+        // (not open since open contributions have no holder; not review |
+        // merged | rejected since those are terminal-ish per ARCH 6.7.5).
+        const { rows: contribRows } = await client.query<{
+          id: string;
+          kind: string;
+          state: string;
+          author_composer_id: string;
+          composer_display_name: string | null;
+          artifact_scope: string[];
+          updated_at: Date;
+        }>(
+          `SELECT c.id, c.kind::text AS kind, c.state::text AS state,
+                  c.author_composer_id,
+                  cm.display_name AS composer_display_name,
+                  c.artifact_scope, c.updated_at
+             FROM contributions c
+             LEFT JOIN composers cm ON cm.id = c.author_composer_id
+            WHERE c.project_id = $1
+              AND c.state::text = ANY ($2::text[])
+              AND c.artifact_scope && $3::text[]`,
+          [
+            ctx.projectId,
+            ['claimed', 'plan_review', 'in_progress'],
+            input.scopeFiles,
+          ],
+        );
+
+        // Currently-held locks: not-yet-expired. Released locks are
+        // deleted from the table per the locks invariant; no
+        // soft-delete column to filter.
+        const { rows: lockRows } = await client.query<{
+          id: string;
+          contribution_id: string;
+          holder_composer_id: string;
+          holder_display_name: string | null;
+          artifact_scope: string[];
+          acquired_at: Date;
+          expires_at: Date | null;
+        }>(
+          `SELECT l.id, l.contribution_id, l.holder_composer_id,
+                  cm.display_name AS holder_display_name,
+                  l.artifact_scope, l.acquired_at, l.expires_at
+             FROM locks l
+             LEFT JOIN composers cm ON cm.id = l.holder_composer_id
+            WHERE l.project_id = $1
+              AND l.artifact_scope && $2::text[]
+              AND (l.expires_at IS NULL OR l.expires_at > NOW())`,
+          [ctx.projectId, input.scopeFiles],
+        );
+
+        const intersect = (a: string[], b: string[]): string[] => {
+          const set = new Set(b);
+          return a.filter((x) => set.has(x));
+        };
+        const now = Date.now();
+        overlappingActive = {
+          contributions: contribRows.map((r) => ({
+            id: r.id,
+            kind: r.kind,
+            state: r.state,
+            composer_id: r.author_composer_id,
+            composer_display_name: r.composer_display_name ?? '',
+            artifact_scope: r.artifact_scope,
+            overlapping_files: intersect(r.artifact_scope, input.scopeFiles!),
+            since: r.updated_at,
+          })),
+          locks: lockRows.map((r) => ({
+            id: r.id,
+            contribution_id: r.contribution_id,
+            holder_composer_id: r.holder_composer_id,
+            holder_display_name: r.holder_display_name ?? '',
+            artifact_scope: r.artifact_scope,
+            overlapping_files: intersect(r.artifact_scope, input.scopeFiles!),
+            acquired_at: r.acquired_at,
+            ttl_remaining_seconds: r.expires_at
+              ? Math.max(0, Math.floor((r.expires_at.getTime() - now) / 1000))
+              : 0,
+          })),
+        };
+      }
+
       return {
         charter: { paths: charterPaths, excerpts: null },
         recent_decisions: {
@@ -542,6 +760,7 @@ export class AtelierClient {
         },
         territories: { owned, consumed },
         contributions_summary: { by_state: byState, active: [], truncated: false },
+        ...(overlappingActive !== undefined ? { overlapping_active: overlappingActive } : {}),
         stale_as_of: new Date(),
       };
     });

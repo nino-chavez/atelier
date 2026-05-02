@@ -89,6 +89,14 @@ jobs:
         # existing yaml package); no Python install required.
         run: npm run lint:yaml
 
+      - name: Portability lint (ADR-029 GCP-portability constraint)
+        # Catches @vercel/edge | @vercel/kv | @vercel/edge-config imports
+        # outside named adapter dirs + Supabase Realtime / RPC usage
+        # outside the named adapter pattern. Per ADR-029 the reference
+        # impl preserves GCP-portability; proprietary surfaces must stay
+        # in well-named modules so substitution is mechanical.
+        run: npm run lint:portability
+
       - name: Traceability validator (PR-scoped; --diff against base)
         run: |
           npx tsx scripts/traceability/validate-refs.ts \

@@ -69,7 +69,7 @@ All stories v1-scope. No phase tags.
 | 8 | Territory contracts | US-8.1 to US-8.4 |
 | 9 | Sync substrate (all 5 scripts) | US-9.1 to US-9.7 |
 | 10 | External system integrations | US-10.1 to US-10.6 |
-| 11 | CLI tooling | US-11.1 to US-11.9 |
+| 11 | CLI tooling | US-11.1 to US-11.13 |
 | 12 | Observability | US-12.1 to US-12.5 |
 | 13 | Security model | US-13.1 to US-13.6 |
 | 14 | Composer lifecycle | US-14.1 to US-14.5 |
@@ -648,6 +648,16 @@ As any composer, I want `atelier review` so that I can compute the required revi
 Acceptance:
 - Given a contribution_id or a PR-changed-files list, when `atelier review` runs, then it computes the required reviewers from `.atelier/territories.yaml` review_role + `.atelier/config.yaml` reviewer-matrix overrides per METHODOLOGY 11.2.
 - Given multiple territories touched, when run, then the response lists the union of required reviewers per territory with the routing logic explained.
+
+**US-11.13 — atelier dev**
+As any composer, I want `atelier dev` so that I can bring up the entire local Atelier substrate (Supabase + dev server + bearer + sanity checks) with a single command instead of stepping through `local-bootstrap.md` Step 0 plus Steps 1, 2, 4, 5 every session.
+
+Acceptance:
+- Given a clean repo with prerequisites installed (Node 22+, Supabase CLI, Docker, an OpenAI API key in `prototype/.env.local`), when `atelier dev` runs, then Supabase starts (or is detected as already running), migrations are applied, the prototype dev server starts on port 3030, a bearer is issued (or the cached one is detected as still valid), `.mcp.json` is updated, and the connection summary prints with the `/atelier` URL + the bearer-rotation reminder.
+- Given a partially-up substrate (e.g., Supabase running but dev server stopped), when run, then `atelier dev` brings up only what's missing without restarting components that are already healthy.
+- Given a port :3030 conflict, when run, then `atelier dev` reports the conflict and exits with a non-zero code rather than silently falling back to a different port.
+- Given a stale bearer (expired or near-expiry per the JWT exp claim), when run, then `atelier dev` re-issues a fresh bearer and updates `.mcp.json` automatically.
+- Per the M7 kickoff: 13th v1 CLI command (CLI surface only; does NOT touch the ADR-013/040 12-tool MCP surface lock). Surfaced by 4 runbook drift findings + 2 bearer-cache incidents + 1 port-mismatch fix observed across M2-M6.
 
 ---
 

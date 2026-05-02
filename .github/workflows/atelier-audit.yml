@@ -194,6 +194,14 @@ jobs:
       - name: Lens smoke (M3 /atelier view-model per lens; ADR-001 / ADR-017)
         run: npx tsx prototype/__smoke__/lens.smoke.ts
 
+      - name: CLI smoke (M7 / US-11.13; atelier dev dispatcher + preflight)
+        # Validates the dispatcher (`atelier --help`, unknown command exit
+        # code, command-specific --help) and `atelier dev --preflight-only`
+        # non-orchestrating shape. Does NOT exercise live substrate startup
+        # (would tie up processes); manual end-to-end + operator runs cover
+        # the full orchestration path.
+        run: npx tsx scripts/cli/__smoke__/cli.smoke.ts
+
       - name: Triage smoke (M6 / migration 9 / ADR-018)
         # Exercises the M6 triage_pending lifecycle end-to-end:
         # below-threshold route-proposal -> triage_pending insert,

@@ -767,6 +767,14 @@
       "prototypePages": []
     },
     {
+      "id": "US-11.13",
+      "label": "atelier dev (one-command local substrate bringup)",
+      "kind": "brd-story",
+      "docPath": "docs/functional/BRD.md",
+      "docUrl": "#us-1113-atelier-dev",
+      "prototypePages": []
+    },
+    {
       "id": "US-12.1",
       "label": "Telemetry emission",
       "kind": "brd-story",

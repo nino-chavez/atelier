@@ -187,6 +187,27 @@ jobs:
         # registry-seam test (deterministic; no live LLM call).
         run: npx tsx scripts/sync/triage/__smoke__/triage.smoke.ts
 
+      - name: Install prototype dependencies (for cc-mcp-client.smoke.ts)
+        # The CC-MCP-client smoke spawns `next dev` against the prototype;
+        # prototype/node_modules must exist for the dev server to boot.
+        run: cd prototype && npm ci
+
+      - name: CC MCP-client probe-shape smoke (M6 / promoted from M7)
+        # Spawns next dev as a child process and probes every URL Claude
+        # Code's MCP HTTP client is empirically known to hit during
+        # /mcp connection. Catches the substrate-fix regression class
+        # that bit M5/M6 six times (PRs #9, #11, #13, #14, trim commit,
+        # #16). See scripts/endpoint/__smoke__/cc-mcp-client.smoke.ts
+        # for the full lesson catalog.
+        run: |
+          set -e
+          eval "$(supabase status -o env --workdir .)"
+          export ATELIER_DATASTORE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          export ATELIER_OIDC_ISSUER="$API_URL/auth/v1"
+          export ATELIER_JWT_AUDIENCE=authenticated
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
+          npx tsx scripts/endpoint/__smoke__/cc-mcp-client.smoke.ts
+
       - name: Embeddings adapter smoke (M5 / ADR-041; mocked fetch + Noop)
         # Pure unit-shaped smoke that exercises the EmbeddingService surface
         # contract: Noop, formatModelVersion validation, OpenAI-compatible

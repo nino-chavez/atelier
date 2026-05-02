@@ -162,11 +162,26 @@ const SKIP_DIRS = new Set([
   'node_modules', '.git', 'supabase', 'scripts/test/__fixtures__',
 ]);
 
+// Path-prefix exclusions applied even in --diff/--staged mode (where SKIP_DIRS
+// doesn't fire because we walk the diff scope, not WALK_DIRS). Test fixtures
+// + external corpora are committed for reproducibility but their content is
+// authored elsewhere and shouldn't be subject to Atelier's canonical-doc
+// validation rules (e.g., external corpora frequently link to provider doc
+// sites with site-relative paths the validator can't resolve).
+const SKIP_PATH_PREFIXES: readonly string[] = [
+  'atelier/eval/find_similar/external-corpora/',
+];
+
+function shouldSkipPath(repoRelative: string): boolean {
+  return SKIP_PATH_PREFIXES.some((prefix) => repoRelative.startsWith(prefix));
+}
+
 async function walkRepo(repoRoot: string, scope?: 'all' | string[]): Promise<FileCitations[]> {
   const out: FileCitations[] = [];
 
   if (Array.isArray(scope)) {
     for (const p of scope) {
+      if (shouldSkipPath(p)) continue;
       const abs = resolve(repoRoot, p);
       if (!abs.endsWith('.md')) continue;
       try {

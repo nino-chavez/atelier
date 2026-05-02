@@ -80,6 +80,15 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: YAML lint (workflows + .atelier configs; PR #10 follow-up)
+        # Catches the YAML 1.2 syntax errors that cause silent CI breakage.
+        # PR #10 hot-fixed this workflow file after a colon-in-step-name
+        # broke parsing on GitHub Actions for several weeks. The class is
+        # general -- any YAML in .github/workflows or .atelier that fails
+        # to parse can ship without notice. Linter is Node-only (uses the
+        # existing yaml package); no Python install required.
+        run: npm run lint:yaml
+
       - name: Traceability validator (PR-scoped; --diff against base)
         run: |
           npx tsx scripts/traceability/validate-refs.ts \

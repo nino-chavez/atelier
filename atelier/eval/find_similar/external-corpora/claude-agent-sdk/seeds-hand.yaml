@@ -1,0 +1,184 @@
+# claude-agent-sdk wider eval seeds (hand-authored baseline)
+#
+# Provenance: Claude Opus 4.7 (1M context), 2026-05-02, single session.
+# Methodology mirrors atelier/eval/find_similar/seeds.yaml: queries paraphrase
+# topics (don't echo titles) but preserve 2-3 keyword bridges; expected lists
+# are canonical answers only (foundational vocabulary-overlap docs excluded);
+# minimum 2 expected per seed where the topology supports it for non-binary
+# per-seed recall.
+#
+# Per the §26 eval method (Nino's 2026-05-02 corpus-selection call): hand
+# baseline (this file) + 3-lens parallel agent expansion (analyst/dev/PM
+# per ADR-017) = canonical seed set. Merged via the same dedup-by-token-
+# Jaccard pattern as M5 (threshold 0.7). 25 hand + 3x30 lens = ~115 pre-
+# dedup; comparable to M5's 111-seed set.
+#
+# Expected paths are corpus-relative (filename only) so the eval runner
+# can compare against the embedded sourceRef without a path-prefix step.
+
+seeds:
+  - id: cas-hand-001
+    description: "Difference between Agent SDK and Client SDK"
+    query: "When picking between the higher-level autonomous loop wrapper and the lower-level message-streaming client, what does the wrapper handle for me that I'd otherwise implement myself?"
+    expected:
+      - overview.md
+
+  - id: cas-hand-002
+    description: "Migration shape from old SDK"
+    query: "What renames and breaking shifts apply when moving an existing project off the previous Claude Code SDK package onto the new Agent SDK package name?"
+    expected:
+      - migration-guide.md
+
+  - id: cas-hand-003
+    description: "First-run quickstart shape"
+    query: "How do I get from zero to a running agent that finds and fixes a bug in a sample file, including the install + API key + first invocation?"
+    expected:
+      - quickstart.md
+
+  - id: cas-hand-004
+    description: "Python install + minimal example"
+    query: "What's the pip install and import shape for the Python package, and where does the canonical README live with the minimal hello-world example?"
+    expected:
+      - github-python-README.md
+      - python-1.md
+
+  - id: cas-hand-005
+    description: "TypeScript install + minimal example"
+    query: "How do I add the npm package to a Node project and what's the shortest TypeScript snippet to issue a query and iterate the message stream?"
+    expected:
+      - github-typescript-README.md
+      - typescript-1.md
+
+  - id: cas-hand-006
+    description: "TypeScript v2 preview shape"
+    query: "What's changing in the next-generation TypeScript API surface that's currently in preview, and where do I see the new type shapes before they ship as default?"
+    expected:
+      - typescript-v2-preview.md
+
+  - id: cas-hand-007
+    description: "Inner agent message loop"
+    query: "Walk me through the request-tool-response cycle the agent runs internally — when the model emits a tool call, when context window compaction triggers, and when the loop exits."
+    expected:
+      - agent-loop.md
+
+  - id: cas-hand-008
+    description: "Session resume across invocations"
+    query: "How do I capture a session identifier from one query and pass it to a subsequent call so the agent retains memory of files it already read and analysis it already performed?"
+    expected:
+      - sessions.md
+
+  - id: cas-hand-009
+    description: "Run callbacks at lifecycle points"
+    query: "Where do I plug in custom code that runs before a tool executes, after it returns, when the user submits a prompt, or when the session starts and stops?"
+    expected:
+      - hooks.md
+
+  - id: cas-hand-010
+    description: "Reverting agent-edited files"
+    query: "If the agent modifies several files during a session and I want to roll back to a known-good snapshot mid-session, what's the file-state tracking + restore mechanism?"
+    expected:
+      - file-checkpointing.md
+
+  - id: cas-hand-011
+    description: "Connect to external MCP servers"
+    query: "How do I wire a third-party MCP server (database, browser, custom API surface) into my agent so its tools become callable alongside the built-in ones?"
+    expected:
+      - mcp.md
+
+  - id: cas-hand-012
+    description: "Define my own tools as code"
+    query: "When the canonical built-in tools and the available MCP servers don't cover my domain, how do I define an in-process function that the agent can call as if it were a tool?"
+    expected:
+      - custom-tools.md
+
+  - id: cas-hand-013
+    description: "Handling massive MCP tool counts"
+    query: "If I'm connecting to MCP servers that expose hundreds or thousands of tools, what's the pagination/search/filtering surface that keeps the model's tool catalog manageable?"
+    expected:
+      - tool-search.md
+
+  - id: cas-hand-014
+    description: "Spawning sub-agents from main agent"
+    query: "How does the main agent delegate a focused sub-task to a specialized agent with its own prompt, allowed tools, and result reporting back to the parent?"
+    expected:
+      - subagents.md
+
+  - id: cas-hand-015
+    description: "Custom slash commands at runtime"
+    query: "Where do I drop markdown files that become invokable shortcuts within an agent session, the way Claude Code's `/audit` or `/review` work?"
+    expected:
+      - slash-commands.md
+
+  - id: cas-hand-016
+    description: "Skills as specialized capabilities"
+    query: "How do I package a domain-specific capability as a reusable artifact the agent loads from the project's `.claude/` directory and applies as needed?"
+    expected:
+      - skills.md
+
+  - id: cas-hand-017
+    description: "Plugins as programmatic extension"
+    query: "What's the API for adding custom commands, sub-agents, and MCP servers programmatically (not via filesystem config) when the SDK is embedded in a larger application?"
+    expected:
+      - plugins.md
+
+  - id: cas-hand-018
+    description: "Loading project context (CLAUDE.md, settings)"
+    query: "How does the SDK pick up the same project-level instructions, hooks, and skills that Claude Code reads from `.claude/` and `~/.claude/`, and how do I restrict which sources load?"
+    expected:
+      - claude-code-features.md
+
+  - id: cas-hand-019
+    description: "Customizing the system prompt"
+    query: "I want to override or append to the default agent persona — what are the three approaches (output styles, systemPrompt append, full custom prompt) and when do I pick each?"
+    expected:
+      - modifying-system-prompts.md
+
+  - id: cas-hand-020
+    description: "Streaming responses to caller"
+    query: "When my application wants to render the agent's tokens as they arrive (not wait for the full response), what's the streaming output shape and how does it differ from the single-shot mode?"
+    expected:
+      - streaming-output.md
+      - streaming-vs-single-mode.md
+
+  - id: cas-hand-021
+    description: "Schema-validated output"
+    query: "How do I constrain the agent's final answer to match a specific JSON schema so my downstream code can parse the result without runtime validation overhead?"
+    expected:
+      - structured-outputs.md
+
+  - id: cas-hand-022
+    description: "Permission control and tool allowlists"
+    query: "How do I restrict an agent to read-only operations, block specific tools, or force interactive approval before the agent runs anything that mutates state?"
+    expected:
+      - permissions.md
+
+  - id: cas-hand-023
+    description: "Asking the user clarifying questions"
+    query: "When the agent needs human input mid-task — disambiguating a request, confirming an action, picking from multiple choices — what's the surface for issuing an interactive question and receiving the answer?"
+    expected:
+      - user-input.md
+
+  - id: cas-hand-024
+    description: "Production deployment shape"
+    query: "When I take the SDK from local prototype to production, what hosting topologies are documented, and what's the security posture for sandboxing the agent process?"
+    expected:
+      - hosting.md
+      - secure-deployment.md
+
+  - id: cas-hand-025
+    description: "Observability + tracing in production"
+    query: "How do I export agent traces, tool-call metrics, and lifecycle events to my OpenTelemetry-compatible observability stack so I can debug production agent behavior?"
+    expected:
+      - observability.md
+
+  - id: cas-hand-026
+    description: "Token usage and cost tracking"
+    query: "How do I monitor per-session token usage, estimate the dollar cost of agent runs, and configure prompt caching to reduce repeat-call cost?"
+    expected:
+      - cost-tracking.md
+
+  - id: cas-hand-027
+    description: "Todo-list tracking inside the agent"
+    query: "What's the canonical pattern for the agent to maintain its own task list across multi-step work, surfacing progress to the caller without re-emitting full state each step?"
+    expected:
+      - todo-tracking.md

@@ -1,0 +1,194 @@
+# claude-agent-sdk dev-lens seeds (per ADR-017)
+# Authored by Claude Opus 4.7 (1M context), 2026-05-02. Methodology + priming
+# per parent prompt; corpus + hand-baseline at sibling files.
+#
+# Reasoning shapes targeted: procedural ("how do I do X"), mechanism ("how
+# does Y work under the hood"), implementation-trace ("what code path handles
+# Z"), edge-case ("what happens when..."), schema-and-API ("what's the
+# contract / signature"). Vocabulary leans on tool names, parameter names,
+# class names, and code-shape terms a dev would type while implementing or
+# debugging against the SDK. Distinct angle from cas-hand-* baseline.
+
+seeds:
+  - id: cas-dev-001
+    description: "Hook output object precedence when multiple hooks fire"
+    query: "If three PreToolUse hooks return different permissionDecision values for the same call, which one wins and where is the tie-break documented — does deny always beat ask, defer, allow?"
+    expected:
+      - hooks.md
+
+  - id: cas-dev-002
+    description: "Async hook side-effect-only return shape"
+    query: "How do I return from a hook callback so the agent doesn't wait on my logging webhook to finish — what's the exact field name (async_ vs async) and timeout argument I emit?"
+    expected:
+      - hooks.md
+
+  - id: cas-dev-003
+    description: "Subagent input channel constraints"
+    query: "When the parent agent invokes a subagent through the Agent tool, what does the subagent see from the parent's conversation — does it inherit tool results, the parent system prompt, or only the prompt string the parent passed?"
+    expected:
+      - subagents.md
+
+  - id: cas-dev-004
+    description: "Detect that a streamed message originated inside a subagent"
+    query: "When iterating the message stream, which field on a message tells me it came from a subagent's execution context rather than the main agent — and what's the rename history of the tool name (Task vs Agent) I need to handle?"
+    expected:
+      - subagents.md
+
+  - id: cas-dev-005
+    description: "Custom tool error semantics that don't kill the loop"
+    query: "What's the difference between throwing from my tool handler and returning isError true — which one keeps the agent loop alive and lets Claude react to the failure?"
+    expected:
+      - custom-tools.md
+
+  - id: cas-dev-006
+    description: "Optional parameter pattern in @tool dict schema"
+    query: "The Python @tool decorator treats every key in the schema dict as required — what's the recommended workaround to mark a parameter optional (use args.get with a default and mention in description, or pass full JSON Schema)?"
+    expected:
+      - custom-tools.md
+
+  - id: cas-dev-007
+    description: "Returning images vs text from a tool handler"
+    query: "When my custom tool produces a PNG, what shape does the content array block need — base64 data field, mimeType, and is there a data URL prefix to include or strip?"
+    expected:
+      - custom-tools.md
+
+  - id: cas-dev-008
+    description: "tools array vs disallowed_tools layer distinction"
+    query: "What's the difference between omitting a built-in from the tools option versus listing it in disallowedTools — does one remove it from Claude's context entirely while the other just denies the call after Claude attempts it?"
+    expected:
+      - custom-tools.md
+      - permissions.md
+
+  - id: cas-dev-009
+    description: "Permission evaluation order across hooks, deny, mode, allow, callback"
+    query: "When Claude requests a tool, walk me through the rule-precedence pipeline the SDK runs — hooks first, then deny rules, then permission mode, then allow rules, then canUseTool — and where does bypassPermissions slot in?"
+    expected:
+      - permissions.md
+
+  - id: cas-dev-010
+    description: "Why allowedTools doesn't constrain bypassPermissions"
+    query: "I set allowedTools to Read only and permissionMode to bypassPermissions expecting a read-only agent — why does Claude still get to run Bash and Write, and what's the right combination to lock it down?"
+    expected:
+      - permissions.md
+
+  - id: cas-dev-011
+    description: "Switch permission mode mid-session via streaming"
+    query: "I want to start in default permission behavior, observe Claude's first few turns, then loosen to acceptEdits without restarting the query — what method (set_permission_mode / setPermissionMode) and which input mode supports it?"
+    expected:
+      - permissions.md
+
+  - id: cas-dev-012
+    description: "Detect content_block_delta text_delta inside StreamEvent"
+    query: "Inside the partial-message stream, where exactly do I find the actual text chunks — what's the nested type-check sequence (StreamEvent then content_block_delta then text_delta) and which event field carries the chars?"
+    expected:
+      - streaming-output.md
+
+  - id: cas-dev-013
+    description: "input_json_delta accumulation pattern for streaming tool calls"
+    query: "When tool input streams in piece by piece, what's the right accumulation pattern — listen for content_block_start to grab the tool name, then concat partial_json from input_json_delta deltas until content_block_stop?"
+    expected:
+      - streaming-output.md
+
+  - id: cas-dev-014
+    description: "Streaming-mode requirement for can_use_tool in Python"
+    query: "My Python can_use_tool callback never fires even though Claude is requesting tools that aren't in allowed_tools — does the Python SDK require streaming-input mode plus a dummy PreToolUse hook returning continue_ True to keep the channel open?"
+    expected:
+      - user-input.md
+      - streaming-vs-single-mode.md
+
+  - id: cas-dev-015
+    description: "AskUserQuestion answers payload shape"
+    query: "When AskUserQuestion fires, what shape does my callback return — keys are the question text, values are the selected option's label, multi-select joined by comma — and do I need to echo the original questions array back?"
+    expected:
+      - user-input.md
+
+  - id: cas-dev-016
+    description: "Resume-with-wrong-cwd silent failure"
+    query: "I pass resume with a known-good session ID and the agent starts fresh with no history instead — what's the most common cause (mismatched cwd because session files live under a path-encoded ~/.claude/projects/ directory)?"
+    expected:
+      - sessions.md
+
+  - id: cas-dev-017
+    description: "Fork creates new session ID; original untouched"
+    query: "If I pass forkSession true alongside resume, do I get a fresh session ID I have to capture separately, or does it overwrite the original's history — and which message do I read the new ID from?"
+    expected:
+      - sessions.md
+
+  - id: cas-dev-018
+    description: "Move session file across hosts via path-encoded jsonl"
+    query: "To pick up a session on a CI worker, where on disk do I copy the transcript file from and to — what's the exact path template under ~/.claude/projects/ and how is the cwd encoded?"
+    expected:
+      - sessions.md
+
+  - id: cas-dev-019
+    description: "Capturing checkpoint UUID requires replay-user-messages extraArg"
+    query: "My UserMessage objects come back with an undefined uuid even though I enabled enableFileCheckpointing — what extraArgs option do I need to pass so the checkpoint UUIDs actually appear in the response stream?"
+    expected:
+      - file-checkpointing.md
+
+  - id: cas-dev-020
+    description: "ProcessTransport not ready for writing on rewind after stream end"
+    query: "Calling rewindFiles() right after the for-await loop finishes throws ProcessTransport not ready for writing — what's the canonical fix (resume the session with an empty prompt, then call rewind on the new query handle)?"
+    expected:
+      - file-checkpointing.md
+
+  - id: cas-dev-021
+    description: "Bash-modified files invisible to checkpoint rewind"
+    query: "I told the agent to use sed -i to fix a config file and now rewindFiles isn't restoring it — does file checkpointing only track Write/Edit/NotebookEdit and ignore changes made through Bash entirely?"
+    expected:
+      - file-checkpointing.md
+
+  - id: cas-dev-022
+    description: "MCP tool naming pattern double-underscore convention"
+    query: "When I list MCP tools in allowedTools, what's the exact prefix string — three underscores or two — and what segments come between the server key and the tool's own name?"
+    expected:
+      - mcp.md
+      - custom-tools.md
+
+  - id: cas-dev-023
+    description: "Pass OAuth bearer to remote MCP server via headers"
+    query: "After I complete an OAuth2 dance in my app and have an access token, where in the mcpServers config object does the Authorization Bearer header go for an http transport server?"
+    expected:
+      - mcp.md
+
+  - id: cas-dev-024
+    description: "Deduplicate parallel tool calls by message ID for accurate token counts"
+    query: "Why am I double-counting tokens — Claude ran four tools in parallel and I'm seeing four assistant messages with identical usage; what's the ID-based dedup pattern the docs recommend?"
+    expected:
+      - cost-tracking.md
+
+  - id: cas-dev-025
+    description: "Per-model usage breakdown when subagents use a different model"
+    query: "My main agent runs Opus and subagents run Sonnet — which field on the result message gives me the per-model token and cost split (modelUsage / model_usage), and what fields does each entry carry?"
+    expected:
+      - cost-tracking.md
+
+  - id: cas-dev-026
+    description: "Extend prompt cache TTL from 5min to 1hr via env var"
+    query: "Short sessions against the same system prompt keep paying full input price because the cache expires — what environment variable extends the prompt-cache TTL, and what's the trade-off on write cost?"
+    expected:
+      - cost-tracking.md
+
+  - id: cas-dev-027
+    description: "OTLP exporter requires ENABLE_TELEMETRY plus per-signal exporter env"
+    query: "I exported OTEL_EXPORTER_OTLP_ENDPOINT but my collector never receives any spans — what's the master enable flag (CLAUDE_CODE_ENABLE_TELEMETRY) and which extra env var lights up traces specifically (the beta one)?"
+    expected:
+      - observability.md
+
+  - id: cas-dev-028
+    description: "Don't set console exporter when running through SDK"
+    query: "Why does the docs explicitly warn against setting OTEL_TRACES_EXPORTER to console when running under the Agent SDK — does the SDK use stdout as its message channel and the console exporter would corrupt it?"
+    expected:
+      - observability.md
+
+  - id: cas-dev-029
+    description: "Auto-injected TRACEPARENT links agent run into application trace"
+    query: "If my Node service has an active OpenTelemetry span when it calls query(), do the agent's claude_code.interaction spans automatically nest under it — what env var (TRACEPARENT) does the SDK propagate into the CLI subprocess?"
+    expected:
+      - observability.md
+
+  - id: cas-dev-030
+    description: "ENABLE_TOOL_SEARCH auto threshold percentage syntax"
+    query: "I want tool search to stay off when my MCP servers are tiny but kick in once tool definitions exceed 5 percent of the context window — what's the exact env var value syntax (auto:5) and where do I set it (env option on query)?"
+    expected:
+      - tool-search.md

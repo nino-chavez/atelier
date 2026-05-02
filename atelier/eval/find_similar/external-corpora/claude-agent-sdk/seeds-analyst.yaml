@@ -1,0 +1,212 @@
+# claude-agent-sdk analyst-lens seeds (per ADR-017)
+# Authored by Claude Opus 4.7 (1M context), 2026-05-02. Methodology + priming
+# per parent prompt; corpus + hand-baseline at sibling files.
+#
+# Reasoning shape: descriptive ("what is X for"), comparative ("how does X
+# relate to Y"), boundary ("is X in scope or excluded"), context-seeking
+# ("what's the rationale, what came before this decision"). Queries an
+# analyst evaluating the Agent SDK as a build option for their team would
+# issue while researching market positioning, scope boundaries, comparative
+# trade-offs, and prior-art relationships.
+#
+# Methodology rules (parent prompt; M5 audit lineage):
+#   - Query paraphrases the topic but preserves a 2-3 keyword bridge to the
+#     canonical answer body. No verbatim title echo.
+#   - Expected lists ONLY canonical answers. Foundational/conceptual docs
+#     that share vocabulary but don't directly answer the question are
+#     EXCLUDED.
+#   - Minimum 2 expected per seed where the topology supports it; single-doc
+#     topics ship with 1 expected.
+#   - No duplication of cas-hand-001 to cas-hand-027; overlapping topics
+#     use a different angle.
+#
+# Expected paths are corpus-relative (filename only) so the eval runner can
+# match against the embedded sourceRef without a path-prefix step.
+
+seeds:
+  - id: cas-analyst-001
+    description: "Three-way positioning against Client SDK and Managed Agents"
+    query: "How does the agent-loop wrapper position itself against the lower-level direct-API client on one side and the Anthropic-hosted sandbox-per-session offering on the other, and which deployment shape is each best for?"
+    expected:
+      - overview.md
+
+  - id: cas-analyst-002
+    description: "Rename rationale and scope expansion beyond coding"
+    query: "Why was the package family rebranded away from the coding-specific name, and what broader agent categories does the new framing cover that the old name implicitly excluded?"
+    expected:
+      - migration-guide.md
+
+  - id: cas-analyst-003
+    description: "CLI vs library trade-off as use-case axis"
+    query: "When the same underlying capabilities are exposed through both a terminal binary and a programmatic library, what use-case axis decides which surface a team should pick — interactive vs CI/CD vs production automation?"
+    expected:
+      - overview.md
+
+  - id: cas-analyst-004
+    description: "What ships in box vs requires user wiring"
+    query: "Which agent capabilities are bundled and immediately callable out of the box (file ops, web fetch, shell), and which ones require the developer to wire up external infrastructure or code their own definitions?"
+    expected:
+      - overview.md
+      - agent-loop.md
+
+  - id: cas-analyst-005
+    description: "V1 vs V2 TypeScript surface — when to adopt which"
+    query: "What's the substantive design shift from the async-generator stable interface to the session-based send-and-stream preview, and what blocks an analyst from defaulting to the newer surface for a greenfield project today?"
+    expected:
+      - typescript-v2-preview.md
+
+  - id: cas-analyst-006
+    description: "Settings-source default reversal — current-state policy"
+    query: "Did the v0.1.0 isolation default of not loading filesystem settings actually stick, and what's the current-release behavior an analyst should plan against for predictable CI/CD environments?"
+    expected:
+      - migration-guide.md
+      - claude-code-features.md
+
+  - id: cas-analyst-007
+    description: "Where the system prompt comes from after the rename"
+    query: "After the breaking change that stopped using Claude Code's persona by default, what are the three options for re-establishing a system prompt and how do they compose with project CLAUDE.md content?"
+    expected:
+      - migration-guide.md
+      - modifying-system-prompts.md
+
+  - id: cas-analyst-008
+    description: "Boundary: subagents nesting"
+    query: "Can a delegated specialized agent itself spawn further specialized agents below it, or is the delegation hierarchy capped at one level — and what's the rationale for whichever constraint applies?"
+    expected:
+      - subagents.md
+
+  - id: cas-analyst-009
+    description: "Boundary: parent context bleed into subagents"
+    query: "When the main agent delegates to a focused subagent, does the subagent inherit the parent's conversation transcript, prior tool results, or system prompt — and what is the only channel the parent can use to pass information in?"
+    expected:
+      - subagents.md
+
+  - id: cas-analyst-010
+    description: "Permission evaluation order across surfaces"
+    query: "When a tool call comes in, in what order are the various gates evaluated — hooks, deny lists, mode rules, allow lists, and the runtime approval callback — and which gates can a 'bypass everything' mode actually override?"
+    expected:
+      - permissions.md
+
+  - id: cas-analyst-011
+    description: "Boundary: bypassPermissions interaction with allow list"
+    query: "Does pre-approving a narrow allow-list of tools constrain the unrestricted permission mode to that subset, or does the unrestricted mode approve every tool regardless of what was allow-listed?"
+    expected:
+      - permissions.md
+
+  - id: cas-analyst-012
+    description: "Subagent inheritance of parent permission mode"
+    query: "If the parent agent runs under acceptEdits or bypassPermissions, do delegated subagents inherit that posture automatically, and can each subagent override its own permission mode independently of the parent?"
+    expected:
+      - permissions.md
+
+  - id: cas-analyst-013
+    description: "Comparative: skills vs subagents vs custom tools"
+    query: "When extending the agent with new behavior, what's the discriminator between defining a model-invoked filesystem capability, spawning a focused agent instance with its own prompt, and registering an in-process function-as-tool?"
+    expected:
+      - skills.md
+      - subagents.md
+      - custom-tools.md
+
+  - id: cas-analyst-014
+    description: "Boundary: skills programmatic registration"
+    query: "Can a host application register a specialized capability purely in code at query time, or must that capability be materialized as a SKILL.md filesystem artifact that the SDK discovers via setting sources?"
+    expected:
+      - skills.md
+
+  - id: cas-analyst-015
+    description: "Comparative: plugins vs raw SDK options"
+    query: "What does packaging commands, agents, hooks, and MCP servers as a loadable plugin bundle give a host app that simply passing the same items inline to query options does not?"
+    expected:
+      - plugins.md
+
+  - id: cas-analyst-016
+    description: "Context-seeking: tool-search activation rationale"
+    query: "What's the empirical justification for dynamically loading tool definitions on-demand instead of preloading them all — both the context-budget cost and the model-accuracy degradation curve as tool counts grow?"
+    expected:
+      - tool-search.md
+
+  - id: cas-analyst-017
+    description: "Boundary: tool-search model gating"
+    query: "Which Claude model families actually support the on-demand tool-loading mechanism, and which generations or tiers (e.g., smaller/older models) are excluded from using it?"
+    expected:
+      - tool-search.md
+
+  - id: cas-analyst-018
+    description: "Comparative: continue vs resume vs fork"
+    query: "Across the three ways to return to an existing conversation — picking up the most recent in the directory, jumping to a specific stored ID, or branching off a copy — which one fits multi-user apps where many parallel sessions exist?"
+    expected:
+      - sessions.md
+
+  - id: cas-analyst-019
+    description: "Boundary: sessions persistence and disk writes"
+    query: "Does every invocation write conversation state to local disk by default, and is there a stateless mode where the session lives only in memory for ephemeral or lambda-style deployments?"
+    expected:
+      - sessions.md
+
+  - id: cas-analyst-020
+    description: "Comparative: sessions vs file checkpointing"
+    query: "What's the conceptual split between snapshotting the conversation history versus snapshotting the filesystem mutations the agent made, and why are the two persistence layers kept separate rather than fused?"
+    expected:
+      - sessions.md
+      - file-checkpointing.md
+
+  - id: cas-analyst-021
+    description: "Boundary: which file mutations checkpointing tracks"
+    query: "If the agent edits files via the structured Edit/Write tools the system tracks revertible snapshots, but what happens to mutations performed indirectly through shell redirection or sed — are those captured in the rollback graph?"
+    expected:
+      - file-checkpointing.md
+
+  - id: cas-analyst-022
+    description: "Comparative: cost-tracking SDK fields vs authoritative billing"
+    query: "How reliable are the per-call cost estimates the SDK exposes in the result message, and where should an analyst look for ground-truth billing numbers when those client-side estimates can drift?"
+    expected:
+      - cost-tracking.md
+
+  - id: cas-analyst-023
+    description: "Where telemetry actually originates"
+    query: "When the SDK exports OpenTelemetry traces and metrics, is the SDK process itself producing the spans, or is it passing configuration through to a child process that owns the instrumentation?"
+    expected:
+      - observability.md
+
+  - id: cas-analyst-024
+    description: "Comparative: hosting patterns — ephemeral vs long-running"
+    query: "When choosing a production deployment shape, what workload signal pushes a team toward spinning up a fresh container per task versus maintaining persistent agent containers handling many requests over time?"
+    expected:
+      - hosting.md
+
+  - id: cas-analyst-025
+    description: "Comparative: secure-deployment isolation tiers"
+    query: "Across the spectrum of OS-level sandbox runtimes, plain Docker containers, syscall-intercepting userspace kernels, and microVMs, what's the security-vs-performance trade-off curve a multi-tenant operator should reason about?"
+    expected:
+      - secure-deployment.md
+
+  - id: cas-analyst-026
+    description: "Boundary: credential exposure and the proxy pattern"
+    query: "Why is the recommended production pattern to inject API keys via an external proxy rather than handing them to the agent process, and what specific risks does keeping credentials outside the agent's security boundary mitigate?"
+    expected:
+      - secure-deployment.md
+
+  - id: cas-analyst-027
+    description: "Comparative: streaming-input mode vs single-message mode capabilities"
+    query: "Which agent capabilities — image attachments, mid-flight interruption, message queueing, hook integration — are exclusive to the long-lived streaming session and outright unavailable to the simpler one-shot invocation?"
+    expected:
+      - streaming-vs-single-mode.md
+
+  - id: cas-analyst-028
+    description: "Boundary: which inputs setting-sources cannot disable"
+    query: "Even when a deployment passes an empty setting-sources list to opt out of user/project/local config, which host-level inputs (managed policy, global config, auto-memory) are still read regardless and require separate disable steps?"
+    expected:
+      - claude-code-features.md
+
+  - id: cas-analyst-029
+    description: "Permission-mode rationale: plan vs dontAsk vs default"
+    query: "Across the available permission postures, what's the use-case fit between a no-execution analyze-only mode, a hard-deny-anything-unlisted mode, and the standard mode that defers unmatched calls to a runtime callback?"
+    expected:
+      - permissions.md
+      - agent-loop.md
+
+  - id: cas-analyst-030
+    description: "Why automatic compaction exists and what it loses"
+    query: "When the conversation grows past the context-window limit, the SDK summarizes old turns to free space — what's the rationale for doing this automatically, and what categories of early-conversation instruction risk being dropped in the summary?"
+    expected:
+      - agent-loop.md

@@ -74,7 +74,7 @@ For audit traceability, this is the M6 PR catalog. All commits since `b5206ce` (
 
 Validator output: 92 issues across 3 FAIL check classes (`trace_id_resolution`, `markdown_link_integrity`, `traceability_coverage`); 2 INFO check classes (`open_questions_hygiene`, `adr_reeval_trigger_check`).
 
-Of the 92 issues: ~85 are M1-exit F1 root-cause (traceability.json `entries[]` missing US-X.Y stories so citations don't resolve). The remaining ~7 are markdown link integrity issues in the M0-exit and M1-exit audit docs themselves (NF-12 references in walk steps; not load-bearing for M6).
+Of the 92 issues: ~85 are M1-exit F1 root-cause (traceability.json `entries[]` missing US-X.Y stories so citations don't resolve). The remaining ~7 are markdown link integrity issues in the M0-exit and M1-exit audit docs themselves (synthetic non-functional-requirement trace IDs in walk-step fixtures; not load-bearing for M6).
 
 **No new drift introduced by M6.**
 

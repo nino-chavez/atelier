@@ -16,6 +16,7 @@
 import type { Pool } from 'pg';
 import { dispatch } from '../../../../scripts/endpoint/lib/dispatch.ts';
 import type {
+  AtelierClient,
   ContributionKind,
   ContributionState,
 } from '../../../../scripts/sync/lib/write.ts';
@@ -92,6 +93,31 @@ export interface ReviewQueueEntry extends ContributionEntry {
   territoryName: string;
 }
 
+export interface FeedbackEntry {
+  id: string;
+  source: string;
+  externalCommentId: string;
+  externalAuthor: string;
+  commentText: string;
+  category: string;
+  confidence: number;
+  signals: string[];
+  bodyMarkdown: string;
+  suggestedAction: string;
+  discipline: 'implementation' | 'research' | 'design';
+  territoryId: string;
+  territoryName: string | null;
+  reviewRole: string | null;
+  createdAt: Date;
+  /**
+   * True when the viewer's discipline matches the territory's review_role
+   * (or owner_role when review_role is null per ADR-025). Drives whether
+   * the panel renders the approve/reject affordances or shows a
+   * "routed to <role>" hint.
+   */
+  routedToViewer: boolean;
+}
+
 export interface LensViewer {
   composerId: string;
   composerName: string;
@@ -115,6 +141,7 @@ export interface LensViewModel {
   locks: LockEntry[];
   contracts: ContractEntry[];
   reviewQueue: ReviewQueueEntry[];
+  feedbackQueue: FeedbackEntry[];
   staleAsOf: Date;
 }
 
@@ -171,6 +198,7 @@ export async function loadLensViewModel(
     locks,
     contracts,
     reviewQueue,
+    feedbackQueue,
   ] = await Promise.all([
     loadViewerInfo(pool, auth.composerId, auth.projectId),
     loadTerritories(pool, auth.projectId, auth.discipline),
@@ -179,6 +207,7 @@ export async function loadLensViewModel(
     loadLocks(pool, auth.projectId),
     loadContracts(pool, auth.projectId),
     loadReviewQueue(pool, auth.projectId, auth.discipline),
+    loadFeedbackQueue(deps.client, auth.projectId, auth.discipline),
   ]);
 
   return {
@@ -206,6 +235,7 @@ export async function loadLensViewModel(
       locks,
       contracts,
       reviewQueue,
+      feedbackQueue,
       staleAsOf: ctx.stale_as_of,
     },
   };
@@ -499,4 +529,55 @@ async function loadReviewQueue(
     updatedAt: r.updated_at,
     reviewRole: r.review_role,
   }));
+}
+
+// =========================================================================
+// Feedback queue (M6 / ADR-018 / migration 9)
+// =========================================================================
+//
+// Loads pending triage_pending rows via AtelierClient.triagePendingList
+// (the panel-side wrapper around migration 9's table). Each row is
+// shaped into a FeedbackEntry that the panel renders. The
+// `routedToViewer` flag (computed client-side from the viewer's
+// discipline + the territory's review_role) drives whether the panel
+// shows approve/reject affordances or just a "routed to <role>" hint.
+//
+// Same data layer pattern as loadReviewQueue: panel reads from the
+// derived view-model; server actions (approve/reject) call back into
+// AtelierClient via the dispatcher.
+
+async function loadFeedbackQueue(
+  client: AtelierClient,
+  projectId: string,
+  viewerDiscipline: string | null,
+): Promise<FeedbackEntry[]> {
+  const rows = await client.triagePendingList({ projectId });
+  return rows.map((r) => {
+    // Per ADR-025 review_role is nullable; falls back to owner_role.
+    // Without owner_role here we conservatively use review_role only;
+    // the server action's territory check is the load-bearing one.
+    const requiredRole = r.territoryReviewRole;
+    const routedToViewer =
+      viewerDiscipline !== null &&
+      requiredRole !== null &&
+      requiredRole === viewerDiscipline;
+    return {
+      id: r.id,
+      source: r.commentSource,
+      externalCommentId: r.externalCommentId,
+      externalAuthor: r.externalAuthor,
+      commentText: r.commentText,
+      category: r.classification.category,
+      confidence: r.classification.confidence,
+      signals: r.classification.signals,
+      bodyMarkdown: r.draftedProposal.bodyMarkdown,
+      suggestedAction: r.draftedProposal.suggestedAction,
+      discipline: r.draftedProposal.discipline,
+      territoryId: r.territoryId,
+      territoryName: r.territoryName,
+      reviewRole: r.territoryReviewRole,
+      createdAt: r.createdAt,
+      routedToViewer,
+    };
+  });
 }

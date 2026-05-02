@@ -247,3 +247,79 @@ review:
     # Project-specific check classes can be added under
     # scripts/traceability/checks/<check_name>.mjs and registered here.
     custom_checks: []
+
+  # Semantic contradiction validator hook (BRD-OPEN-QUESTIONS section 22).
+  #
+  # Reserved at v1; implementation deferred to v1.x per the M7 strategic
+  # call ("schema reservation only -- not implementation"). Catches semantic
+  # drift the syntactic validator misses ("this new ADR contradicts the
+  # NORTH-STAR" / "this contribution implements the opposite of the cited
+  # BRD story"). Implementation will use the OpenAI-compatible adapter
+  # surface from ADR-041 (same API contract; different prompt) so swap-out
+  # follows the existing named-adapter pattern.
+  #
+  # Why reserved now:
+  #
+  #   - Adopters who fork at v1 don't need a schema migration to enable
+  #     the v1.x validator -- the config slot exists from day one.
+  #   - The validator's check_class identifier (`semantic_contradiction`)
+  #     is documented in scripts/README.md "Extended cross-doc consistency"
+  #     so adopters can predict where it will plug in.
+  #   - Adopters running v1 with `enabled: false` (default) experience
+  #     identical behavior to current v1: the validator skips the check
+  #     class entirely. No latency cost, no token cost, no failure mode
+  #     to learn.
+  #
+  # When v1.x lands the implementation:
+  #
+  #   - The adapter pattern matches `find_similar.embeddings` (per
+  #     ADR-041): an OpenAI-compatible base_url + api_key_env + model.
+  #     Adopters using a different LLM provider (Anthropic, Mistral,
+  #     vLLM, etc.) override base_url + model_name; the adapter code
+  #     does not change.
+  #   - Default scope: PRs touching docs/architecture/decisions/ and
+  #     docs/functional/BRD.md (where contradiction risk is highest).
+  #     Code PRs not enabled at v1.x default.
+  #   - Output: per-PR comment listing potential contradictions with
+  #     citations. Advisory at v1.x; promotion to blocking is per-project
+  #     policy based on observed false-positive rate (mirrors the
+  #     advisory/blocking gate split per ADR-043).
+  #
+  # Adopters who want to enable today (against an LLM endpoint of their
+  # choice) override `enabled: true` plus the model fields. The validator
+  # will then call the configured LLM at the documented runtime; until
+  # the v1.x implementation lands, the call is a no-op stub that always
+  # returns "no contradictions found" (so enabling early doesn't break
+  # CI -- it just costs nothing and finds nothing).
+  semantic_contradiction:
+    enabled: false
+    # Scope: which PR-touching paths trigger the check (when enabled).
+    # Default scope mirrors the v1.x recommendation per BRD section 22.
+    scope_paths:
+      - "docs/architecture/decisions/**"
+      - "docs/functional/BRD.md"
+      - "docs/strategic/NORTH-STAR.md"
+    # Mode: advisory (warn, never block) | blocking (fail PR on detected
+    # contradiction). Advisory is the v1.x default; blocking is opt-in
+    # for projects with calibrated false-positive rates.
+    mode: advisory
+    # OpenAI-compatible adapter config (same shape as find_similar.embeddings
+    # per ADR-041; v1.x implementation will read these).
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "OPENAI_API_KEY"
+    model_name: "gpt-4o-mini"
+    # Anchors: which canonical-state docs the validator compares the
+    # changed content against (loaded into the LLM prompt as context).
+    # Adopters can tighten or loosen this list; the v1.x default
+    # balances signal vs prompt-cost.
+    anchor_paths:
+      - "docs/strategic/NORTH-STAR.md"
+      - "docs/strategic/STRATEGY.md"
+      - "docs/functional/PRD.md"
+      - "docs/architecture/ARCHITECTURE.md"
+      - "docs/architecture/decisions/README.md"
+    # Confidence threshold below which findings are suppressed. The LLM
+    # returns a per-finding confidence; v1.x default of 0.7 is a common
+    # advisory-tier threshold (flag obvious contradictions; let the
+    # human decide on subtle ones).
+    confidence_threshold: 0.7

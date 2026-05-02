@@ -55,7 +55,12 @@ export default function PanelHost({
     case 'contracts':
       return <ContractsPanel contracts={viewModel.contracts} territories={viewModel.territories} />;
     case 'feedback_queue':
-      return <FeedbackQueuePanel />;
+      return (
+        <FeedbackQueuePanel
+          entries={viewModel.feedbackQueue}
+          viewerDiscipline={viewModel.viewer.discipline}
+        />
+      );
     case 'recent_decisions':
       return (
         <RecentDecisionsPanel

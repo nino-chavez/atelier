@@ -282,6 +282,28 @@ telemetry
   duration_ms
   metadata (jsonb)
   created_at
+
+triage_pending                                                          -- M6 / migration 9; per ADR-018 (triage never auto-merges) + ARCH 6.5.2
+  id (uuid, pk)
+  project_id (fk)
+  comment_source (github | jira | linear | figma | confluence | notion | manual)
+  external_comment_id (text)                                            -- idempotency key with (project_id, comment_source) per migration 9
+  external_author (text)
+  comment_text (text)
+  comment_context (jsonb)                                               -- territory-scope hints (e.g., scope_kind for the review_role lens)
+  received_at (timestamp)
+  classification (jsonb)                                                -- latest Classification record from scripts/sync/triage/classifier.ts; re-classification UPDATEs in place
+  drafted_proposal (jsonb)                                              -- DraftedProposal record from scripts/sync/triage/drafter.ts
+  territory_id (fk)                                                     -- routing target captured at draft time
+  triage_session_id (fk to sessions, nullable, ON DELETE SET NULL)      -- ADR-036 (operational; reaper-survivable)
+  created_at
+  routed_to_contribution_id (fk to contributions, nullable, ON DELETE SET NULL)  -- set on human approval; mutually exclusive with rejected_at
+  rejected_at (timestamp, nullable)                                     -- set on human rejection; mutually exclusive with routed_to_contribution_id
+  rejection_reason (text, nullable)
+  decided_by_composer_id (fk to composers, nullable, ON DELETE SET NULL) -- ADR-036 (immortal decider attribution; required whenever either decision column is set)
+  CONSTRAINT triage_pending_decision_pair (NOT (routed_to_contribution_id IS NOT NULL AND rejected_at IS NOT NULL))
+  CONSTRAINT triage_pending_decided_has_composer ((routed_to_contribution_id IS NULL AND rejected_at IS NULL) OR decided_by_composer_id IS NOT NULL)
+  UNIQUE (project_id, comment_source, external_comment_id)              -- idempotency key
 ```
 
 ### 5.2 Key indexes
@@ -298,6 +320,10 @@ telemetry
 | decisions | GIN (trace_ids) | Trace-scoped decision lookup (ADR-021) |
 | contributions | GIN (trace_ids) | Trace-scoped contribution lookup (ADR-021) |
 | telemetry | (project_id, action, created_at DESC) | Observability queries |
+| triage_pending | (project_id, created_at DESC) WHERE routed_to_contribution_id IS NULL AND rejected_at IS NULL | FeedbackQueuePanel default view; pending-only filter keeps the index hot as the rejected archive grows (per migration 9) |
+| triage_pending | (project_id, created_at DESC) WHERE routed_to_contribution_id IS NOT NULL OR rejected_at IS NOT NULL | Decided-archive audit-trail queries |
+| triage_pending | (territory_id) WHERE routed_to_contribution_id IS NULL AND rejected_at IS NULL | Territory-scoped routing for the review_role lens (ADR-025) |
+| triage_pending | GIN (comment_context) | Context-shape queries (e.g., scope_kind=design_component for the designer lens) |
 
 ### 5.3 Authorization (row-level)
 
@@ -308,6 +334,7 @@ telemetry
 - `decisions`: append-only (policy rejects UPDATE and DELETE). Authorship checked against `author_composer_id` (per ADR-036).
 - `locks`: writes restricted to the lock's `holder_composer_id` (per ADR-036). Reads are project-scoped.
 - `contracts`: writes restricted to territory-owner role; reads are project-scoped.
+- `triage_pending` (M6 / migration 9): service-role-only at v1 (the triage poll process is the only writer; FeedbackQueuePanel reads through the same backend handler with its own composer JWT). Per-composer RLS policies are deferred to the M7 JWT-mapped RLS pass alongside the other tables. Reads are project-scoped via the FeedbackQueuePanel server action's project selector.
 
 ### 5.4 Vector index
 

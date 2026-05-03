@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-05-02 (sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral alongside the 12-command CLI polish PR; sections 21, 22, 23, 29 are the genuinely-open list)
+**Last updated:** 2026-05-02 (sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral alongside the 12-command CLI polish PR; section 30 ADDED as push-notification observability-alerting v1.x deferral alongside the M7 Track 1 observability stack PR; sections 21, 22, 23, 29, 30 are the genuinely-open list)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -175,6 +175,35 @@ This works for adopters who cloned recently and have minimal local divergence. I
 4. CHANGELOG convention enforcement: every template change that affects adopter projects requires a corresponding migration script + CHANGELOG entry
 
 **Status.** OPEN. Scope-deferred to v1.x with the trigger above. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form ships as a scope-deferred stub).
+
+---
+
+### 30 · Push-notification alerting via messaging adapter (out-of-band observability delivery)
+
+**Scenario.** ARCH §8.3 specifies messaging-adapter-published alerts when observability thresholds cross (sync lag > NFR thresholds, find_similar precision regression > 5%, reaper rate spike, authentication failure spike). The M7 Track 1 observability stack ships UI-rendered alerts only — the dashboard at `/atelier/observability` colors threshold pills (yellow at 80% of envelope, red at 100%) per `.atelier/config.yaml: observability.thresholds`, but does not push out-of-band notifications to messaging surfaces (Slack, Teams, Discord, email). v1 ships visibility-in-UI; out-of-band delivery is filed for v1.x.
+
+**Why deferred to v1.x:**
+
+- Same lens as the contributions-panel and find_similar deferrals: ship the substrate (UI-visible alerts that operators can actually see), let adopter signal inform the delivery shape rather than pre-deciding before any adopter has voiced what they want notified about.
+- Channel coverage matters: messaging-adapter delivery means picking which channels are first-class (Slack? Teams? Discord? Generic webhook?) and which thresholds are noisy by default. Pre-deciding without operator feedback risks both omission (missing the channel adopters use) and churn (an early decision needing reversal once signal arrives).
+- The substrate hooks already exist: telemetry rows are queryable, thresholds are configurable, the dashboard shows the alert state. Adding a messaging-adapter publisher is additive — no schema change, no breaking config rename. v1.x lands the publisher when the trigger fires.
+
+**Trigger to land:** first adopter requests out-of-band ops alerts with a named channel preference. Until then, operator practice is dashboard polling — the 30s client-poll on `/atelier/observability` keeps the UI close to real-time, and the threshold pills surface state visibly enough that a tab open during ops review covers the operational case.
+
+**v1 deliverables that already shipped (M7 Track 1):**
+
+- `.atelier/config.yaml: observability.thresholds` block — adopter-tunable values for the 10 envelope dimensions (sessions, contributions, decisions, locks, vector rows, triage backlog, sync lag p95, daily cost)
+- `/atelier/observability` route — admin-gated 8-section dashboard rendering threshold pills + 30s client-poll + manual refresh button
+- Severity calculator in `prototype/src/lib/atelier/observability-config.ts` — single source for the 80%/100% color bands, ready for the v1.x messaging-adapter publisher to consume
+
+**v1.x deliverables (when triggered):**
+
+1. Messaging-adapter publisher: poll the same view-model the dashboard reads, fire when severity transitions from `ok` → `warn` or `warn` → `alert` (debounced — no continuous reposting while a metric stays in the same band)
+2. Per-threshold channel routing: `.atelier/config.yaml: observability.alerts.<metric>.channel` so adopters can route different signals to different channels (cost spike → finance Slack channel, reaper spike → ops on-call)
+3. Quiet hours + acknowledgment: respect operator-set quiet windows; allow ack from the messaging surface to suppress repeat notifications until the next state transition
+4. Backoff on flap: exponential backoff when a metric oscillates between `warn` and `alert` (reduces alert fatigue from noisy thresholds)
+
+**Status.** OPEN. v1 ships UI alerts; out-of-band delivery deferred to v1.x with the adopter-signal trigger above. Filed 2026-05-02 as part of the M7 Track 1 observability stack PR.
 
 ---
 

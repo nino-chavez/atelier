@@ -5,15 +5,17 @@
 // distinct message so the operator (or a developer running the smoke
 // test) can debug which step failed.
 
-import type { LensId } from '../../../lib/atelier/lens-config.ts';
 import styles from './LensUnauthorized.module.css';
 
+// `lensId` is a display label here (rendered into the eyebrow); the
+// /atelier/observability surface reuses this component with id="observability"
+// so the type is widened from `LensId` to plain string.
 export default function LensUnauthorized({
   lensId,
   reason,
   message,
 }: {
-  lensId: LensId;
+  lensId: string;
   reason: 'no_bearer' | 'invalid_bearer' | 'no_composer';
   message: string;
 }) {

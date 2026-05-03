@@ -3,7 +3,7 @@
 **Companion to:** `NORTH-STAR.md`, `../functional/PRD.md`, `../functional/BRD.md`
 **Status:** Draft v1.0
 **Owner:** Nino Chavez
-**Last updated:** 2026-04-27
+**Last updated:** 2026-05-03
 **Related:** `../architecture/decisions`, `../functional/PRD-COMPANION.md`, `../functional/BRD-OPEN-QUESTIONS.md`
 
 ---
@@ -39,9 +39,11 @@ The reference impl runs on **GitHub + Supabase (Postgres + Realtime + Auth + pgv
 
 ## 3. The recursion check
 
-Atelier dogfoods itself. From **M1** onward, every contribution toward building Atelier is tracked *in* Atelier — through M1's thin schema and sync substrate. From **M2** onward, those contributions are written through the endpoint rather than directly. From **M5** onward, every contribution is checked via find_similar against the corpus. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.
+Atelier dogfoods itself. The bootstrap inflection point is **M5-exit / M6 onward** per ADR-044: build sessions become MCP clients of the substrate, contributions write through the endpoint, find_similar advisory checks fire against the corpus on PRs. Before that point, the substrate was being *built* — not used to coordinate its own build — through markdown + git + per-session human/agent review.
 
-**At each milestone, ask:** "Did we use the previous milestone to coordinate building this one?" If the answer is no, dogfooding has drifted and the milestone is suspect.
+**Honest read on M0-M5:** the four-table schema landed at M1 and the endpoint at M2, but build-session attribution into `contributions` rows did not begin until M6 (per ADR-044). The original "from M1 onward" / "from M2 onward" framing in earlier drafts of this section overstated the dogfood timeline; ADR-044 codified the actual inflection point and this section now reflects it. By **M6**, the analyst case from `BRD-OPEN-QUESTIONS §1` is not a hypothetical — it is the artifact that produces M7.
+
+**At each milestone from M6 forward, ask:** "Did we use the previous milestone to coordinate building this one?" If the answer is no, dogfooding has drifted and the milestone is suspect. M0-M5 are exempt from this check by ADR-044's design (the substrate was not yet adopter-ready for self-coordination).
 
 This is also the strongest disconfirming test available before public release. A reference implementation that cannot run its own development is unlikely to run anyone else's.
 
@@ -51,15 +53,15 @@ This is also the strongest disconfirming test available before public release. A
 
 | ID | Title | Bootstrap function | Status |
 |---|---|---|---|
-| **M0** | Methodology | Repo + git + markdown is the starting substrate | **Done** (2026-04-24) |
-| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) + adapter interface + GitHub adapter | Sync scripts run against real persistence; dogfooding ignition point | **Done** (2026-04-29; see `../architecture/audits/milestone-M1-exit.md`) |
-| **M1.5** | Remaining external adapters (Jira, Linear, Confluence, Notion, Figma) | Full v1 adapter coverage; sequenced after M1 to avoid blocking dogfooding ignition | Planned |
-| **M2** | 12-tool endpoint + fenced locks + remaining schema (5 tables) | Coordination substrate goes live; agents coordinate through the endpoint | Planned |
-| **M3** | Prototype shell + `/atelier` + 5 lenses | The dashboard you build is the dashboard you use | Planned |
-| **M4** | Multi-composer concurrency (real broadcast) | Concurrent authoring is observable and conflict-safe | Planned |
-| **M5** | find_similar + eval harness + CI gate | Disconfirming test on the commercial wedge fires | Planned |
-| **M6** | Remote-principal composers + triage | Analyst case executes through Atelier itself | Planned |
-| **M7** | Hardening + open-ADR resolution | Reference implementation is publication-ready | Planned |
+| **M0** | Methodology | Repo + git + markdown is the starting substrate | **Done** (2026-04-24; see `../architecture/audits/milestone-M0-exit.md`) |
+| **M1** | SDLC sync substrate (5 scripts) + thin schema (4 tables) + adapter interface + GitHub adapter | Sync scripts run against real persistence | **Done** (2026-04-29; see `../architecture/audits/milestone-M1-exit.md`) |
+| **M1.5** | Remaining external adapters (Jira, Linear, Confluence, Notion, Figma) | Full v1 adapter coverage | **Deferred to v1.x** (adopter-signal trigger; see §M1.5 below) |
+| **M2** | 12-tool endpoint + fenced locks + remaining schema (5 tables) | Coordination substrate goes live; agents coordinate through the endpoint | **Done** (~2026-04-30; no per-milestone exit audit; backfilled by M7-exit sweep covering the full M2-M7 substrate) |
+| **M3** | Prototype shell + `/atelier` + 5 lenses | The dashboard you build is the dashboard you use | **Done** (~2026-04-30; no per-milestone exit audit; backfilled by M7-exit sweep) |
+| **M4** | Multi-composer concurrency (real broadcast) | Concurrent authoring is observable and conflict-safe | **Done** (~2026-05-01; no per-milestone exit audit; backfilled by M7-exit sweep) |
+| **M5** | find_similar + eval harness + CI gate | Disconfirming test on the commercial wedge fires | **Done** (2026-05-01; no per-milestone exit audit; calibration captured in ADR-042/043; reframed by ADR-047) |
+| **M6** | Remote-principal composers + triage | Analyst case executes through Atelier itself; bootstrap inflection point per ADR-044 | **Done** (2026-05-02; see `../architecture/audits/milestone-M6-exit.md`) |
+| **M7** | Hardening + open-ADR resolution | Reference implementation is publication-ready | **Audit complete** (2026-05-03; see `../architecture/audits/milestone-M7-exit.md`); Playwright IA/UX suite is the remaining exit gate per PR #40 |
 
 ---
 
@@ -111,7 +113,17 @@ The traceability validator under `scripts/traceability/` (separate concern from 
 
 ### M1.5 -- Remaining external adapters
 
-**Status:** Planned
+**Status:** Deferred to v1.x (decision recorded 2026-05-03 by this drift sweep; no separate ADR — the deferral is sequence hygiene, not an architectural reversal of ADR-008/ADR-011, since the adapter *interface* + GitHub adapter shipped at M1 and the remaining providers are concrete implementations of an unchanged interface).
+
+**What did NOT ship at v1.** Concrete adapters for Jira, Linear, Confluence, Notion, Figma; integration tests against live or recorded fixtures; per-provider runbooks under `docs/user/integrations/`. The directory `docs/user/integrations/` exists as an empty slot per the operational-completeness map; `scripts/sync/adapters/` was never authored as a separate directory (the GitHub adapter lives at `scripts/sync/lib/github.ts` against the interface in `scripts/sync/lib/adapters.ts`).
+
+**Why deferred.** No adopter-signal materialized during M2-M7 indicating which non-GitHub providers were on the critical path. ADR-011 governs *feature scope*, not *which concrete vendor implementations of an unchanged capability ship at v1*; under ADR-012 the architecture is capability-level and the GitHub adapter satisfies the adapter-interface contract. Shipping five additional adapters with credentials, recorded fixtures, and per-provider runbooks ahead of any adopter request would have been speculative implementation work — exactly the discipline-tax pattern the methodology warns against.
+
+**v1.x activation trigger.** First adopter request for a specific non-GitHub provider with named integration. Each adapter ships independently against the existing interface; no batched M1.5 milestone. The M7-exit operational-completeness check (`integrations: docs/user/integrations/`) will populate as adopters drive provider selection.
+
+**Operationalizes (now).** Nothing additional at v1. The capability is unchanged; only the concrete implementations are deferred.
+
+**Original spec (preserved for provenance).** The intent at sequencing time was that all five non-GitHub adapters land before the endpoint (M2) so any interface drift surfaced before endpoint coordination went live. M2 shipped without driving such drift, so the rationale for batching them ahead of M2 collapsed; the rationale for shipping all five at v1 (in any order) collapsed when no adopter signaled a need for any specific provider during M2-M7.
 
 **Produces.** Concrete adapter implementations for the four remaining external systems against the adapter interface that landed at M1: Jira and Linear (delivery trackers, US-10.3), Confluence and Notion (published-doc systems, US-10.4), Figma (design tool, US-10.5). Each ships with integration tests against a live or recorded fixture for the external service.
 
@@ -131,7 +143,7 @@ The traceability validator under `scripts/traceability/` (separate concern from 
 
 ### M2 -- 12-tool endpoint + fenced locks + remaining schema
 
-**Status:** Planned
+**Status:** Done (~2026-04-30). No per-milestone exit audit; backfilled by `../architecture/audits/milestone-M7-exit.md` which sweeps the M2-M7 substrate as one. Recommendation for v1.x: when the methodology mandates per-milestone exit drift sweeps (METHODOLOGY 11.3), honor that even when milestones close fast — the wide retroactive sweep loses per-milestone evidence even when the substrate is correct.
 
 **Produces.** The five remaining tables on top of M1's four — `composers`, `sessions`, `locks`, `contracts`, `telemetry` (per ARCHITECTURE §5.1). The 12-tool agent endpoint per ADR-013, with find_similar returning `unknown` (real find_similar arrives in M5). Locks with fencing tokens from day one. The `BroadcastService` interface (per ADR-029) lands here — default impl Supabase Realtime, documented migration impl Postgres NOTIFY/LISTEN — though the broadcast substrate goes live at M4. `atelier datastore init` ships in raw form here (Epic 1 partial; polished at M7).
 
@@ -151,7 +163,7 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 ### M3 — Prototype shell + `/atelier` route + 5 lenses
 
-**Status:** Planned
+**Status:** Done (~2026-04-30). No per-milestone exit audit; backfilled by `../architecture/audits/milestone-M7-exit.md`.
 
 **Produces.** Prototype web app with six routes (`/`, `/strategy`, `/design`, `/slices/[id]`, `/atelier`, `/traceability`). The `/atelier` route renders the five role-aware lenses (analyst, dev, PM, designer, stakeholder) per ADR-017, backed by M2's endpoint. `atelier deploy` ships in raw form here (Epic 1 partial; polished at M7).
 
@@ -169,7 +181,7 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 ### M4 — Multi-composer concurrency
 
-**Status:** Planned
+**Status:** Done (~2026-05-01). No per-milestone exit audit; backfilled by `../architecture/audits/milestone-M7-exit.md`.
 
 **Produces.** Pub/sub broadcast (the second of ADR-016's two substrates), live presence indicators, real-time conflict surfacing in `/atelier`.
 
@@ -187,19 +199,21 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 ### M5 — find_similar + eval harness + CI gate
 
-**Status:** Planned
+**Status:** Done (2026-05-01). No per-milestone exit audit; backfilled by `../architecture/audits/milestone-M7-exit.md`. The calibration sequence is captured in ADR-042 (hybrid retrieval + RRF thresholds + multi-author seed expansion); the gate-tier framing is captured in ADR-043 (advisory/blocking split); the wider-eval finding that reframed the wedge is captured in ADR-047.
 
-**Produces.** Find_similar scoring service backed by an embedding model (default selected per D24 resolution, which must land before M5 begins — see §7 Q3), eval harness with a labeled seed set drawn from this repo's own decisions corpus, CI gate enforcing ≥75% precision at ≥60% recall per ADR-006, keyword-search fallback with explicit UI degraded banner per US-6.5.
+**Produces.** Find_similar scoring service backed by an OpenAI-compatible embedding adapter per ADR-041 (default `text-embedding-3-small`, 1536-dim). Hybrid retrieval (vector kNN + Postgres BM25, fused via RRF k=60) per ADR-042. Eval harness with a 111-seed multi-author set drawn from this repo's decision/contribution corpus. Keyword-search fallback with explicit UI degraded banner per US-6.5.
 
-**Operationalizes.** ADR-006 (find_similar + eval harness + keyword fallback).
+**Operationalizes.** ADR-006 (find_similar + eval harness + keyword fallback) — but with the gate-tier framing of ADR-043 + ADR-047, not the original ≥75%/≥60% blocking gate ADR-006 specified.
 
 **Advances.** BRD Epic 6 (find_similar + eval harness).
 
-**Bootstrap function.** Every PR merging into Atelier from this point is checked via find_similar against Atelier's own corpus. **This is the disconfirming test the entire commercial wedge depends on.** Failure here does not stop the project (every other capability still ships), but it does scope the commercial story.
+**Bootstrap function.** Find_similar is available on every PR as an *advisory* signal against the corpus from M5-exit forward. The dogfood inflection point per ADR-044 happens at this milestone exit (M6 is the first fully self-coordinating milestone).
 
-**Demoable.** A deliberately-misaligned contribution (e.g., one that violates ADR-007 by introducing SaaS coupling) is rejected at PR time with a find_similar explanation. An aligned contribution passes. Eval-set precision/recall reported on every push.
+**Demoable.** A potentially-misaligned contribution surfaces find_similar matches at PR time; the operator decides whether to act on the signal. Aligned contributions pass cleanly. Eval-set precision/recall reported on every push (informational).
 
-**Exit criteria.** CI gate is mandatory on `main`. Eval set is committed and versioned. Precision/recall metrics published per-run. The disconfirming test has fired at least once.
+**Exit criteria (as actually met).** Eval set committed and versioned (`atelier/eval/find_similar/seeds.yaml`, 111 multi-author seeds). Precision/recall metrics published per-run. Internal-corpus measurement cleared the ADR-043 *advisory* tier (P=0.672, R=0.626 against P≥0.60 / R≥0.60). Gate ships *informational* in CI (continue-on-error) per the ADR-045-companion eval-gate flip; *blocking* tier was reversed by ADR-047 after the wider-eval (claude-agent-sdk corpus) measured P=0.5540 / R=0.5423 — below advisory.
+
+**Original ADR-006 framing (preserved for provenance).** ADR-006 specified a CI gate at ≥75% precision and ≥60% recall, mandatory on `main`, with find_similar pitched as the wedge that prevents duplicate work hands-off. ADR-042/043/047 sequenced the actual calibration: ADR-042 found the right retrieval architecture; ADR-043 split the gate into advisory + blocking tiers preserving ADR-006's ambition without overclaiming; ADR-047 reversed the blocking tier when the wider eval failed to clear it. The advisory tier IS the v1 wedge; blocking-tier remains a v1.x opt-in gated on a cross-encoder reranker per BRD-OPEN-QUESTIONS §27.
 
 ---
 
@@ -225,9 +239,9 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 ### M7 — Hardening + open-ADR resolution
 
-**Status:** Planned
+**Status:** Audit complete (2026-05-03; see `../architecture/audits/milestone-M7-exit.md`). Playwright IA/UX suite is the remaining exit gate per PR #40; bounded ~1-2 days, sequenced after the audit per the M7-exit kickoff direction. Do not flip status to Done until the suite passes against the deployed substrate at scale fixtures.
 
-**Produces.** Resolution to D24 (embedding model default) landed as a new ADR — D22 already resolved as ADR-026 and D23 as ADR-028. Observability stack (telemetry table populated, `/atelier/observability` route, alerting). Full CLI polish for all 12 v1 commands per NORTH-STAR §10 (lifecycle: `atelier init`, `datastore init`, `deploy`, `invite`, `territory add`, `doctor`, `upgrade`; sync substrate: `sync`, `reconcile`, `eval find_similar`; process: `audit`, `review`) -- the per-command raw-vs-polished split is in §9 below. Reference-implementation technology choices documented (per ADR-027). `docs/migration-to-gcp.md` runbook finalized per ADR-029. Lint rule banning proprietary imports outside named adapters (per ADR-029).
+**Produces.** D24 (embedding model default) resolved by ADR-041 prior to M5; D22 resolved as ADR-026; D23 resolved as ADR-028. Observability stack (telemetry table populated, `/atelier/observability` route at v1; out-of-band alerting deferred to v1.x per BRD-OPEN-QUESTIONS §30). 12 v1 CLI commands per NORTH-STAR §10 — split per §9 below into 6 working at v1 (sync, reconcile, eval, audit, review, dev) and 7 pointer-stubs to v1.x (init, datastore, deploy, invite, territory, doctor, upgrade). Reference-implementation technology choices documented (ADR-027 + ADR-046 deploy strategy). Lint rule banning proprietary imports outside named adapters per ADR-029 (PR #28). `docs/migration-to-gcp.md` runbook **NOT delivered** at v1 — the portability lint operationalizes the constraint at code level, but the per-capability migration runbook is filed as M7-exit follow-up F7.2 in the M7-exit audit and held until first adopter signal requests an actual GCP migration. ADR-029's promise-to-author at M2 was never honored; the M7-exit drift sweep surfaced it cleanly through validator link-integrity (broken link in `docs/developer/fork-and-customize.md`).
 
 **Operationalizes.** New ADR for D24. ADR-012 (capability-level architecture) reaffirmed by labeling all reference choices as "one valid implementation." ADR-029 hardened with lint discipline.
 
@@ -274,23 +288,28 @@ The 8-milestone shape was derived from a "destination-first build sequencing" ex
 
 ## 9. CLI surface sequencing convention
 
-This repo is **hand-bootstrapped** — it is the artifact that `atelier init` will eventually produce. The full v1 CLI surface (12 commands per NORTH-STAR §10) ships across milestones in two phases per command -- raw form (the underlying capability works) and polished form (CLI wrapper with `--help`, exit codes, end-to-end test).
+This repo is **hand-bootstrapped** — it is the artifact that `atelier init` will eventually produce. The full v1 CLI surface (12 commands per NORTH-STAR §10, plus `atelier dev` per US-11.13 added during M7) ships across milestones in two phases per command -- raw form (the underlying capability works via direct script invocation) and polished form (CLI wrapper with `--help`, exit codes, end-to-end test).
 
-| Command | Group | Raw form (functional, hand-invokable) | Polished form (exit-code-tested, `--help`, end-to-end tested) |
+The v1 polished-form scope review at PR #37 surfaced an honest split: 6 commands ship working polished form at v1; 7 ship as pointer-stubs that print the v1 raw equivalent and exit 0, with the polished implementation deferred to v1.x. The table below records which.
+
+| Command | Group | Raw form (functional, hand-invokable) | v1 polished form |
 |---|---|---|---|
-| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8 -- the credential-handover surface that lets AI-driven setup proceed past third-party browser-only flows; surfaced by 2026-04-28 AI-speed pivot) | M7 |
-| `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | M7 |
-| `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | M7 |
-| `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | M7 |
-| `atelier territory add` | Lifecycle (Epic 1) | M2 (manual `.atelier/territories.yaml` edit pattern) | M7 |
-| `atelier doctor` | Lifecycle (Epic 1) | M2 (raw script invocation of the ARCH 6.1.1 self-verification flow once the endpoint exists; recommended priority per 2026-04-28 expert review -- in self-hosted, connectivity issues will be the dominant support volume) | M7 |
-| `atelier upgrade` | Lifecycle (Epic 1) | -- | M7 |
-| `atelier sync` | Sync substrate (Epic 9) | M1 (direct invocation of underlying script per scripts/README.md) | M7 |
-| `atelier reconcile` | Sync substrate (Epic 9) | M1 (direct invocation of `scripts/sync/reconcile.mjs`) | M7 |
-| `atelier eval find_similar` | Eval (Epic 6) | M5 (direct invocation of eval harness per ADR-006) | M7 |
-| `atelier audit` | Process (Epic 11) | M1 (raw script invocations of the extended validator per scripts/README.md; supports --per-pr, --milestone-entry, --milestone-exit, --quarterly modes) | M7 |
-| `atelier review` | Process (Epic 11) | M1 (raw script computing required reviewers from territories.yaml + config.yaml) | M7 |
+| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8) | **v1.x stub** — prints clone-and-rm-rf-git pointer + local-bootstrap.md path; polished init lands with US-1.8 handshake |
+| `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | **v1.x stub** — prints `supabase db reset` pointer |
+| `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | **v1.x stub** — prints `vercel deploy --prod` + first-deploy.md pointer |
+| `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | **v1.x stub** — prints Supabase Auth invite + bearer-rotation pointer |
+| `atelier territory add` | Lifecycle (Epic 1) | M2 (manual `.atelier/territories.yaml` edit pattern) | **v1.x stub** — prints YAML edit pointer + audit invocation |
+| `atelier doctor` | Lifecycle (Epic 1) | M2 (raw script invocation of the ARCH 6.1.1 self-verification flow) | **v1.x stub** — prints `atelier dev` + smoke pointer (overlaps with `atelier dev` at v1) |
+| `atelier upgrade` | Lifecycle (Epic 1) | -- | **v1.x stub** (no v1 raw form; semver-aware migration system is v1.x scope per BRD-OPEN-QUESTIONS §29) |
+| `atelier dev` | Lifecycle (Epic 1; US-11.13) | M7 (PR #35; one-command local substrate bringup) | **v1 polished** (PR #35) |
+| `atelier sync` | Sync substrate (Epic 9) | M1 (direct invocation of underlying script) | **v1 polished** (PR #37) |
+| `atelier reconcile` | Sync substrate (Epic 9) | M1 (direct invocation of `scripts/sync/reconcile.ts`) | **v1 polished** (PR #37) |
+| `atelier eval find_similar` | Eval (Epic 6) | M5 (direct invocation of eval harness) | **v1 polished** (PR #37) |
+| `atelier audit` | Process (Epic 11) | M1 (raw script invocations of the extended validator) | **v1 polished** (PR #37) |
+| `atelier review` | Process (Epic 11) | M1 (raw script computing required reviewers from territories.yaml + config.yaml) | **v1 polished** (PR #37) |
 
-**Why split:** the destination-first rule (ADR-011) governs feature scope, not packaging. Ergonomics polish (CLI commands, `--help` text, exit-code contracts, end-to-end tests) is correctly batched into M7 once all the underlying capabilities exist. The earlier milestones use the underlying scripts directly; M7 wraps them.
+**Why this honest split:** the original M7 plan was to wrap all 12 commands into polished form. PR #37's scope review found that 7 of the 12 either had no v1 raw form (`upgrade`), or had raw forms that overlap a different polished command (`doctor` overlaps `dev`), or required substantive new infrastructure (`init`'s US-1.8 handshake; `deploy`'s vercel-and-supabase orchestration; `datastore init`'s migration runner; `invite`'s Auth bridge; `territory add`'s YAML editor) that wasn't in scope. Rather than ship six commands as half-implementations, the polished-form pointer-stub pattern was adopted: each stub prints the v1 raw-equivalent path (so the underlying capability is reachable via documented escape hatch) and exits 0. The stubs DO satisfy `--help`, exit-code, and smoke-test contracts; they just don't wrap a polished v1 capability the substrate doesn't have yet.
 
-**Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation. Acceptance for "polished form": all of US-1.1 through US-1.7 (lifecycle), US-9.1 through US-9.7 (sync), US-6.x (eval), and US-11.1 through US-11.12 (CLI surface stories) pass.
+**Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation.
+**Acceptance for "v1 polished":** US-11.x story passes — exit-code contract, `--help` output, end-to-end smoke.
+**Acceptance for "v1.x stub":** prints v1 raw-equivalent pointer with link to runbook; exits 0; smoke asserts the pointer matches documented path.

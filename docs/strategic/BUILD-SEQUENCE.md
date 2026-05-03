@@ -237,7 +237,7 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 **Demoable.** `atelier init demo-project && cd demo-project && atelier deploy` produces a live prototype + endpoint with the five lenses working out of the box.
 
-**Exit criteria.** All 35 design decisions in `../functional/PRD-COMPANION.md` are DECIDED (no OPEN). `atelier init` round-trips clean. Public reference implementation is announced.
+**Exit criteria.** All 35 design decisions in `../functional/PRD-COMPANION.md` are DECIDED (no OPEN). `atelier init` round-trips clean. Automated IA/UX validation suite (Playwright) covers the prototype's dynamic surfaces (`/atelier` lenses + `/atelier/observability`) per the IA/UX scope rule. No announcement ceremony — the README + repo description state shipped status; the substrate validates itself through automated flows. Adoption discovery is organic.
 
 ---
 

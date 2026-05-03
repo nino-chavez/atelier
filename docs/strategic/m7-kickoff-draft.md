@@ -16,7 +16,7 @@
 
 ## M7 framing
 
-Per BUILD-SEQUENCE: **Hardening + open-ADR resolution. Closes the loop.** A fresh `atelier init` on an empty directory produces a working coordination substrate with one command. Public reference implementation is announced.
+Per BUILD-SEQUENCE: **Hardening + open-ADR resolution. Closes the loop.** A fresh `atelier init` on an empty directory produces a working coordination substrate with one command. Automated IA/UX validation suite covers the prototype's dynamic surfaces. README + repo description state shipped status; no announcement ceremony — adoption discovery is organic.
 
 M6 substantially expanded the substrate's correctness baseline (URL split, JSON-404 catch-all, registration_endpoint absolute, env-var trim, real-CC-MCP-client smoke). M7's job is to harden that baseline into something an adopter can drop into without being on a four-iteration substrate-fix dance.
 
@@ -185,7 +185,8 @@ Lifted from BUILD-SEQUENCE §M7 with M7-specific additions:
 
 - All 35 design decisions in `docs/functional/PRD-COMPANION.md` are DECIDED (no OPEN)
 - `atelier init` round-trips clean against an empty directory (the demoable)
-- Public reference implementation announced
+- Automated IA/UX validation suite (Playwright) covers the prototype's dynamic surfaces (`/atelier` lenses + `/atelier/observability`) per the IA/UX scope rule
+- README + repo description state shipped status; no announcement ceremony — adoption discovery is organic
 - BRD-OPEN-QUESTIONS reduces from 7 to ≤3 (the genuinely-deferred ones; sections 7, 21, 23 plausible holdovers if user defers)
 - Real-CC-MCP-client smoke catch-rate verified across ≥10 PRs through M7 (data point: did the smoke catch any divergences at PR time?)
 - M6 follow-ups (F6.1-F6.5 from M6-exit audit) all closed
@@ -196,8 +197,9 @@ Lifted from BUILD-SEQUENCE §M7 with M7-specific additions:
 
 ```
 You're picking up the Atelier project at M7 entry. M6 substrate complete; deploy
-live at https://atelier-three-coral.vercel.app. Public reference implementation
-is M7's exit goal.
+live at https://atelier-three-coral.vercel.app. M7's exit goal: substrate hardened
++ automated IA/UX validation across dynamic surfaces. No announcement ceremony —
+README/repo description state shipped status; adoption discovery is organic.
 
 Read first:
 - docs/architecture/audits/milestone-M6-exit.md (this audit; M7-entry follow-ups
@@ -228,9 +230,9 @@ Sequence M7 work in this order (revisable based on user input):
    surface; observability stack as a final pass
 
 When M7 PR is ready: PR with the work + M7-exit audit. CI green is the merge gate.
-After merge, run the public-reference-implementation announcement (the demoable
-itself is the announcement: `atelier init demo-project && cd demo-project &&
-atelier deploy`).
+The substrate validates itself through automated flows (CI + Playwright IA/UX
+suite + smoke catch-rate). README + repo description update is the entire public
+surface; no external launch (HN/Twitter/blog/etc.).
 
 Do NOT:
 - Land §21 (AI auto-reviewers) at v1 unless the strategic call shifts (default v1.x)
@@ -247,6 +249,7 @@ The 7 strategic calls are resolved (above); Tracks 1/2/3 framing stands; success
 
 1. **Confirm or adjust the resolutions** above if any read missed something
 2. **Cadence preference** — back-to-back from M6 close, or a deliberate cool-down before M7 starts?
-3. **Public-reference-implementation announcement plan** — when M7 substrate is done + a clean `atelier init` produces the demoable, does the announcement happen via README + repo description update only, or also via external surfaces (HN / Twitter / blog)?
+
+Note: announcement-plan question dropped per the no-ceremony directive (2026-05-03). README + repo description update IS the entire public surface; the substrate validates itself through automated flows (CI + Playwright IA/UX suite + smoke catch-rate); adoption discovery is organic.
 
 This draft is now closer to canonical than draft. The M7 session opens against this version + any refinements you fold inline before opening.

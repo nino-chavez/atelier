@@ -27,6 +27,8 @@
     "smoke:iaux:dom": "cd prototype && npx playwright test",
     "smoke:alert-publisher": "tsx scripts/observability/__smoke__/alert-publisher.smoke.ts",
     "alert-publisher": "tsx scripts/observability/alert-publisher.ts",
+    "smoke:semantic-contradiction": "tsx scripts/traceability/__smoke__/semantic-contradiction.smoke.ts",
+    "semantic-contradiction": "tsx scripts/traceability/semantic-contradiction.ts",
     "smoke:embeddings": "tsx scripts/coordination/__smoke__/embeddings.smoke.ts",
     "smoke:find_similar": "tsx scripts/endpoint/__smoke__/find_similar.smoke.ts",
     "smoke:eval_harness": "tsx scripts/eval/find_similar/__smoke__/eval-harness.smoke.ts",

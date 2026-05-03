@@ -194,6 +194,29 @@ observability:
     sync_lag_seconds_p95: 300              # any sync script p95 lag >5min is yellow
     cost_usd_per_day_per_project: 10       # adopter-tunable; v1 default conservative
 
+  # Out-of-band alert delivery (BRD-OPEN-QUESTIONS section 30). When
+  # channels[] is empty or omitted, the publisher exits without dispatching
+  # and UI alerts at /atelier/observability remain the canonical surface.
+  # Adopters add channels here to enable out-of-band delivery to Slack /
+  # Discord / Teams / generic webhook receivers via the publisher script
+  # (scripts/observability/alert-publisher.ts).
+  #
+  # Schema example (commented; uncomment + populate to enable):
+  #   alerts:
+  #     dashboard_base_url: "https://atelier.example.com"
+  #     channels:
+  #       - name: "ops-on-call"
+  #         webhook_url: "${OPS_SLACK_WEBHOOK_URL}"
+  #     routes:
+  #       - metric: "sessions_active_per_project"
+  #         channel: "ops-on-call"
+  #         min_severity: "warn"
+  #
+  # See docs/user/guides/observability-alerts.md for runbook.
+  alerts:
+    channels: []
+    routes: []
+
 # Protocol version. Bumped when endpoint tool surface changes.
 protocol_version: "1.0"
 

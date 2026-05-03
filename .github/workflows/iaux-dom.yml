@@ -1,0 +1,138 @@
+name: iaux-dom
+
+# IA/UX DOM Playwright suite (B2 — CI integration of PR #44).
+#
+# Companion to atelier-audit.yml's existing static iaux smoke (PR #43).
+# Runs the DOM-render assertions against a real local-Supabase + dev-server
+# substrate. Triggers only on changes that could affect the suite or the
+# surfaces it tests, to keep PR latency unchanged for unrelated work.
+#
+# What this catches that the static iaux smoke can't:
+#   - Render-ceiling enforcement under moderate-scale fixtures (100
+#     contributions, 50 locks, 200+30 telemetry rows): DOM row counts
+#     stay capped even though the SQL LIMIT is well below seeded volume.
+#   - Lens kind-weighting fires at scale: analyst lens shows the most-
+#     recent research contribution first (US-IAUX.2 in the fixture),
+#     not the most-recent contribution overall (US-IAUX.1, implementation
+#     kind, weighted lower).
+#   - Server-side LIMIT at the network layer: SSR HTML contains in-cap
+#     trace IDs and excludes past-cap trace IDs.
+#   - Live freshness: Refresher tick observation after a DB-side write.
+#   - Hydration health: pages render real lens chrome, not the
+#     application-error fallback that surfaces when broadcast-island
+#     env is misconfigured.
+#
+# Why a separate workflow:
+#   - Scope: only runs on prototype/ + workflow file changes
+#   - Cost: Playwright browser install + Supabase startup + dev server
+#     compile + 5 spec runs ~= 3-4 minutes; not justified on every PR
+#     when most touch substrate-only paths
+#   - Failure isolation: DOM smoke failure surfaces as its own check,
+#     not bundled into atelier-audit.yml's bigger merge job
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'prototype/**'
+      - '.github/workflows/iaux-dom.yml'
+      - 'package.json'
+      - 'supabase/migrations/**'
+  push:
+    branches: [main]
+    paths:
+      - 'prototype/**'
+      - '.github/workflows/iaux-dom.yml'
+      - 'package.json'
+      - 'supabase/migrations/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iaux-dom-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dom-suite:
+    name: IA/UX DOM Playwright suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install prototype dependencies
+        working-directory: prototype
+        run: npm ci
+
+      - name: Install Playwright browser (chromium only)
+        working-directory: prototype
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        # `supabase start` applies migrations from supabase/migrations/ as
+        # part of its bring-up sequence; matches the atelier-audit.yml
+        # merge-job pattern.
+        run: supabase start --workdir .
+
+      - name: Confirm DB reachable + schema applied
+        run: |
+          psql 'postgresql://postgres:postgres@127.0.0.1:54322/postgres' \
+            -c "SELECT count(*) FROM pg_tables WHERE schemaname='public';"
+
+      - name: Run DOM Playwright suite
+        working-directory: prototype
+        # Env mirrors the local-run config in playwright.config.ts. The
+        # OIDC vars are explicitly empty to force stubVerifier path on
+        # the lens; NEXT_PUBLIC_SUPABASE_* point at local Supabase so
+        # the broadcast-island doesn't throw on hydration.
+        env:
+          ATELIER_ALLOW_DEV_BEARER: 'true'
+          ATELIER_DEV_BEARER: 'stub:sub-iaux-smoke-analyst'
+          ATELIER_OIDC_ISSUER: ''
+          ATELIER_JWT_AUDIENCE: ''
+          NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321'
+          # Local-Supabase well-known anon key. Same value across every
+          # `supabase start` install; safe to commit because it only
+          # authenticates against an ephemeral CI Supabase instance.
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+          ATELIER_DATASTORE_URL: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+        run: npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: prototype/playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload Playwright test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-${{ github.run_id }}
+          path: prototype/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --workdir . || true

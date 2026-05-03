@@ -260,6 +260,44 @@ v1 substrate is now publication-ready per the no-announcement-ceremony principle
 
 ---
 
+## 5.5. v1.x post-launch staging (adopter-signal-triggered)
+
+The v1 surface is locked at 12 tools per ADR-013 + ADR-040. v1.x extensions are not pre-sequenced milestones — they are adopter-signal-triggered (per ADR-011's destination-first principle, v1 ships complete; v1.x grows on demand). This section stages **three MCP tool decisions** that are *designed now* so that when adopter signal arrives, build sessions start with a settled architecture instead of greenfield design.
+
+The decisions land as ADRs on the append-only log. The implementations land later, in build-session order driven by adopter signal. This pattern (decide-now / build-on-signal) is consistent with how ADR-041 resolved D24 *before* M5 implementation began per ADR-011.
+
+### Three v1.x tools designed at v1 exit
+
+| Tool | Decision ADR | Schema impact | Adopter signal trigger |
+|---|---|---|---|
+| `triage_proposal(contribution_id, decision)` | **ADR-048** — disposition state machine (`scope_in \| defer \| reject`) | None — uses existing `state` + `requires_owner_approval` columns | Analyst teams formalize triage routing; external-content volume warrants automation beyond the M6 sync script |
+| `decompose_contribution(epic_id, strategy)` | **ADR-049** — parent-child contribution relationship via `parent_contribution_id` self-FK + `decomposition_strategy` enum | Migration adding two columns + parent-merge gating rule | PM-led epic splitting; analyst workflow demands explicit epic-to-atom decomposition (BRD Epic 16 completion) |
+| `diagnose_failure(trace_id)` | **ADR-050** — endpoint error telemetry write-through + decision-graph traversal for failure-path reconstruction | None for the query path; minor dispatcher refactor to surface `recordTelemetry` for error path | Operator diagnostics; first sustained production deployment requesting failure-path observability |
+
+### Build order (when triggered)
+
+1. **`triage_proposal` lands first.** Pure dispatch-layer wrapping of the existing M6 triage script. Zero schema change. Smallest scope, formalizes a disposition vocabulary that's currently implicit in ADR-018's "proposals await approval" framing.
+2. **`decompose_contribution` and `diagnose_failure` are parallel-feasible.** They share no schema or logic. The decompose migration (parent-child columns + merge gate) is independent of the diagnose telemetry write-through (dispatcher refactor).
+
+### Why these three, why now
+
+These are the most-cited gaps from the M6/M7 strategic reviews of the 12-tool surface. They share a property: **the schema substrate is mostly ready** (state machine, trace_ids, append-only ADRs, telemetry table) but the **public MCP surface doesn't expose the capability yet**. Documenting the design decisions now means the v1.x build is "land the surface" rather than "design the surface."
+
+### What this section is NOT
+
+- Not a v1.x roadmap. There is no v1.x roadmap by ADR-011's destination-first principle. v1.x is signal-triggered.
+- Not a commitment to build these in any timeframe. Adopter signal drives the build.
+- Not exhaustive. Other v1.x tools may be designed (and ADRs added) as analysis surfaces them.
+- Not a violation of the 12-tool surface lock. ADR-040's lock applies to v1; v1.x will explicitly expand the surface, governed by new ADRs at the time of build.
+
+### Open dependencies before build
+
+- **ADR-050 implementation prerequisite**: `AtelierClient.recordTelemetry` is currently `private`. Its first build-session task is exposing a public `recordError` (or similar) method so the dispatcher's `mapError` path can write error telemetry without breaking the encapsulation pattern.
+- **ADR-049 implementation prerequisite**: the parent-merge gating rule ("epic merges only when all children merged") needs a state-machine update to `update`'s contribution-state transitions. New trigger or application-layer check; ADR-049 records the choice.
+- **ADR-048 implementation prerequisite**: triage script logic at `scripts/sync/lib/triage.ts` already produces dispositions implicitly; the dispatcher tool exposes them. No prereq beyond MCP surface declaration in `dispatch.ts` TOOL_NAMES (which expands from 12 to 13+ at v1.x — explicitly governed by a new ADR at that time).
+
+---
+
 ## 6. How this document evolves
 
 - **Editable in place.** Re-ordering within a milestone, refining exit criteria, adjusting demoable artifacts, or redistributing scope between adjacent milestones to honor an existing dependency happens via PR to this file. The rationale lives inline (or in `../architecture/walks/` if it grows).

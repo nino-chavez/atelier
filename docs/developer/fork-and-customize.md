@@ -35,7 +35,7 @@ Each links to the relevant guide in [`extending/`](./extending/) (populated as e
 | Declare a new territory | `extending/add-a-territory.md` | M2 |
 | Extend the trace-ID format | `extending/add-a-trace-id-format.md` | M1 |
 | Swap the embedding model (D24) | `extending/swap-embedding-model.md` | M5 |
-| Change the deploy stack (per ADR-029 portability constraint) | [`../ops/migration/`](../ops/migration/) | M7 |
+| Change the deploy stack (per ADR-029 portability constraint) | per-capability adapter swap pattern documented inline in ADR-029 + ARCH §6.8 (BroadcastService) until `docs/migration-to-gcp.md` runbook lands (filed as M7-exit F7.2) | M7 |
 
 ## What you should NOT customize
 

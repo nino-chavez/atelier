@@ -487,7 +487,11 @@ async function loadVector(
       [projectId, lookbackInterval],
     ).catch(() => ({ rows: [{ count: '0' }] })),
     pool.query<{ embedding_model_version: string }>(
-      `SELECT DISTINCT embedding_model_version FROM embeddings WHERE project_id = $1 LIMIT 5`,
+      // ORDER BY for deterministic ordering under the LIMIT cap; without
+      // it, distinct rows are returned in arbitrary order and the visible
+      // first-five may rotate between page loads. Caught by iaux smoke.
+      `SELECT DISTINCT embedding_model_version FROM embeddings WHERE project_id = $1
+        ORDER BY embedding_model_version LIMIT 5`,
       [projectId],
     ).catch(() => ({ rows: [] as Array<{ embedding_model_version: string }> })),
   ]);

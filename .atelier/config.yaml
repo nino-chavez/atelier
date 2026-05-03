@@ -137,6 +137,31 @@ find_similar:
   ci_precision_gate: 0.60
   ci_recall_gate: 0.60
 
+  # Cross-encoder reranker (C3 — ADR-047 v1.x opt-in path to blocking tier).
+  # Interface + adapter shipped at v1; runner wiring is v1.x next-level
+  # deferral pending adopter-side activation criteria measurement (per
+  # ADR-047: ≤15pp gap to blocking thresholds AND reranker measurably lifts
+  # AND p95 latency added stays <200ms).
+  #
+  # When enabled=true (and the runner wiring lands), find_similar invokes
+  # the reranker on the top-K hybrid retrieval results before returning.
+  # Default false at v1; opt-in.
+  #
+  # Adapter: `cohere-compatible` covers Cohere, Voyage AI, and self-hosted
+  # services exposing the same /v1/rerank shape. New adapters add new
+  # values + sibling files under scripts/coordination/adapters/ per
+  # ADR-029 portability discipline.
+  reranker:
+    enabled: false
+    adapter: cohere-compatible
+    base_url: "https://api.cohere.ai/v1"
+    model_name: "rerank-english-v3.0"
+    api_key_env: "COHERE_API_KEY"
+    timeout_ms: 5000
+    # Optional cap on documents returned post-rerank. Default unbounded
+    # (return all, re-ranked); set to a small N to trim the tail.
+    # top_k: 20
+
 # Agent-session transcript capture (ADR-024). Opt-in.
 # When capture=true, the endpoint writes a sidecar transcript next to
 # each contribution's content_ref (e.g., research/foo.md +

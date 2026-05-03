@@ -26,6 +26,7 @@
     "smoke:iaux": "tsx prototype/__smoke__/iaux.smoke.ts",
     "smoke:iaux:dom": "cd prototype && npx playwright test",
     "smoke:embeddings": "tsx scripts/coordination/__smoke__/embeddings.smoke.ts",
+    "smoke:reranker": "tsx scripts/coordination/__smoke__/reranker.smoke.ts",
     "smoke:find_similar": "tsx scripts/endpoint/__smoke__/find_similar.smoke.ts",
     "smoke:eval_harness": "tsx scripts/eval/find_similar/__smoke__/eval-harness.smoke.ts",
     "embed:run": "tsx scripts/coordination/embed-runner.ts",

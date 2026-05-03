@@ -1,58 +1,249 @@
-// `atelier doctor` — self-verification flow per ARCH 6.1.1
-// (US-11.9; BUILD-SEQUENCE §9).
+// `atelier doctor` — diagnose substrate health (US-11.9; D1 polished form).
 //
-// v1: pointer-stub. The substrate self-verification path ships at v1
-// via scripts/endpoint/__smoke__/real-client.smoke.ts (the four-step
-// register / heartbeat / get_context / deregister sequence per
-// ARCH 6.1.1). The polished CLI form (single-command symptom-to-cause
-// mapping + actionable remediation hints) lands in v1.x.
+// Per ARCH 6.1.1 self-verification flow + the 2026-04-28 expert review
+// finding that "in self-hosted, connectivity issues are the dominant
+// support-volume class." Doctor is the adopter's first-line tool for
+// substrate triage.
+//
+// What this does:
+//   1. Runs the preflight checks shared with `atelier dev` (docker,
+//      supabase CLI, supabase running, port 3030, bearer expiry, env file)
+//   2. If substrate is up, hits /api/mcp with an unauthenticated probe
+//      to confirm the endpoint dispatches (expects 401 without bearer
+//      = healthy; 500 = endpoint broken; connection-refused = dev
+//      server not up)
+//   3. Maps observed failures to the symptom-to-cause table in
+//      ARCH 6.1.1 with actionable remediation hints
+//   4. Exits 0 when all checks pass; exit 1 when any check is degraded
+//
+// Diagnostic only — does NOT start, restart, or modify the substrate.
+// `atelier dev` is the fix surface. This separation keeps doctor safe
+// to run from any state without side effects.
 
-import { emitStub } from '../lib/stub.ts';
+import { request } from 'node:http';
+import {
+  runPreflight,
+  formatReport,
+  type PreflightReport,
+} from '../lib/preflight.ts';
 
 export const doctorUsage = `atelier doctor — diagnose substrate health
 
 Usage:
-  atelier doctor
+  atelier doctor [--json]
 
-v1 status: pointer-stub (timeline-deferred). The four-step
-self-verification (register / heartbeat / get_context / deregister)
-ships at v1 via the real-client smoke; polished doctor UX with
-symptom-to-cause mapping per ARCH 6.1.1 lands in v1.x.
+Options:
+  --json   Emit machine-readable JSON instead of human-formatted output.
 
-Per the 2026-04-28 expert review: in self-hosted, connectivity issues
-are the dominant support-volume class. Doctor's polished form is the
-adopter's first-line tool for substrate triage.
+Diagnostic only. Reports:
+  - docker: daemon reachable
+  - supabase CLI: installed
+  - supabase running: services up
+  - port 3030: state of dev-server port
+  - bearer: presence + expiry of .mcp.json bearer
+  - dev server: prototype is reachable on :3030
+  - env file: prototype/.env.local present
+  - endpoint: /api/mcp dispatches (when dev server is up)
 
-For v1, run the real-client smoke directly:
+Exits 0 when all checks pass; 1 when any check is degraded.
+This command does NOT modify substrate state. Use \`atelier dev\` to
+start / repair the substrate.
 
-  # Local Supabase + endpoint (covers steps 1-4 of ARCH 6.1.1):
-  supabase start
-  eval "$(supabase status -o env)"
-  SUPABASE_URL=$API_URL SUPABASE_ANON_KEY=$ANON_KEY \\
-    SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY \\
-    npx tsx scripts/endpoint/__smoke__/real-client.smoke.ts
-
-The smoke spawns its own MCP server on a random port + runs the
-four-step end-to-end + reports per-step status. Failure modes map
-to the symptom-to-cause table in ARCH 6.1.1.
+Symptom -> cause hints map to ARCH 6.1.1.
 `;
 
-export async function runDoctor(_args: readonly string[]): Promise<number> {
-  return emitStub({
-    command: 'atelier doctor',
-    rationale: 'timeline',
-    rawForm: 'see block below',
-    rawFormBlock: [
-      'supabase start',
-      'eval "$(supabase status -o env)"',
-      'SUPABASE_URL=$API_URL SUPABASE_ANON_KEY=$ANON_KEY \\',
-      '  SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY \\',
-      '  npx tsx scripts/endpoint/__smoke__/real-client.smoke.ts',
-    ].join('\n'),
-    notes: [
-      'Failure modes map to the symptom-to-cause table in ARCH 6.1.1.',
-      'For local-stack pre-flight checks (docker, supabase running,',
-      'port :3030, bearer expiry), see `atelier dev --preflight-only`.',
-    ],
+interface EndpointProbeResult {
+  ok: boolean;
+  detail: string;
+  /** HTTP status code observed (when reachable). */
+  statusCode?: number;
+}
+
+/**
+ * Probe /api/mcp without a bearer. A healthy endpoint returns 401 with
+ * a JSON-RPC-shaped body (the MCP dispatcher rejects unauthorized).
+ * Any other shape indicates degraded behavior.
+ */
+async function probeEndpoint(): Promise<EndpointProbeResult> {
+  return new Promise((resolve) => {
+    const req = request(
+      {
+        host: '127.0.0.1',
+        port: 3030,
+        path: '/api/mcp',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 3000,
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        let body = '';
+        res.setEncoding('utf-8');
+        res.on('data', (chunk: string) => (body += chunk));
+        res.on('end', () => {
+          if (status === 401) {
+            resolve({
+              ok: true,
+              detail: 'returned 401 (expected without bearer; endpoint dispatches)',
+              statusCode: status,
+            });
+          } else if (status === 405) {
+            // Some clients hit GET first; 405 with allow:POST also indicates healthy
+            resolve({
+              ok: true,
+              detail: 'returned 405 (route reachable; expecting POST)',
+              statusCode: status,
+            });
+          } else if (status >= 500) {
+            resolve({
+              ok: false,
+              detail: `returned ${status}: endpoint reachable but error path: ${body.slice(0, 200)}`,
+              statusCode: status,
+            });
+          } else {
+            resolve({
+              ok: false,
+              detail: `unexpected ${status} from /api/mcp without bearer`,
+              statusCode: status,
+            });
+          }
+        });
+      },
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ ok: false, detail: 'timeout connecting to dev server (3s)' });
+    });
+    req.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'ECONNREFUSED') {
+        resolve({ ok: false, detail: 'dev server not running on :3030' });
+      } else {
+        resolve({ ok: false, detail: `transport error: ${err.message}` });
+      }
+    });
+    req.write('{}');
+    req.end();
   });
+}
+
+interface DiagnosisHint {
+  symptom: string;
+  cause: string;
+  fix: string;
+}
+
+function deriveHints(report: PreflightReport, endpoint: EndpointProbeResult): DiagnosisHint[] {
+  const out: DiagnosisHint[] = [];
+
+  if (!report.docker.ok) {
+    out.push({
+      symptom: 'docker daemon unreachable',
+      cause: 'Docker Desktop or container runtime not running',
+      fix: 'start Docker Desktop (or your container runtime); then re-run `atelier doctor`',
+    });
+  }
+  if (!report.supabaseCli.ok) {
+    out.push({
+      symptom: 'supabase CLI not found',
+      cause: 'supabase CLI is not installed or not on PATH',
+      fix: 'install via `npm install -g supabase` (or `brew install supabase/tap/supabase`)',
+    });
+  }
+  if (!report.supabaseRunning.ok && report.docker.ok && report.supabaseCli.ok) {
+    out.push({
+      symptom: 'supabase services not running',
+      cause: 'local Supabase stack is stopped',
+      fix: 'run `supabase start` (or `atelier dev` to start everything in one go)',
+    });
+  }
+  if (!report.bearer.status.ok) {
+    out.push({
+      symptom: report.bearer.status.detail ?? 'bearer expired or missing',
+      cause: 'Supabase Auth access_tokens default to 1h TTL; .mcp.json bearer not refreshed',
+      fix: 'rotate via `npx tsx scripts/bootstrap/rotate-bearer.ts` (per docs/user/guides/rotate-bearer.md)',
+    });
+  } else if (report.bearer.remainingSeconds !== null && report.bearer.remainingSeconds < 300) {
+    out.push({
+      symptom: `bearer expires in ${report.bearer.remainingSeconds}s`,
+      cause: 'within 5-minute expiry window',
+      fix: 'rotate via `npx tsx scripts/bootstrap/rotate-bearer.ts` (per docs/user/guides/rotate-bearer.md)',
+    });
+  }
+  if (!report.envFile.ok) {
+    out.push({
+      symptom: 'prototype/.env.local missing or incomplete',
+      cause: 'env file not copied from .env.example',
+      fix: 'cp prototype/.env.example prototype/.env.local && edit OPENAI_API_KEY (per local-bootstrap.md Step 2)',
+    });
+  }
+  if (!endpoint.ok && report.devServer.ok === false) {
+    out.push({
+      symptom: 'dev server not reachable on :3030',
+      cause: 'next dev process not running',
+      fix: 'run `atelier dev` (or `cd prototype && npm run dev`)',
+    });
+  }
+  if (!endpoint.ok && endpoint.statusCode && endpoint.statusCode >= 500) {
+    out.push({
+      symptom: `/api/mcp returned ${endpoint.statusCode}`,
+      cause: 'endpoint code path errored — likely missing OIDC env or schema drift',
+      fix: 'check dev server stderr: ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE must be set; supabase migrations must be applied',
+    });
+  }
+  return out;
+}
+
+interface DoctorJsonOutput {
+  preflight: PreflightReport;
+  endpoint: EndpointProbeResult;
+  hints: DiagnosisHint[];
+  overallOk: boolean;
+}
+
+export async function runDoctor(args: readonly string[]): Promise<number> {
+  const json = args.includes('--json');
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(doctorUsage);
+    return 0;
+  }
+
+  const preflight = await runPreflight();
+  // Probe endpoint regardless of preflight; if dev server not up, probe
+  // will report ECONNREFUSED.
+  const endpoint = await probeEndpoint();
+  const hints = deriveHints(preflight, endpoint);
+
+  const preflightOk =
+    preflight.docker.ok &&
+    preflight.supabaseCli.ok &&
+    preflight.supabaseRunning.ok &&
+    preflight.envFile.ok &&
+    preflight.bearer.status.ok;
+  const overallOk = preflightOk && endpoint.ok;
+
+  if (json) {
+    const out: DoctorJsonOutput = { preflight, endpoint, hints, overallOk };
+    console.log(JSON.stringify(out, null, 2));
+    return overallOk ? 0 : 1;
+  }
+
+  // Human-formatted output: reuse formatReport for preflight, then append
+  // endpoint + hints.
+  console.log(formatReport(preflight));
+  console.log('');
+  console.log(`endpoint  /api/mcp: ${endpoint.ok ? 'OK' : 'DEGRADED'} ${endpoint.detail}`);
+  console.log('');
+  if (hints.length === 0) {
+    console.log('atelier doctor: substrate is HEALTHY');
+    return 0;
+  }
+  console.log(`atelier doctor: ${hints.length} issue(s) detected:`);
+  console.log('');
+  for (const h of hints) {
+    console.log(`  symptom: ${h.symptom}`);
+    console.log(`  cause:   ${h.cause}`);
+    console.log(`  fix:     ${h.fix}`);
+    console.log('');
+  }
+  return overallOk ? 0 : 1;
 }

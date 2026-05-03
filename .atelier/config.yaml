@@ -156,9 +156,43 @@ policy:
   lock_max_ttl_seconds: 28800        # 8 hours
   reap_interval_seconds: 60
 
-# Observability sink binding. Capability-level.
+# Observability sink binding + dashboard thresholds (per ARCH 8.2 / 8.3).
+#
+# `sink_binding` points at the optional external time-series store that
+# adopters wire in for long-horizon retention; the in-table `telemetry`
+# rows always exist regardless of binding (per ARCH 8.1).
+#
+# `thresholds` populate the /atelier/observability dashboard's color
+# pills (yellow at 80% of envelope, red at 100%; via the M7 Track 1
+# observability stack landing). Numbers mirror the v1 envelope at
+# ARCH 9.8 / docs/architecture/audits/scale-ceiling-envelope-v1.md;
+# the dashboard reads these values rather than hardcoding so adopters
+# on Free or Enterprise tiers (~1/4x or ~10x respectively) can override
+# without forking the prototype.
+#
+# `lookback_seconds` bounds the dashboard's recent-event windows.
+# Defaults to 24h; the observability route reads it for the
+# "recent transitions" / "recent runs" lists.
+#
+# Push-notification delivery (out-of-band alerting via the messaging
+# adapter when thresholds cross) is BRD-OPEN-QUESTIONS section 29
+# scope; v1 ships UI-rendered alerts only, with adopter signal
+# informing the delivery shape (which channels, what thresholds,
+# per-metric tuning).
 observability:
   sink_binding: "${ATELIER_OBSERVABILITY_SINK_URL}"
+  lookback_seconds: 86400              # 24 hours
+  thresholds:
+    sessions_active_per_project: 20
+    sessions_active_per_guild: 100
+    contributions_lifetime_per_project: 10000
+    contributions_lifetime_per_guild: 50000
+    decisions_lifetime_per_project: 500
+    locks_held_concurrent_per_project: 20  # mirrors composers-per-project envelope
+    vector_index_rows_per_guild: 100000
+    triage_pending_backlog: 25             # backlog warns at 25; alerts at 50% over
+    sync_lag_seconds_p95: 300              # any sync script p95 lag >5min is yellow
+    cost_usd_per_day_per_project: 10       # adopter-tunable; v1 default conservative
 
 # Protocol version. Bumped when endpoint tool surface changes.
 protocol_version: "1.0"

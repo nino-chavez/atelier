@@ -1,0 +1,300 @@
+/* Observability dashboard styles. Mirrors the lens shell's visual
+ * vocabulary (panels in a dark slate with monospace metadata) but
+ * leans on a single global stylesheet rather than CSS modules per
+ * panel - the section components share a tight set of metric/pill/row
+ * primitives and a module-per-section would multiply boilerplate
+ * for no real isolation gain.
+ */
+
+.obs-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+  color: #e6e9ef;
+  font: 14px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
+.obs-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #2a303c;
+  margin-bottom: 16px;
+}
+
+.obs-eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a93a6;
+  margin-bottom: 4px;
+}
+
+.obs-title {
+  font: 600 24px/1.2 ui-sans-serif, system-ui, sans-serif;
+  margin: 0 0 8px;
+  color: #e6e9ef;
+}
+
+.obs-description {
+  font-size: 13px;
+  color: #c9d1e0;
+  margin: 0;
+  max-width: 720px;
+}
+
+.obs-viewer {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.obs-viewer-name {
+  font-weight: 600;
+  color: #e6e9ef;
+}
+
+.obs-viewer-meta {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  color: #8a93a6;
+  margin-bottom: 8px;
+}
+
+.obs-refresher {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.obs-refresher-meta {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: #8a93a6;
+}
+
+.obs-refresher-btn {
+  background: #2a303c;
+  border: 1px solid #3a4150;
+  color: #c9d1e0;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font: 600 11px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.obs-refresher-btn:hover {
+  border-color: #7aa6ff;
+  color: #e6e9ef;
+}
+
+.obs-refresher-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.obs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #2a303c;
+}
+
+.obs-tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #8a93a6;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.obs-tab:hover {
+  color: #c9d1e0;
+}
+
+.obs-tab-active {
+  color: #e6e9ef;
+  border-bottom-color: #7aa6ff;
+}
+
+.obs-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.obs-card {
+  background: #161a22;
+  border: 1px solid #2a303c;
+  border-radius: 6px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.obs-card-wide {
+  grid-column: 1 / -1;
+}
+
+.obs-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.obs-card-title {
+  font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c9d1e0;
+  margin: 0;
+}
+
+.obs-card-sub {
+  font-size: 11px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: #8a93a6;
+}
+
+.obs-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.obs-metric-value {
+  font: 600 28px/1 ui-sans-serif, system-ui, sans-serif;
+  color: #e6e9ef;
+}
+
+.obs-metric-suffix {
+  font-size: 13px;
+  color: #8a93a6;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.obs-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font: 600 10px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.obs-pill-ok {
+  background: #143426;
+  color: #71d49a;
+  border: 1px solid #2c5b46;
+}
+
+.obs-pill-warn {
+  background: #3a2a14;
+  color: #ffae73;
+  border: 1px solid #6a4a26;
+}
+
+.obs-pill-alert {
+  background: #3a1a22;
+  color: #ff7a8a;
+  border: 1px solid #6a2c3c;
+}
+
+.obs-row-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.obs-row {
+  border: 1px solid #2a303c;
+  border-radius: 4px;
+  padding: 8px 10px;
+  background: #1d222c;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.obs-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.obs-row-meta {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  color: #8a93a6;
+}
+
+.obs-empty {
+  color: #8a93a6;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.obs-callout {
+  border-left: 3px solid #7aa6ff;
+  padding: 8px 12px;
+  background: #1d222c;
+  color: #c9d1e0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.obs-callout-warn {
+  border-left-color: #ffae73;
+}
+
+.obs-bar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 60px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.obs-bar-label {
+  color: #c9d1e0;
+  text-transform: capitalize;
+}
+
+.obs-bar-track {
+  height: 6px;
+  background: #0e1014;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.obs-bar-fill {
+  height: 100%;
+  background: #7aa6ff;
+}
+
+.obs-bar-fill-warn {
+  background: #ffae73;
+}
+
+.obs-bar-fill-alert {
+  background: #ff7a8a;
+}
+
+.obs-bar-count {
+  color: #8a93a6;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  text-align: right;
+}

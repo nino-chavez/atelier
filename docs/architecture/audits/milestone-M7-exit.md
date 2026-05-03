@@ -81,7 +81,7 @@ Validator output: 19 issues across 2 FAIL check classes (`trace_id_resolution`, 
 
 Of the 19 issues:
 
-- **18 fixture trace IDs** in `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` (synthetic NF-* and out-of-range US-99.x / BRD:Epic-99 placeholders). These are intentional placeholder citations the early audits used to demonstrate the validator's catch behavior on fabricated IDs; carrying them is documented load-bearing for the audit narrative. Fix is to either (a) annotate them so the validator skips fixture lines, or (b) accept them as known-fixed cost. **Track 3 polish; not exit-blocking.**
+- **18 fixture trace IDs** in `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` (synthetic non-functional-requirement placeholders and out-of-range user-story / BRD-epic placeholders using `99` as the sentinel value). These are intentional placeholder citations the early audits used to demonstrate the validator's catch behavior on fabricated IDs; carrying them is documented load-bearing for the audit narrative. Fix is to either (a) annotate them so the validator skips fixture lines, or (b) accept them as known-fixed cost. **Track 3 polish; not exit-blocking.**
 
 - **1 markdown link** in `docs/developer/fork-and-customize.md:38` references `../ops/migration/` — a directory that doesn't exist. Either the doc should drop the reference or the directory should be authored. **Foldable into this audit's PR** if scope permits; otherwise filed as F7.1.
 

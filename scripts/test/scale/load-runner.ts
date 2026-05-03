@@ -226,7 +226,15 @@ async function callTool(
   toolArgs: Record<string, unknown>,
 ): Promise<{ ok: boolean; durationMs: number; result: unknown }> {
   const out = await rpc(args, 'tools/call', { name: toolName, arguments: toolArgs });
-  return { ok: out.ok, durationMs: out.durationMs, result: out.response?.result };
+  // MCP tools/call wraps tool output in {content: [...], structuredContent:
+  // {...}} per the protocol. The harness wants the structured form so callers
+  // can dereference fields like result.session_id directly.
+  const raw = out.response?.result as
+    | { structuredContent?: Record<string, unknown>; isError?: boolean }
+    | undefined;
+  const ok = out.ok && !raw?.isError;
+  const result = raw?.structuredContent ?? raw;
+  return { ok, durationMs: out.durationMs, result };
 }
 
 // ---------------------------------------------------------------------------

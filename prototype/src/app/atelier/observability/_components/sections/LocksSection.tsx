@@ -54,7 +54,7 @@ export default function LocksSection({
         ) : (
           <ul className="obs-row-list">
             {data.recentLedger.map((r, idx) => (
-              <li key={`${r.at.toISOString()}-${idx}`} className="obs-row">
+              <li key={`${r.at.toISOString()}-${idx}`} className="obs-row" data-iaux-row="lock-ledger">
                 <div className="obs-row-head">
                   <span>
                     <span style={{ fontFamily: 'ui-monospace, monospace' }}>{r.action}</span>

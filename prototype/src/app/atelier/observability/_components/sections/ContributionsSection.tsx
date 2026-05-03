@@ -59,7 +59,7 @@ export default function ContributionsSection({
         ) : (
           <ul className="obs-row-list">
             {data.recentTransitions.map((t, idx) => (
-              <li key={`${t.at.toISOString()}-${idx}`} className="obs-row">
+              <li key={`${t.at.toISOString()}-${idx}`} className="obs-row" data-iaux-row="recent-transition">
                 <div className="obs-row-head">
                   <span>
                     <span style={{ fontFamily: 'ui-monospace, monospace' }}>{t.action}</span>

@@ -141,9 +141,36 @@ console.log('\n[7] multi-word commands dispatch correctly');
   const dsBad = run(['datastore', 'invalid']);
   check('datastore <invalid> exits 2', dsBad.status === 2, `got ${dsBad.status}`);
 
-  const terAdd = run(['territory', 'add']);
-  check('territory add exits 0', terAdd.status === 0, `got ${terAdd.status}`);
-  check('territory add references territories.yaml', terAdd.stdout.includes('.atelier/territories.yaml'));
+  // territory add is polished form per D2 (PR #53). Missing-required-flags
+  // exits 2 (non-TTY), --help exits 0, --dry-run with valid input exits 0
+  // and renders a preview without touching the file.
+  const terMissing = run(['territory', 'add']);
+  check('territory add (no args, non-TTY) exits 2', terMissing.status === 2, `got ${terMissing.status}`);
+  check('territory add error names the missing flags', terMissing.stderr.includes('--name'));
+
+  const terDryRun = run([
+    'territory', 'add',
+    '--name', 'smoke-territory-do-not-commit',
+    '--owner-role', 'dev',
+    '--scope-kind', 'files',
+    '--scope-pattern', 'smoke/**',
+    '--description', 'Smoke-test only; never written.',
+    '--dry-run',
+  ]);
+  check('territory add --dry-run exits 0', terDryRun.status === 0, `got ${terDryRun.status}`);
+  check('territory add --dry-run prints DRY RUN banner', terDryRun.stdout.includes('DRY RUN'));
+  check('territory add --dry-run renders the new entry', terDryRun.stdout.includes('- name: smoke-territory-do-not-commit'));
+
+  const terDup = run([
+    'territory', 'add',
+    '--name', 'methodology',  // collides with the existing "methodology" territory
+    '--owner-role', 'dev',
+    '--scope-kind', 'files',
+    '--scope-pattern', 'x/**',
+    '--non-interactive',
+  ]);
+  check('territory add duplicate-name exits 1', terDup.status === 1, `got ${terDup.status}`);
+  check('territory add duplicate-name names the conflict', terDup.stderr.includes('already exists'));
 
   const evalBad = run(['eval', 'invalid']);
   check('eval <invalid> exits 2', evalBad.status === 2, `got ${evalBad.status}`);

@@ -50,7 +50,7 @@ const COMMANDS: readonly Command[] = [
   { name: 'datastore', description: 'Manage the coordination datastore (init)', status: 'stub', run: runDatastore, usage: datastoreUsage },
   { name: 'deploy', description: 'Push prototype + endpoint to deploy target', status: 'stub', run: runDeploy, usage: deployUsage },
   { name: 'invite', description: 'Invite a remote-principal composer', status: 'stub', run: runInvite, usage: inviteUsage },
-  { name: 'territory', description: 'Manage territory definitions (add)', status: 'stub', run: runTerritory, usage: territoryUsage },
+  { name: 'territory', description: 'Manage territory definitions (add)', status: 'working', run: runTerritory, usage: territoryUsage },
   { name: 'doctor', description: 'Diagnose substrate health (ARCH 6.1.1 four-step)', status: 'stub', run: runDoctor, usage: doctorUsage },
   { name: 'upgrade', description: 'Pull new template version (v1.x scope)', status: 'scope-deferred', run: runUpgrade, usage: upgradeUsage },
   // Sync substrate.

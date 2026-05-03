@@ -134,10 +134,57 @@ console.log('\n[6] pointer-stubs honor v1.x deferral contract');
 // ---------------------------------------------------------------------------
 console.log('\n[7] multi-word commands dispatch correctly');
 {
-  const dsInit = run(['datastore', 'init']);
-  check('datastore init exits 0', dsInit.status === 0, `got ${dsInit.status}`);
-  check('datastore init shows raw form (supabase db push)', dsInit.stdout.includes('supabase db push'));
+  // datastore init is polished form per D3 (this PR). --dry-run renders
+  // the plan + auto-detected mode + DB host without touching anything.
+  // Local mode is the default when no ATELIER_DATASTORE_URL is set.
+  const dsDryRun = run(['datastore', 'init', '--dry-run']);
+  check('datastore init --dry-run exits 0', dsDryRun.status === 0, `got ${dsDryRun.status}`);
+  check('datastore init --dry-run prints DRY RUN banner', dsDryRun.stdout.includes('DRY RUN'));
+  check('datastore init --dry-run names auto-detected mode', /Mode:\s+(local|cloud)/.test(dsDryRun.stdout));
+  check('datastore init --dry-run surfaces DB host line', dsDryRun.stdout.includes('DB host:'));
 
+  // --json mode: parses cleanly and exposes the InitJsonOutput shape.
+  const dsJson = run(['datastore', 'init', '--dry-run', '--json']);
+  check('datastore init --dry-run --json exits 0', dsJson.status === 0, `got ${dsJson.status}`);
+  type DsInitJson = { ok: boolean; mode: string; dryRun: boolean };
+  let parsedJson: DsInitJson | null = null;
+  try {
+    parsedJson = JSON.parse(dsJson.stdout) as DsInitJson;
+  } catch {
+    parsedJson = null;
+  }
+  check('datastore init --json emits parseable JSON', parsedJson !== null);
+  check('datastore init --json reports dryRun: true', parsedJson?.dryRun === true);
+  check('datastore init --json reports mode in {local, cloud}', parsedJson?.mode === 'local' || parsedJson?.mode === 'cloud');
+
+  // Precondition: --reset without --yes (in non-interactive) is a usage error.
+  const dsResetGated = run(['datastore', 'init', '--reset', '--non-interactive']);
+  check('datastore init --reset (non-interactive) without --yes exits 2', dsResetGated.status === 2, `got ${dsResetGated.status}`);
+  check('datastore init --reset error names --yes', dsResetGated.stderr.includes('--yes'));
+
+  // Precondition: --seed without --email/--password (in non-interactive) is exit 2.
+  const dsSeedGated = run(['datastore', 'init', '--seed', '--non-interactive']);
+  check('datastore init --seed (non-interactive) without creds exits 2', dsSeedGated.status === 2, `got ${dsSeedGated.status}`);
+  check('datastore init --seed error names --email', dsSeedGated.stderr.includes('--email'));
+
+  // Precondition: --remote without ATELIER_DATASTORE_URL/DATABASE_URL is exit 2.
+  // spawnSync inherits parent env so we override it with the relevant vars stripped.
+  const dsRemoteGated = spawnSync('npx', ['tsx', CLI, 'datastore', 'init', '--remote'], {
+    encoding: 'utf8',
+    cwd: REPO_ROOT,
+    env: Object.fromEntries(
+      Object.entries(process.env).filter(([k]) => k !== 'ATELIER_DATASTORE_URL' && k !== 'DATABASE_URL'),
+    ) as NodeJS.ProcessEnv,
+  });
+  check('datastore init --remote without URL exits 2', dsRemoteGated.status === 2, `got ${dsRemoteGated.status}`);
+  check('datastore init --remote error names ATELIER_DATASTORE_URL', dsRemoteGated.stderr.includes('ATELIER_DATASTORE_URL'));
+
+  // Mutual-exclusion: --remote + --local exits 2 with clear message.
+  const dsConflict = run(['datastore', 'init', '--remote', '--local']);
+  check('datastore init --remote --local exits 2', dsConflict.status === 2, `got ${dsConflict.status}`);
+  check('datastore init mutual-exclusion error mentions both flags', dsConflict.stderr.includes('--remote') && dsConflict.stderr.includes('--local'));
+
+  // Unknown subcommand still exits 2.
   const dsBad = run(['datastore', 'invalid']);
   check('datastore <invalid> exits 2', dsBad.status === 2, `got ${dsBad.status}`);
 

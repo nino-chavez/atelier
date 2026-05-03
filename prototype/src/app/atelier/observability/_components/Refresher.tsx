@@ -48,7 +48,7 @@ export default function Refresher({ staleAsOf }: { staleAsOf: string }) {
   const secondsToNext = Math.max(0, Math.ceil((POLL_INTERVAL_MS - (Date.now() - lastTick)) / 1000));
 
   return (
-    <div className="obs-refresher" suppressHydrationWarning>
+    <div className="obs-refresher" suppressHydrationWarning data-iaux-snapshot-ts={staleAsOf}>
       <span className="obs-refresher-meta">
         Snapshot {staleAsOf} (auto-refresh in ~{secondsToNext}s; last tick {secondsSinceTick}s ago)
       </span>

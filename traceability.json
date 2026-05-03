@@ -1,17 +1,17 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-05-03T21:44:40.658Z",
+  "generated_at": "2026-05-03T22:47:50.158Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
   "counts": {
     "brd-epics": 16,
     "brd-stories": 106,
-    "decisions": 52,
+    "decisions": 49,
     "open-questions": 30,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 50
+    "adrs": 47
   },
   "entries": [
     {
@@ -1326,7 +1326,7 @@
     },
     {
       "id": "D33",
-      "label": "Per-ADR file split — DECISIONS.md becomes a directory",
+      "label": "Per-ADR file split \u2014 DECISIONS.md becomes a directory",
       "kind": "decision",
       "docPath": "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md",
       "docUrl": "",
@@ -1337,7 +1337,7 @@
     },
     {
       "id": "D34",
-      "label": "Three-tier consumer model — Specification / Reference Implementation / Reference Deployment",
+      "label": "Three-tier consumer model \u2014 Specification / Reference Implementation / Reference Deployment",
       "kind": "decision",
       "docPath": "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md",
       "docUrl": "",
@@ -1509,39 +1509,6 @@
       "prototypePages": [],
       "adr": "ADR-047",
       "source": "m7-track-2-section-26-wider-eval",
-      "status": "DECIDED"
-    },
-    {
-      "id": "D50",
-      "label": "Triage proposal disposition state machine",
-      "kind": "decision",
-      "docPath": "docs/architecture/decisions/ADR-048-triage-proposal-disposition-state-machine.md",
-      "docUrl": "",
-      "prototypePages": [],
-      "adr": "ADR-048",
-      "source": "design-session-2026-05-03",
-      "status": "DECIDED"
-    },
-    {
-      "id": "D51",
-      "label": "Contribution decomposition via parent-child relationship",
-      "kind": "decision",
-      "docPath": "docs/architecture/decisions/ADR-049-contribution-decomposition-parent-child-relationship.md",
-      "docUrl": "",
-      "prototypePages": [],
-      "adr": "ADR-049",
-      "source": "design-session-2026-05-03",
-      "status": "DECIDED"
-    },
-    {
-      "id": "D52",
-      "label": "Endpoint error telemetry + diagnose_failure semantics",
-      "kind": "decision",
-      "docPath": "docs/architecture/decisions/ADR-050-endpoint-error-telemetry-and-diagnose-failure-semantics.md",
-      "docUrl": "",
-      "prototypePages": [],
-      "adr": "ADR-050",
-      "source": "design-session-2026-05-03",
       "status": "DECIDED"
     },
     {
@@ -2055,21 +2022,6 @@
       "from": "ADR-047",
       "to": "ADR-043",
       "rel": "supersedes"
-    },
-    {
-      "from": "ADR-048",
-      "to": "BRD:Epic-9",
-      "rel": "implements"
-    },
-    {
-      "from": "ADR-049",
-      "to": "BRD:Epic-16",
-      "rel": "implements"
-    },
-    {
-      "from": "ADR-050",
-      "to": "BRD:Epic-12",
-      "rel": "implements"
     }
   ]
 }

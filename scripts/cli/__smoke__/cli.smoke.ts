@@ -89,6 +89,81 @@ console.log('\n[4] atelier dev --preflight-only is non-orchestrating');
 }
 
 // ---------------------------------------------------------------------------
+// [5] All 12 polished commands are registered + each surfaces --help
+// ---------------------------------------------------------------------------
+//
+// Per BUILD-SEQUENCE §9 the polished CLI surface is 12 commands; `dev` (#13)
+// shipped at PR #35. This batch verifies the dispatcher knows about every
+// command and each one's `--help` produces the per-command usage block.
+console.log('\n[5] all 12 polished commands surface --help');
+{
+  const COMMANDS_TO_CHECK = [
+    'init', 'datastore', 'deploy', 'invite', 'territory', 'doctor', 'upgrade',
+    'sync', 'reconcile', 'eval', 'audit', 'review',
+  ];
+  for (const cmd of COMMANDS_TO_CHECK) {
+    const r = run([cmd, '--help']);
+    check(`${cmd} --help exits 0`, r.status === 0, `got ${r.status}`);
+    check(`${cmd} --help mentions Usage:`, r.stdout.includes('Usage:'));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// [6] Pointer-stub commands print v1.x deferral message + raw equivalent
+// ---------------------------------------------------------------------------
+//
+// Per Nino's 2026-05-02 brief: stubs must run, print "polished form lands in
+// v1.x; for v1 do X via <raw equivalent>", exit 0. This batch verifies the
+// stubs honor that contract (init = timeline-deferred; upgrade = scope-deferred
+// with the additional v1.x-not-just-CLI framing).
+console.log('\n[6] pointer-stubs honor v1.x deferral contract');
+{
+  const stubInit = run(['init']);
+  check('atelier init exits 0', stubInit.status === 0, `got ${stubInit.status}`);
+  check('atelier init mentions v1.x', stubInit.stdout.includes('v1.x'));
+  check('atelier init names the raw equivalent', stubInit.stdout.includes('git clone'));
+
+  const stubUpgrade = run(['upgrade']);
+  check('atelier upgrade exits 0', stubUpgrade.status === 0, `got ${stubUpgrade.status}`);
+  check('atelier upgrade flags scope-deferred', stubUpgrade.stdout.includes('SCOPE-DEFERRED'));
+  check('atelier upgrade points at BRD-OPEN-QUESTIONS', stubUpgrade.stdout.includes('BRD-OPEN-QUESTIONS'));
+}
+
+// ---------------------------------------------------------------------------
+// [7] Multi-word command dispatch (datastore init, territory add, eval find_similar)
+// ---------------------------------------------------------------------------
+console.log('\n[7] multi-word commands dispatch correctly');
+{
+  const dsInit = run(['datastore', 'init']);
+  check('datastore init exits 0', dsInit.status === 0, `got ${dsInit.status}`);
+  check('datastore init shows raw form (supabase db push)', dsInit.stdout.includes('supabase db push'));
+
+  const dsBad = run(['datastore', 'invalid']);
+  check('datastore <invalid> exits 2', dsBad.status === 2, `got ${dsBad.status}`);
+
+  const terAdd = run(['territory', 'add']);
+  check('territory add exits 0', terAdd.status === 0, `got ${terAdd.status}`);
+  check('territory add references territories.yaml', terAdd.stdout.includes('.atelier/territories.yaml'));
+
+  const evalBad = run(['eval', 'invalid']);
+  check('eval <invalid> exits 2', evalBad.status === 2, `got ${evalBad.status}`);
+}
+
+// ---------------------------------------------------------------------------
+// [8] atelier review (inline implementation; no DB/network)
+// ---------------------------------------------------------------------------
+console.log('\n[8] atelier review computes from territories.yaml');
+{
+  const empty = run(['review']);
+  check('review with no args exits 2', empty.status === 2, `got ${empty.status}`);
+
+  const real = run(['review', 'docs/architecture/ARCHITECTURE.md']);
+  check('review <real-file> exits 0', real.status === 0, `got ${real.status}`);
+  check('review names the matched territory', real.stdout.includes('Territory:'));
+  check('review surfaces review_role', real.stdout.includes('review_role:'));
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log('');

@@ -1757,6 +1757,15 @@
       "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
       "docUrl": "#28-deploy-trigger-conditions-for-the-atelier-endpoint",
       "prototypePages": [],
+      "status": "RESOLVED"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-29",
+      "label": "atelier upgrade template-upgrade flow (scope-deferred to v1.x)",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#29-atelier-upgrade-template-upgrade-flow-scope-deferred-to-v1x",
+      "prototypePages": [],
       "status": "OPEN"
     }
   ],

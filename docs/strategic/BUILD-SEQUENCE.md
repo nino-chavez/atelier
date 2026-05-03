@@ -61,7 +61,7 @@ This is also the strongest disconfirming test available before public release. A
 | **M4** | Multi-composer concurrency (real broadcast) | Concurrent authoring is observable and conflict-safe | **Done** (~2026-05-01; no per-milestone exit audit; backfilled by M7-exit sweep) |
 | **M5** | find_similar + eval harness + CI gate | Disconfirming test on the commercial wedge fires | **Done** (2026-05-01; no per-milestone exit audit; calibration captured in ADR-042/043; reframed by ADR-047) |
 | **M6** | Remote-principal composers + triage | Analyst case executes through Atelier itself; bootstrap inflection point per ADR-044 | **Done** (2026-05-02; see `../architecture/audits/milestone-M6-exit.md`) |
-| **M7** | Hardening + open-ADR resolution | Reference implementation is publication-ready | **Audit complete** (2026-05-03; see `../architecture/audits/milestone-M7-exit.md`); Playwright IA/UX suite is the remaining exit gate per PR #40 |
+| **M7** | Hardening + open-ADR resolution | Reference implementation is publication-ready | **Done** (2026-05-03; audit at `../architecture/audits/milestone-M7-exit.md`; Playwright IA/UX suite landed via PR #43 (static layer) + PR #44 (DOM layer); v1 substrate complete) |
 
 ---
 
@@ -239,7 +239,12 @@ Per-composer attribution kicks in: M1's service-role internal writes are joined 
 
 ### M7 — Hardening + open-ADR resolution
 
-**Status:** Audit complete (2026-05-03; see `../architecture/audits/milestone-M7-exit.md`). Playwright IA/UX suite is the remaining exit gate per PR #40; bounded ~1-2 days, sequenced after the audit per the M7-exit kickoff direction. Do not flip status to Done until the suite passes against the deployed substrate at scale fixtures.
+**Status:** Done (2026-05-03; see `../architecture/audits/milestone-M7-exit.md`). The Playwright IA/UX suite that was the remaining exit gate per PR #40 landed in two layers:
+
+- **PR #43** — static layer: `prototype/__smoke__/iaux.smoke.ts`. Source-text contract assertions on data modules + Refresher + lens panels (LIMIT requires ORDER BY; recency-DESC requires LIMIT; Refresher poll declared at 30_000; baseline absence of client-side filter/sort controls; no client-side `.sort()` on rendered lists). 23 assertions; runs in <1s; wired to CI.
+- **PR #44** — DOM layer: `prototype/__smoke__/iaux.dom.spec.ts`. Render-time assertions against a moderate-scale fixture (100 contributions, 50 locks, 200 contribution-telemetry, 30 lock-telemetry rows). 5 tests covering render-ceiling enforcement, lens-weighting at scale, server-side LIMIT enforcement at the network layer, and live freshness (Refresher tick observation). 5 passing; ~38s; local-only at v1 (CI integration filed as v1.x polish requiring supabase-in-CI).
+
+v1 substrate is now publication-ready per the no-announcement-ceremony principle (PR #40): README + repo description state shipped status; the substrate validates itself through automated flows; adoption discovery is organic.
 
 **Produces.** D24 (embedding model default) resolved by ADR-041 prior to M5; D22 resolved as ADR-026; D23 resolved as ADR-028. Observability stack (telemetry table populated, `/atelier/observability` route at v1; out-of-band alerting deferred to v1.x per BRD-OPEN-QUESTIONS §30). 12 v1 CLI commands per NORTH-STAR §10 — split per §9 below into 6 working at v1 (sync, reconcile, eval, audit, review, dev) and 7 pointer-stubs to v1.x (init, datastore, deploy, invite, territory, doctor, upgrade). Reference-implementation technology choices documented (ADR-027 + ADR-046 deploy strategy). Lint rule banning proprietary imports outside named adapters per ADR-029 (PR #28). `docs/migration-to-gcp.md` runbook **NOT delivered** at v1 — the portability lint operationalizes the constraint at code level, but the per-capability migration runbook is filed as M7-exit follow-up F7.2 in the M7-exit audit and held until first adopter signal requests an actual GCP migration. ADR-029's promise-to-author at M2 was never honored; the M7-exit drift sweep surfaced it cleanly through validator link-integrity (broken link in `docs/developer/fork-and-customize.md`).
 

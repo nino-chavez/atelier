@@ -440,6 +440,21 @@ The audit applies five checks to every schema-bearing surface in the milestone's
 
 **Why this section was added.** The `kind=proposal` semantic conflation surfaced via conversation in 2026-04-28 rather than from a prior audit -- exact evidence the audit pattern was missing. Codifying this section makes the pattern routine instead of incidental.
 
+### 11.5b Canonical-pattern pre-check (pre-spec)
+
+Before specifying any implementation that touches infrastructure with a well-known canonical pattern -- authentication, payments, OAuth, sessions, queues, webhooks, file uploads, anything where the vendor publishes "the right way to do this" -- the spec author runs two checks IN THIS ORDER:
+
+1. **Vendor canonical.** Read the vendor's recommended-approach doc page (Supabase Auth flow guide, Stripe payment-flow guide, AWS canonical example, etc.) for the specific primitive. Don't skip even if you "already know" the vendor -- patterns evolve and what was "the standard" two years ago may not be now.
+2. **Internal reference impl.** Check Nino's other repos (`apps/rally-hq`, `apps/630-apps`, `apps/zerospecs`, `wip/`, `tools/`) for a working implementation of the same primitive. If one exists, it is a primary source equivalent to vendor docs.
+
+The default is the canonical pattern. Custom shapes -- anything that diverges from the vendor canonical or from a working internal reference -- require an ADR-level justification with explicit "why not the canonical" naming. The shape of the justification mirrors ADR-026's Switchman rejection: name the canonical, name the disqualifier, choose the alternative.
+
+**Why this section was added.** D7 (`/sign-in` magic-link auth) shipped a custom PKCE flow + custom `/sign-in/check` C1 gate to address an OTP-relay audit finding. The Supabase canonical pattern (token-hash flow + `shouldCreateUser:false` + custom email template) addresses OTP-relay structurally without a custom server route. `apps/rally-hq` had a working canonical-pattern reference impl all along; it was not consulted during D7 spec or build. The custom shape broke in production (Vercel cold-start), required a refactor, and represented hours of work re-discovering an answer that was already shipped in another repo. Codifying this check makes the pattern routine instead of incidental.
+
+**When canonical-divergence IS justified.** ADR-026 (Switchman rejection: canonical lacked fencing tokens) and ADR-027 (Vercel + Supabase + GitHub stack: canonical assumed SaaS, Atelier is OSS-only) are the model. Both name the canonical, name the disqualifier, choose the alternative explicitly. If the spec doesn't have a similarly explicit "why not canonical" sentence, the spec is incomplete -- not because process is missing, but because the design choice itself is unjustified.
+
+**Cadence.** Run the check at spec time (before BRD/PRD/ADR drafting). Surface the canonical-pattern reference in the spec's opening paragraph: "The canonical Supabase pattern for X is Y (per Z docs); we adopt it" OR "The canonical Supabase pattern for X is Y; we diverge to Z because ..." Either is acceptable; silence is not.
+
 ### 11.6 Spec-to-implementation gate (M2+)
 
 Once M2 is in flight, every code PR that implements a spec'd capability cites the ARCH section it implements. The citation lives in the PR description in a structured block:

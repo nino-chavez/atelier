@@ -1,6 +1,6 @@
 {
   "$schema": "./scripts/traceability/schema.json",
-  "generated_at": "2026-05-03T22:47:50.158Z",
+  "generated_at": "2026-05-04T14:32:42.045Z",
   "project_id": "atelier-self",
   "project_name": "Atelier",
   "template_version": "1.0",
@@ -8,7 +8,7 @@
     "brd-epics": 16,
     "brd-stories": 106,
     "decisions": 49,
-    "open-questions": 30,
+    "open-questions": 31,
     "sections": 0,
     "prototype-slices": 0,
     "adrs": 47
@@ -1326,7 +1326,7 @@
     },
     {
       "id": "D33",
-      "label": "Per-ADR file split \u2014 DECISIONS.md becomes a directory",
+      "label": "Per-ADR file split — DECISIONS.md becomes a directory",
       "kind": "decision",
       "docPath": "docs/architecture/decisions/ADR-030-per-adr-file-split-decisionsmd-becomes-a-directory.md",
       "docUrl": "",
@@ -1337,7 +1337,7 @@
     },
     {
       "id": "D34",
-      "label": "Three-tier consumer model \u2014 Specification / Reference Implementation / Reference Deployment",
+      "label": "Three-tier consumer model — Specification / Reference Implementation / Reference Deployment",
       "kind": "decision",
       "docPath": "docs/architecture/decisions/ADR-031-three-tier-consumer-model-specification-reference-implementa.md",
       "docUrl": "",
@@ -1778,6 +1778,15 @@
       "kind": "open-question",
       "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
       "docUrl": "#30-push-notification-alerting-via-messaging-adapter-out-of-band-observability-delivery",
+      "prototypePages": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "BRD-OPEN-QUESTIONS:section-31",
+      "label": "X1 close-out audit follow-ups",
+      "kind": "open-question",
+      "docPath": "docs/functional/BRD-OPEN-QUESTIONS.md",
+      "docUrl": "#31-x1-close-out-audit-follow-ups",
       "prototypePages": [],
       "status": "OPEN"
     }

@@ -27,6 +27,7 @@
 import { Client } from 'pg';
 import { promises as fs } from 'node:fs';
 import { resolveDeliveryAdapter } from './lib/adapters.ts';
+import { registerConfiguredAdapters } from './lib/adapter-registry.ts';
 
 interface Args {
   reapBranches: boolean | null;     // null = use env default
@@ -317,6 +318,7 @@ async function main(): Promise<void> {
   const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
   const db = new Client({ connectionString: dbUrl });
   await db.connect();
+  registerConfiguredAdapters();
   try {
     const report = await reconcile({ db, projectId, args, reapingEnabled, reapingApply });
     await recordTelemetry(db, projectId, report);

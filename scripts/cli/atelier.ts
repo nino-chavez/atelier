@@ -46,7 +46,7 @@ interface Command {
 const COMMANDS: readonly Command[] = [
   // Adopter-readiness workflow (BUILD-SEQUENCE §9 + US-11.13).
   { name: 'dev', description: 'Bring up the local Atelier substrate', status: 'working', run: runDev, usage: devUsage },
-  { name: 'init', description: 'Scaffold a new Atelier project', status: 'stub', run: runInit, usage: initUsage },
+  { name: 'init', description: 'Scaffold a new Atelier project', status: 'working', run: runInit, usage: initUsage },
   { name: 'datastore', description: 'Manage the coordination datastore (init)', status: 'stub', run: runDatastore, usage: datastoreUsage },
   { name: 'deploy', description: 'Push prototype + endpoint to deploy target', status: 'stub', run: runDeploy, usage: deployUsage },
   { name: 'invite', description: 'Invite a remote-principal composer', status: 'stub', run: runInvite, usage: inviteUsage },

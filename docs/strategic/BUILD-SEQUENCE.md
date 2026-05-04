@@ -299,7 +299,7 @@ The v1 polished-form scope review at PR #37 surfaced an honest split: 6 commands
 
 | Command | Group | Raw form (functional, hand-invokable) | v1 polished form |
 |---|---|---|---|
-| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8) | **v1.x stub** — prints clone-and-rm-rf-git pointer + local-bootstrap.md path; polished init lands with US-1.8 handshake |
+| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8) | **v1 polished** (D5) — clones the reference repo, customizes `.atelier/config.yaml` + README, strips discovery docs to template skeletons, optionally delegates to `atelier datastore init` + `atelier invite`. Cloud-mode auto-provisioning + the guided handshake protocol per US-1.8 (credential-handover surface) remain v1.x scope |
 | `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | **v1.x stub** — prints `supabase db reset` pointer |
 | `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | **v1.x stub** — prints `vercel deploy --prod` + first-deploy.md pointer |
 | `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | **v1.x stub** — prints Supabase Auth invite + bearer-rotation pointer |

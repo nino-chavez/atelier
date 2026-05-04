@@ -113,16 +113,13 @@ console.log('\n[5] all 12 polished commands surface --help');
 // ---------------------------------------------------------------------------
 //
 // Per Nino's 2026-05-02 brief: stubs must run, print "polished form lands in
-// v1.x; for v1 do X via <raw equivalent>", exit 0. This batch verifies the
-// stubs honor that contract (init = timeline-deferred; upgrade = scope-deferred
-// with the additional v1.x-not-just-CLI framing).
+// v1.x; for v1 do X via <raw equivalent>", exit 0. `atelier init` flipped to
+// polished form at D5; the polished argument-handling contract is asserted
+// in the init section below. Substrate-touching scaffolding lives in
+// scripts/cli/__smoke__/init.smoke.ts. `upgrade` remains scope-deferred at
+// v1.x per BRD-OPEN-QUESTIONS §29.
 console.log('\n[6] pointer-stubs honor v1.x deferral contract');
 {
-  const stubInit = run(['init']);
-  check('atelier init exits 0', stubInit.status === 0, `got ${stubInit.status}`);
-  check('atelier init mentions v1.x', stubInit.stdout.includes('v1.x'));
-  check('atelier init names the raw equivalent', stubInit.stdout.includes('git clone'));
-
   const stubUpgrade = run(['upgrade']);
   check('atelier upgrade exits 0', stubUpgrade.status === 0, `got ${stubUpgrade.status}`);
   check('atelier upgrade flags scope-deferred', stubUpgrade.stdout.includes('SCOPE-DEFERRED'));
@@ -161,6 +158,111 @@ console.log('\n[8] atelier review computes from territories.yaml');
   check('review <real-file> exits 0', real.status === 0, `got ${real.status}`);
   check('review names the matched territory', real.stdout.includes('Territory:'));
   check('review surfaces review_role', real.stdout.includes('review_role:'));
+}
+
+// ---------------------------------------------------------------------------
+// [9] atelier init (D5 polished form; argument-handling contract only)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching scaffolding (real git clone + datastore init) lives in
+// scripts/cli/__smoke__/init.smoke.ts (gated on git binary presence).
+// This section asserts only the argument-handling contract: missing
+// positional exits 2, invalid name exits 2, --dry-run renders a plan
+// without mutating, --help cross-references local-bootstrap.md and ADR-029.
+console.log('\n[9] atelier init (D5 polished form)');
+{
+  const help = run(['init', '--help']);
+  check('init --help exits 0', help.status === 0, `got ${help.status}`);
+  check('init --help mentions Required', help.stdout.includes('Required:'));
+  check('init --help mentions <project-name>', help.stdout.includes('<project-name>'));
+  check('init --help mentions --datastore-mode', help.stdout.includes('--datastore-mode'));
+  check('init --help mentions --discipline', help.stdout.includes('--discipline'));
+  check('init --help mentions --email', help.stdout.includes('--email'));
+  check('init --help mentions --skip-git', help.stdout.includes('--skip-git'));
+  check('init --help mentions --template-url', help.stdout.includes('--template-url'));
+  check('init --help cross-references local-bootstrap.md', help.stdout.includes('local-bootstrap.md'));
+  check('init --help cross-references ADR-029', help.stdout.includes('ADR-029'));
+
+  const noPositional = run(['init']);
+  check('init (no positional) exits 2', noPositional.status === 2, `got ${noPositional.status}`);
+  check(
+    'init (no positional) names project-name as required',
+    noPositional.stderr.includes('project-name'),
+  );
+
+  const tooMany = run(['init', 'one', 'two']);
+  check('init (>1 positional) exits 2', tooMany.status === 2, `got ${tooMany.status}`);
+
+  const badName = run(['init', 'BadName_Underscore']);
+  check('init <invalid-name> exits 2', badName.status === 2, `got ${badName.status}`);
+  check(
+    'init <invalid-name> names the pattern',
+    badName.stderr.includes('project-name') && badName.stderr.includes('a-z'),
+  );
+
+  const badNameLeading = run(['init', '-bad']);
+  check('init <leading-dash> exits 2', badNameLeading.status === 2, `got ${badNameLeading.status}`);
+
+  const badEmail = run([
+    'init', 'demo-project',
+    '--email', 'not-an-email',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+  ]);
+  check('init --email <invalid> exits 2', badEmail.status === 2, `got ${badEmail.status}`);
+
+  const emailWithoutDatastore = run([
+    'init', 'demo-project',
+    '--email', 'a@b.co',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+  ]);
+  check(
+    'init --email + --datastore-mode skip exits 2',
+    emailWithoutDatastore.status === 2,
+    `got ${emailWithoutDatastore.status}`,
+  );
+
+  const badMode = run(['init', 'demo-project', '--datastore-mode', 'wizard']);
+  check('init --datastore-mode <invalid> exits 2', badMode.status === 2, `got ${badMode.status}`);
+
+  const badDiscipline = run(['init', 'demo-project', '--discipline', 'wizard']);
+  check('init --discipline <invalid> exits 2', badDiscipline.status === 2, `got ${badDiscipline.status}`);
+
+  // --dry-run does not touch git or supabase, so it runs without env.
+  const dry = run([
+    'init', 'demo-project',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+  ]);
+  check('init --dry-run exits 0', dry.status === 0, `got ${dry.status}`);
+  check('init --dry-run renders PLAN header', dry.stdout.includes('PLAN'));
+  check('init --dry-run echoes project_name', dry.stdout.includes('demo-project'));
+  check('init --dry-run lists steps', dry.stdout.includes('Steps'));
+  check('init --dry-run notes no mutations', dry.stdout.includes('No mutations performed'));
+  check('init --dry-run does NOT print DONE', !dry.stdout.includes('DONE'));
+
+  const dryJson = run([
+    'init', 'demo-project',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+    '--json',
+  ]);
+  check('init --dry-run --json exits 0', dryJson.status === 0, `got ${dryJson.status}`);
+  let parsed: { ok?: boolean; dryRun?: boolean; plan?: { projectName?: string; projectUuid?: string } } | null = null;
+  try {
+    parsed = JSON.parse(dryJson.stdout);
+  } catch {
+    parsed = null;
+  }
+  check('init --dry-run --json emits valid JSON', parsed !== null);
+  check('init --dry-run --json sets ok=true', parsed?.ok === true);
+  check('init --dry-run --json sets dryRun=true', parsed?.dryRun === true);
+  check('init --dry-run --json carries plan.projectName', parsed?.plan?.projectName === 'demo-project');
+  check(
+    'init --dry-run --json carries plan.projectUuid',
+    typeof parsed?.plan?.projectUuid === 'string' && /^[0-9a-f-]{36}$/.test(parsed!.plan!.projectUuid!),
+  );
 }
 
 // ---------------------------------------------------------------------------

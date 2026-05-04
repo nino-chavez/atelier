@@ -21,7 +21,12 @@ import { JiraDeliveryAdapter } from './jira.ts';
 import { LinearDeliveryAdapter } from './linear.ts';
 import { ConfluenceDocAdapter } from './confluence.ts';
 import { NotionDocAdapter } from './notion.ts';
-import { registerDeliveryAdapter, registerDocAdapter } from './adapters.ts';
+import { FigmaCommentSourceAdapter } from './figma.ts';
+import {
+  registerCommentSourceAdapter,
+  registerDeliveryAdapter,
+  registerDocAdapter,
+} from './adapters.ts';
 
 export interface RegistryOptions {
   /** Skip GitHub registration even if env vars are set. Tests use this to
@@ -35,6 +40,8 @@ export interface RegistryOptions {
   skipConfluence?: boolean;
   /** Skip Notion registration even if env vars are set. */
   skipNotion?: boolean;
+  /** Skip Figma registration even if env vars are set. */
+  skipFigma?: boolean;
 }
 
 export function registerConfiguredAdapters(opts: RegistryOptions = {}): { registered: string[] } {
@@ -92,6 +99,18 @@ export function registerConfiguredAdapters(opts: RegistryOptions = {}): { regist
     if (apiToken && defaultDatabaseId) {
       registerDocAdapter(new NotionDocAdapter({ apiToken, defaultDatabaseId }));
       registered.push('notion');
+    }
+  }
+
+  if (!opts.skipFigma) {
+    const apiToken = process.env.ATELIER_FIGMA_API_TOKEN;
+    const fileKeysRaw = process.env.ATELIER_FIGMA_FILE_KEYS;
+    const fileKeys = fileKeysRaw
+      ? fileKeysRaw.split(',').map((s) => s.trim()).filter((s) => s.length > 0)
+      : [];
+    if (apiToken && fileKeys.length > 0) {
+      registerCommentSourceAdapter(new FigmaCommentSourceAdapter({ apiToken, fileKeys }));
+      registered.push('figma');
     }
   }
 

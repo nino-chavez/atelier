@@ -109,24 +109,27 @@ console.log('\n[5] all 12 polished commands surface --help');
 }
 
 // ---------------------------------------------------------------------------
-// [6] Pointer-stub commands print v1.x deferral message + raw equivalent
+// [6] Polished-form commands honor argument-handling contract (no stub banner)
 // ---------------------------------------------------------------------------
 //
-// Per Nino's 2026-05-02 brief: stubs must run, print "polished form lands in
-// v1.x; for v1 do X via <raw equivalent>", exit 0. This batch verifies the
-// stubs honor that contract (init = timeline-deferred; upgrade = scope-deferred
-// with the additional v1.x-not-just-CLI framing).
-console.log('\n[6] pointer-stubs honor v1.x deferral contract');
+// Per Nino's 2026-05-02 brief: stubs print "polished form lands in v1.x" and
+// the v1 raw equivalent. `atelier init` flipped to polished form at D5;
+// `atelier deploy` at D6; `atelier upgrade` at E2 (this PR; consumes the E1
+// migration runner; resolves BRD-OPEN-QUESTIONS §29). Each polished command
+// has dedicated assertions further down. This section asserts the cross-
+// cutting contract: polished commands do NOT surface the v1.x deferral
+// banner, and unknown flags exit 2.
+console.log('\n[6] polished commands surface argument-handling contract');
 {
-  const stubInit = run(['init']);
-  check('atelier init exits 0', stubInit.status === 0, `got ${stubInit.status}`);
-  check('atelier init mentions v1.x', stubInit.stdout.includes('v1.x'));
-  check('atelier init names the raw equivalent', stubInit.stdout.includes('git clone'));
-
-  const stubUpgrade = run(['upgrade']);
-  check('atelier upgrade exits 0', stubUpgrade.status === 0, `got ${stubUpgrade.status}`);
-  check('atelier upgrade flags scope-deferred', stubUpgrade.stdout.includes('SCOPE-DEFERRED'));
-  check('atelier upgrade points at BRD-OPEN-QUESTIONS', stubUpgrade.stdout.includes('BRD-OPEN-QUESTIONS'));
+  // upgrade --help is asserted in [11] below. The minimal polished-contract
+  // assertion here: no v1.x deferral banner with --help.
+  const upgradeHelp = run(['upgrade', '--help']);
+  check('atelier upgrade --help exits 0', upgradeHelp.status === 0, `got ${upgradeHelp.status}`);
+  check(
+    'atelier upgrade --help does NOT print v1.x deferral banner',
+    !upgradeHelp.stdout.includes('polished form lands in v1.x') &&
+      !upgradeHelp.stdout.includes('SCOPE-DEFERRED'),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -161,6 +164,229 @@ console.log('\n[8] atelier review computes from territories.yaml');
   check('review <real-file> exits 0', real.status === 0, `got ${real.status}`);
   check('review names the matched territory', real.stdout.includes('Territory:'));
   check('review surfaces review_role', real.stdout.includes('review_role:'));
+}
+
+// ---------------------------------------------------------------------------
+// [9] atelier init (D5 polished form; argument-handling contract only)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching scaffolding (real git clone + datastore init) lives in
+// scripts/cli/__smoke__/init.smoke.ts (gated on git binary presence).
+// This section asserts only the argument-handling contract: missing
+// positional exits 2, invalid name exits 2, --dry-run renders a plan
+// without mutating, --help cross-references local-bootstrap.md and ADR-029.
+console.log('\n[9] atelier init (D5 polished form)');
+{
+  const help = run(['init', '--help']);
+  check('init --help exits 0', help.status === 0, `got ${help.status}`);
+  check('init --help mentions Required', help.stdout.includes('Required:'));
+  check('init --help mentions <project-name>', help.stdout.includes('<project-name>'));
+  check('init --help mentions --datastore-mode', help.stdout.includes('--datastore-mode'));
+  check('init --help mentions --discipline', help.stdout.includes('--discipline'));
+  check('init --help mentions --email', help.stdout.includes('--email'));
+  check('init --help mentions --skip-git', help.stdout.includes('--skip-git'));
+  check('init --help mentions --template-url', help.stdout.includes('--template-url'));
+  check('init --help cross-references local-bootstrap.md', help.stdout.includes('local-bootstrap.md'));
+  check('init --help cross-references ADR-029', help.stdout.includes('ADR-029'));
+
+  const noPositional = run(['init']);
+  check('init (no positional) exits 2', noPositional.status === 2, `got ${noPositional.status}`);
+  check(
+    'init (no positional) names project-name as required',
+    noPositional.stderr.includes('project-name'),
+  );
+
+  const tooMany = run(['init', 'one', 'two']);
+  check('init (>1 positional) exits 2', tooMany.status === 2, `got ${tooMany.status}`);
+
+  const badName = run(['init', 'BadName_Underscore']);
+  check('init <invalid-name> exits 2', badName.status === 2, `got ${badName.status}`);
+  check(
+    'init <invalid-name> names the pattern',
+    badName.stderr.includes('project-name') && badName.stderr.includes('a-z'),
+  );
+
+  const badNameLeading = run(['init', '-bad']);
+  check('init <leading-dash> exits 2', badNameLeading.status === 2, `got ${badNameLeading.status}`);
+
+  const badEmail = run([
+    'init', 'demo-project',
+    '--email', 'not-an-email',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+  ]);
+  check('init --email <invalid> exits 2', badEmail.status === 2, `got ${badEmail.status}`);
+
+  const emailWithoutDatastore = run([
+    'init', 'demo-project',
+    '--email', 'a@b.co',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+  ]);
+  check(
+    'init --email + --datastore-mode skip exits 2',
+    emailWithoutDatastore.status === 2,
+    `got ${emailWithoutDatastore.status}`,
+  );
+
+  const badMode = run(['init', 'demo-project', '--datastore-mode', 'wizard']);
+  check('init --datastore-mode <invalid> exits 2', badMode.status === 2, `got ${badMode.status}`);
+
+  const badDiscipline = run(['init', 'demo-project', '--discipline', 'wizard']);
+  check('init --discipline <invalid> exits 2', badDiscipline.status === 2, `got ${badDiscipline.status}`);
+
+  // --dry-run does not touch git or supabase, so it runs without env.
+  const dry = run([
+    'init', 'demo-project',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+  ]);
+  check('init --dry-run exits 0', dry.status === 0, `got ${dry.status}`);
+  check('init --dry-run renders PLAN header', dry.stdout.includes('PLAN'));
+  check('init --dry-run echoes project_name', dry.stdout.includes('demo-project'));
+  check('init --dry-run lists steps', dry.stdout.includes('Steps'));
+  check('init --dry-run notes no mutations', dry.stdout.includes('No mutations performed'));
+  check('init --dry-run does NOT print DONE', !dry.stdout.includes('DONE'));
+
+  const dryJson = run([
+    'init', 'demo-project',
+    '--datastore-mode', 'skip',
+    '--dry-run',
+    '--json',
+  ]);
+  check('init --dry-run --json exits 0', dryJson.status === 0, `got ${dryJson.status}`);
+  let parsed: { ok?: boolean; dryRun?: boolean; plan?: { projectName?: string; projectUuid?: string } } | null = null;
+  try {
+    parsed = JSON.parse(dryJson.stdout);
+  } catch {
+    parsed = null;
+  }
+  check('init --dry-run --json emits valid JSON', parsed !== null);
+  check('init --dry-run --json sets ok=true', parsed?.ok === true);
+  check('init --dry-run --json sets dryRun=true', parsed?.dryRun === true);
+  check('init --dry-run --json carries plan.projectName', parsed?.plan?.projectName === 'demo-project');
+  check(
+    'init --dry-run --json carries plan.projectUuid',
+    typeof parsed?.plan?.projectUuid === 'string' && /^[0-9a-f-]{36}$/.test(parsed!.plan!.projectUuid!),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// [10] atelier deploy (D6 polished form; argument-handling contract only)
+// ---------------------------------------------------------------------------
+//
+// Real deploy invokes the `vercel` CLI against a real Vercel project; not
+// testable in CI without a staging Vercel project + bound credentials.
+// The dry-run path + preflight rejection paths live in
+// scripts/cli/__smoke__/deploy.smoke.ts. This section asserts the
+// argument-handling contract: --help dispatches, unknown flag exits 2,
+// flags are documented, no positional args.
+console.log('\n[10] atelier deploy (D6 polished form)');
+{
+  const help = run(['deploy', '--help']);
+  check('deploy --help exits 0', help.status === 0, `got ${help.status}`);
+  check('deploy --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('deploy --help mentions --preview', help.stdout.includes('--preview'));
+  check('deploy --help mentions --skip-checks', help.stdout.includes('--skip-checks'));
+  check('deploy --help mentions --skip-build', help.stdout.includes('--skip-build'));
+  check('deploy --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('deploy --help mentions --json', help.stdout.includes('--json'));
+  check('deploy --help cross-references ADR-046', help.stdout.includes('ADR-046'));
+  check('deploy --help cross-references first-deploy.md', help.stdout.includes('first-deploy.md'));
+  check('deploy --help cross-references enable-auto-deploy.md', help.stdout.includes('enable-auto-deploy.md'));
+  check(
+    'deploy --help lists required env vars',
+    help.stdout.includes('ATELIER_DATASTORE_URL') &&
+      help.stdout.includes('ATELIER_OIDC_ISSUER') &&
+      help.stdout.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  );
+
+  const unknownFlag = run(['deploy', '--bogus']);
+  check('deploy --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+  check(
+    'deploy --bogus names the unknown flag',
+    unknownFlag.stderr.includes('--bogus'),
+  );
+
+  // Polished deploy is no longer the v1.x stub: should NOT print the
+  // "polished form lands in v1.x" deferral banner with no flags.
+  // Without --dry-run, deploy enters preflight which will fail in this
+  // smoke env (no vercel CLI / not logged in / not linked); we only
+  // assert that it does not surface the stub deferral banner.
+  const noFlags = run(['deploy']);
+  check(
+    'deploy (no flags) does NOT print v1.x deferral banner',
+    !noFlags.stdout.includes('polished form lands in v1.x'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// [11] atelier upgrade (E2 polished form; argument-handling contract only)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching behavior (real Postgres connect + apply migrations) lives
+// in scripts/cli/__smoke__/upgrade.smoke.ts (gated on local Supabase running).
+// This section asserts the argument-handling contract: --help dispatches,
+// unknown flag exits 2, conflicting actions exit 2, --remote without
+// ATELIER_DATASTORE_URL exits 2.
+console.log('\n[11] atelier upgrade (E2 polished form)');
+{
+  const help = run(['upgrade', '--help']);
+  check('upgrade --help exits 0', help.status === 0, `got ${help.status}`);
+  check('upgrade --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('upgrade --help mentions --check', help.stdout.includes('--check'));
+  check('upgrade --help mentions --apply', help.stdout.includes('--apply'));
+  check('upgrade --help mentions --force-apply-modified', help.stdout.includes('--force-apply-modified'));
+  check('upgrade --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('upgrade --help mentions --json', help.stdout.includes('--json'));
+  check('upgrade --help mentions --remote', help.stdout.includes('--remote'));
+  check('upgrade --help mentions LOCAL / CLOUD modes', help.stdout.includes('LOCAL') && help.stdout.includes('CLOUD'));
+  check('upgrade --help cross-references ADR-005', help.stdout.includes('ADR-005'));
+  check('upgrade --help cross-references BRD-OPEN-QUESTIONS', help.stdout.includes('BRD-OPEN-QUESTIONS'));
+  check('upgrade --help cross-references migration-system.md', help.stdout.includes('migration-system.md'));
+  check('upgrade --help cross-references upgrade-schema.md', help.stdout.includes('upgrade-schema.md'));
+
+  const unknownFlag = run(['upgrade', '--bogus']);
+  check('upgrade --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+  check('upgrade --bogus names the unknown flag', unknownFlag.stderr.includes('--bogus'));
+
+  const conflicting = run(['upgrade', '--check', '--apply']);
+  check('upgrade --check --apply exits 2', conflicting.status === 2, `got ${conflicting.status}`);
+  check(
+    'upgrade --check --apply names the conflict',
+    conflicting.stderr.includes('mutually exclusive'),
+  );
+
+  // --remote without ATELIER_DATASTORE_URL must exit 2 (precondition error).
+  // We override the env for this single invocation by spawning with explicit env.
+  const remoteNoEnv = spawnSync(
+    'npx',
+    ['tsx', CLI, 'upgrade', '--remote', '--check'],
+    {
+      encoding: 'utf8',
+      cwd: REPO_ROOT,
+      // Strip ATELIER_DATASTORE_URL so the precondition fires regardless of the
+      // surrounding shell. Keep PATH + HOME so npx + tsx still resolve.
+      env: { ...process.env, ATELIER_DATASTORE_URL: '' },
+    },
+  );
+  check('upgrade --remote (no env) exits 2', remoteNoEnv.status === 2, `got ${remoteNoEnv.status}`);
+  check(
+    'upgrade --remote (no env) names the missing env var',
+    remoteNoEnv.stderr.includes('ATELIER_DATASTORE_URL'),
+  );
+
+  // Polished upgrade is no longer the v1.x stub: should NOT print the
+  // "polished form lands in v1.x" deferral banner. With no args, upgrade
+  // defaults to --check which will attempt a connection and either
+  // succeed (local stack up) or fail at the connect step (exit 2). We
+  // only assert that the stub deferral banner is absent in either case.
+  const noFlags = run(['upgrade']);
+  check(
+    'upgrade (no flags) does NOT print v1.x deferral banner',
+    !noFlags.stdout.includes('polished form lands in v1.x') &&
+      !noFlags.stdout.includes('SCOPE-DEFERRED'),
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -1,5 +1,15 @@
 # Local-stack bootstrap: run Atelier on your workstation
 
+> **Recommended: use `atelier init` instead.** As of D5 the manual clone-and-customize steps below collapse to one command for new projects:
+>
+> ```bash
+> atelier init <project-name> --email you@example.com --discipline architect
+> ```
+>
+> `atelier init` clones the reference repo, customizes `.atelier/config.yaml` + README, strips Atelier's discovery docs to template skeletons, runs `atelier datastore init` (when `--datastore-mode local`, the default), and delegates to `atelier invite` (when `--email` is supplied). Then `cd <project-name> && atelier dev`.
+>
+> The steps below remain canonical for adopters who want manual setup, are debugging the substrate, or are already working inside an existing Atelier checkout (rather than scaffolding a fresh project).
+
 **Status:** v1 reference flow per ADR-044. The steps below are the canonical local-only setup; no cloud deploy required.
 
 **Audience:** A composer (architect, dev, PM, designer) who wants to use Atelier on their own machine — either to evaluate it before committing to a deploy, or as the reference development setup that the build team itself runs against.

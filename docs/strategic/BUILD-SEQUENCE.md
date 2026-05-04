@@ -299,13 +299,13 @@ The v1 polished-form scope review at PR #37 surfaced an honest split: 6 commands
 
 | Command | Group | Raw form (functional, hand-invokable) | v1 polished form |
 |---|---|---|---|
-| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8) | **v1.x stub** — prints clone-and-rm-rf-git pointer + local-bootstrap.md path; polished init lands with US-1.8 handshake |
+| `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8) | **v1 polished** (D5) — clones the reference repo, customizes `.atelier/config.yaml` + README, strips discovery docs to template skeletons, optionally delegates to `atelier datastore init` + `atelier invite`. Cloud-mode auto-provisioning + the guided handshake protocol per US-1.8 (credential-handover surface) remain v1.x scope |
 | `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | **v1.x stub** — prints `supabase db reset` pointer |
-| `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | **v1.x stub** — prints `vercel deploy --prod` + first-deploy.md pointer |
+| `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | **v1 polished** (D6) — preflight (vercel CLI, login, project link, env vars), pre-deploy validation (typecheck + portability lint + yaml lint; --skip-checks), build (--skip-build), `vercel deploy [--prod]`, post-deploy verify (discovery + /api/mcp dispatch). Per ADR-046 Vercel + Supabase Cloud + rootDirectory=prototype. Operator-driven `vercel link` + env-var setup remain one-time per `docs/user/tutorials/first-deploy.md` |
 | `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | **v1.x stub** — prints Supabase Auth invite + bearer-rotation pointer |
 | `atelier territory add` | Lifecycle (Epic 1) | M2 (manual `.atelier/territories.yaml` edit pattern) | **v1.x stub** — prints YAML edit pointer + audit invocation |
 | `atelier doctor` | Lifecycle (Epic 1) | M2 (raw script invocation of the ARCH 6.1.1 self-verification flow) | **v1.x stub** — prints `atelier dev` + smoke pointer (overlaps with `atelier dev` at v1) |
-| `atelier upgrade` | Lifecycle (Epic 1) | -- | **v1.x stub** (no v1 raw form; semver-aware migration system is v1.x scope per BRD-OPEN-QUESTIONS §29) |
+| `atelier upgrade` | Lifecycle (Epic 1) | -- | **v1 polished** (E2; consumes E1 migration runner) — `--check` (default; read-only status) / `--apply` (apply pending in order) / `--dry-run` / `--force-apply-modified` / `--json` / `--remote`. Resolves BRD-OPEN-QUESTIONS §29 (PARTIAL → RESOLVED). DOWN migrations remain v1.x next-level per ADR-005 |
 | `atelier dev` | Lifecycle (Epic 1; US-11.13) | M7 (PR #35; one-command local substrate bringup) | **v1 polished** (PR #35) |
 | `atelier sync` | Sync substrate (Epic 9) | M1 (direct invocation of underlying script) | **v1 polished** (PR #37) |
 | `atelier reconcile` | Sync substrate (Epic 9) | M1 (direct invocation of `scripts/sync/reconcile.ts`) | **v1 polished** (PR #37) |
@@ -318,3 +318,30 @@ The v1 polished-form scope review at PR #37 surfaced an honest split: 6 commands
 **Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation.
 **Acceptance for "v1 polished":** US-11.x story passes — exit-code contract, `--help` output, end-to-end smoke.
 **Acceptance for "v1.x stub":** prints v1 raw-equivalent pointer with link to runbook; exits 0; smoke asserts the pointer matches documented path.
+
+---
+
+## 10. v1.x close-out
+
+Post-M7 work that flips v1.x stubs to polished form and lands the substrates BRD-OPEN-QUESTIONS deferred. Tracked here so the trajectory from "v1 substrate shipped" to "all v1 surfaces polished" is legible. Each row links the close-out item to its trigger.
+
+| ID | Item | Status | Trigger | PR |
+|---|---|---|---|---|
+| D1 | `atelier doctor` polished form (US-11.9) | Done 2026-05-03 | Adopter triage need (substrate connectivity is the dominant support-volume class per 2026-04-28 expert review) | #52 |
+| D2 | `atelier territory add` polished form (US-11.5) | Done | Shared substrate ergonomics | parallel branch |
+| D3 | `atelier datastore init` polished form (US-11.2) | Done | Adopter bootstrap need | parallel branch |
+| D4 | `atelier invite` polished form (US-11.4) | Done | Multi-composer enablement | parallel branch |
+| D5 | `atelier init` polished form (US-11.1) | Done 2026-05-03 | Bootstrap one-command surface | local commit (PR pending) |
+| D6 | `atelier deploy` polished form (US-11.3) | Done 2026-05-04 | Adopter deploy ergonomics post-D5 | local commit (PR pending) |
+| D7 | Magic-link sign-in for `/atelier` | Done | M3-late wire-up | parallel branch |
+| E1 | Schema migration runner substrate | Done 2026-05-04 | §29 atelier upgrade prereq | local commit (PR pending) |
+| E2 | `atelier upgrade` polished form (US-11.10) | Done 2026-05-04 | Consumes E1; closes §29 (PARTIAL → RESOLVED) | local commit (PR pending) |
+| **X1** | **Security + quality batch from review of v1.x close-out** | **Done 2026-05-04** | **HIGH + MEDIUM findings from coding-standards + security review of D6/E1/E2 + #46-#57; gates F-series** | **this PR** |
+| F | 5 sync adapters (Discussions, Jira, Linear, Confluence, Notion, Figma per ADR-019) | Pending | Adopter signal per adapter; F1 (Jira) is the next item after X1 | -- |
+| G | Dogfood closure (Atelier-built-with-Atelier per ADR-044 + M5-exit bootstrap inflection) | Pending | M6+ MCP-client posture | -- |
+
+E1 is substrate-only. The runner library (`scripts/migration/`) + tracking table (`atelier_schema_versions` via `supabase/migrations/20260504000010_*.sql`) are the primitives E2 composes into the operator-facing `atelier upgrade [--check | --apply]` CLI. No new ADR was filed for E1 because the design is operationalization of ADR-005 (append-only, applied to migrations) + ADR-027 (Supabase Postgres reference) without a load-bearing architectural choice that warrants the durability cost. The contract lives in `docs/architecture/schema/migration-system.md`.
+
+E2 is the operator-facing CLI on top of the E1 substrate. Default action is `--check` (read-only status); `--apply` is opt-in. The CLI auto-detects LOCAL (default) vs CLOUD mode from `ATELIER_DATASTORE_URL`; LOCAL preflight reuses the shared docker / supabase-CLI / supabase-running checks. Modified-migration detection (adopter edited an upstream file) refuses `--apply` without `--force-apply-modified` opt-in. JSON output (`--json`) carries the same status buckets the human-format renders. The shipped command resolves BRD-OPEN-QUESTIONS §29 fully (PARTIAL → RESOLVED). The operator runbook lives at `docs/user/guides/upgrade-schema.md`. DOWN migrations / rollback semantics remain v1.x next-level per ADR-005 (append-only); cross-deploy coordination remains an adopter-side decision.
+
+X1 is the audit close-out batch from the coding-standards + security review of the v1.x close-out PRs. Two HIGH findings (B1 prompt-injection pre-filter on the semantic-contradiction validator; the open-OTP-relay finding C1 deferred to BRD §31 because the SignInForm.tsx target is on the unmerged D7 branch); six MEDIUM findings (A3 secret redaction in diffs; B2 execFileSync hardening; B4 statement_timeout on migration apply; D1 advisory lock on alert-publisher; D2 advisory lock on migration runner; A1 magic-link redaction in invite, deferred to §31 alongside C1); plus the three quality patterns (Q1 self-disabling tests, Q2 regex-as-parser sanity floors, Q3 parallel-implementation consolidation under `scripts/lib/`). The §31 follow-up section names every LOW item the audit surfaced with explicit activation criteria so they don't get lost. F1 (Jira sync adapter) resumes after X1 lands.

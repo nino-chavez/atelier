@@ -96,26 +96,25 @@ test.describe('IA/UX DOM contract', () => {
     // Observability tab=contributions surfaces the recent-transitions panel.
     await page.goto('/atelier/observability?tab=contributions', { waitUntil: 'networkidle' });
 
-    // Count rendered rows. Use a permissive selector that catches the
-    // panel's list rows. The exact selector depends on Observability.css
-    // markup — we count text nodes that look like timestamped entries.
-    const transitionsCount = await page.locator('[data-iaux-row="recent-transition"]').count();
-    // If the markup doesn't expose the data-iaux-row attribute yet, this
-    // returns 0 — assert the structural invariant the audit's Pattern 3
-    // table commits to: panel exists and renders SOMETHING bounded.
-    if (transitionsCount > 0) {
-      expect(transitionsCount).toBeLessThanOrEqual(50);
-    }
+    // X1 audit Q1a: assert the affordance is present + bounded as the FIRST
+    // assertion. Prior `if (count > 0)` form silently passed when the
+    // affordance was missing, masking regressions where a refactor removed
+    // the data-iaux-row markup entirely.
+    const transitionsRows = page.locator('[data-iaux-row="recent-transition"]');
+    const transitionsCount = await transitionsRows.count();
+    expect(transitionsCount).toBeGreaterThan(0);
+    expect(transitionsCount).toBeLessThanOrEqual(50);
   });
 
   test('observability dashboard: lock ledger panel caps at LIMIT 25', async ({ page }) => {
     // Observability tab=locks surfaces the recent-ledger panel.
     await page.goto('/atelier/observability?tab=locks', { waitUntil: 'networkidle' });
 
-    const ledgerCount = await page.locator('[data-iaux-row="lock-ledger"]').count();
-    if (ledgerCount > 0) {
-      expect(ledgerCount).toBeLessThanOrEqual(25);
-    }
+    // X1 audit Q1a: assert affordance present + bounded (see freshness test).
+    const ledgerRows = page.locator('[data-iaux-row="lock-ledger"]');
+    const ledgerCount = await ledgerRows.count();
+    expect(ledgerCount).toBeGreaterThan(0);
+    expect(ledgerCount).toBeLessThanOrEqual(25);
   });
 
   test('observability dashboard: snapshot timestamp updates after Refresher tick', async ({
@@ -131,15 +130,11 @@ test.describe('IA/UX DOM contract', () => {
     // the page header).
     const tsLocator = page.locator('[data-iaux-snapshot-ts]').first();
 
-    // If the prototype hasn't surfaced a data-attributed timestamp yet,
-    // this is a documented gap — the static layer asserts setInterval +
-    // router.refresh exist; the DOM-visible timestamp surface is a
-    // separate operability story.
-    const hasTsAttr = await tsLocator.count();
-    if (hasTsAttr === 0) {
-      test.skip(true, 'Snapshot timestamp not exposed in DOM yet (documented gap; static layer covers Refresher contract)');
-      return;
-    }
+    // X1 audit Q1a: assert the affordance EXISTS first. The prior
+    // test.skip() form silently passed when data-iaux-snapshot-ts was
+    // missing, which masked a class of regressions where a refactor
+    // removed the DOM hook entirely. Now: missing => failed test.
+    await expect(tsLocator).toHaveCount(1);
 
     const initial = await tsLocator.getAttribute('data-iaux-snapshot-ts');
     expect(initial).toBeTruthy();

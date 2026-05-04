@@ -207,6 +207,24 @@ assert(
 const lensQueries = extractTypedQueries(lensSource);
 const obsQueries = extractTypedQueries(obsSource);
 
+// X1 audit Q2: minimum-match sanity floors. The extractor regex is
+// pattern-fragile — if `pool.query<...>` syntax changes (e.g., a refactor
+// to `db.query<...>` or a new helper wrapper), extraction silently
+// returns 0 and the contract assertions above become vacuously true.
+// Floors reflect today's count minus a small tolerance; bump them up if
+// the codebase grows new queries, bump them down only when an audited
+// reduction lands.
+const LENS_QUERY_FLOOR = 5;
+const OBS_QUERY_FLOOR = 8;
+assert(
+  lensQueries.length >= LENS_QUERY_FLOOR,
+  `lens-data.ts query extractor regression: expected >=${LENS_QUERY_FLOOR} typed queries, found ${lensQueries.length} — check the regex against current source`,
+);
+assert(
+  obsQueries.length >= OBS_QUERY_FLOOR,
+  `observability-data.ts query extractor regression: expected >=${OBS_QUERY_FLOOR} typed queries, found ${obsQueries.length}`,
+);
+
 // =====================================================================
 // Assertion 3: Documented per-panel ceilings haven't drifted.
 // =====================================================================
@@ -352,9 +370,14 @@ console.log('# 6. Server-side filter/sort — no client-side list re-sorting');
 let clientSortDrift = 0;
 for (const file of panelFiles) {
   const src = readSource(join(PANELS_DIR, file));
-  // `.sort(` directly applied to a list passed in as a prop. Heuristic:
-  // look for `.sort(` calls that aren't inside a comment.
-  const sortMatches = src.match(/(?<!\/\/[^\n]*)\.sort\(/g) ?? [];
+  // X1 audit Q2: strip line comments BEFORE matching .sort(. The prior
+  // lookbehind form (/(?<!\/\/[^\n]*)\.sort\(/g) was unreliable because
+  // variable-length lookbehinds collapse to a single position and the
+  // assertion didn't actually exclude commented occurrences. Operators
+  // who legitimately need to write about sort in code comments can keep
+  // doing so; only real .sort() invocations count toward drift.
+  const stripped = src.replace(/\/\/[^\n]*$/gm, '');
+  const sortMatches = stripped.match(/\.sort\(/g) ?? [];
   if (sortMatches.length > 0) {
     clientSortDrift += sortMatches.length;
     console.log(`  drift: panel ${file} contains ${sortMatches.length} client-side .sort() call(s)`);

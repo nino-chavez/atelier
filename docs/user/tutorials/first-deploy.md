@@ -1,5 +1,7 @@
 # First deploy: run Atelier on the network
 
+> **Recommended (post-D6):** once the one-time setup below is complete (Steps 1-3 plus `vercel link`), use `atelier deploy` (or `atelier deploy --preview`) for every subsequent deploy. The polished CLI runs the same preflight + validation + build + `vercel deploy --prod` + post-deploy verification this runbook walks through manually. See `BUILD-SEQUENCE.md §9` row for `atelier deploy` (D6) for the polished-form contract. The manual sequence below remains canonical for the one-time provisioning + as the operator-readable reference for what the wrapper is doing under the hood.
+
 **Status:** v1 reference flow per `BRD-OPEN-QUESTIONS §28`. Captures the empirical sequence executed at M6 entry to land `https://atelier-three-coral.vercel.app` (cloud Supabase project `lgzitibcufxfgkaxroqg`, Vercel project `atelier`, all 9 migrations applied). Adopters substitute their own project names + URLs.
 
 **Audience:** A composer (architect, dev, PM, designer) whose local-bootstrap is already working and who needs network-reachable access to the endpoint. Triggers per `docs/functional/BRD-OPEN-QUESTIONS.md §28`: a teammate joining on a different machine, a remote agent peer composer (claude.ai Connectors / ChatGPT Connectors), continuous availability, external demo, or CI auto-deploy. If none of those apply, stay on local-bootstrap; deploy adds operational debt without proportional benefit.

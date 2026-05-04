@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-05-02 (sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral alongside the 12-command CLI polish PR; section 30 ADDED as push-notification observability-alerting v1.x deferral alongside the M7 Track 1 observability stack PR; sections 21, 22, 23, 29, 30 are the genuinely-open list)
+**Last updated:** 2026-05-04 (section 29 RESOLVED — E2 `atelier upgrade` polished CLI landed, consuming the E1 migration runner substrate; PARTIAL → RESOLVED. Earlier same-day: E1 substrate landed [`atelier_schema_versions` table + `scripts/migration/` runner]. Earlier 2026-05-02: sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral; section 30 ADDED as push-notification observability-alerting v1.x deferral. Genuinely-open list: 21, 22, 23, 30.)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -174,7 +174,28 @@ This works for adopters who cloned recently and have minimal local divergence. I
 3. `atelier upgrade` polished implementation: discovers the registry, applies migrations in order, reports conflicts with the team's local divergence, preserves the decision log per ARCH 9.7
 4. CHANGELOG convention enforcement: every template change that affects adopter projects requires a corresponding migration script + CHANGELOG entry
 
-**Status.** OPEN. Scope-deferred to v1.x with the trigger above. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form ships as a scope-deferred stub).
+**Status.** RESOLVED 2026-05-04 — both substrate (E1) and operator-facing CLI (E2) landed. E2 ships the polished `atelier upgrade [--check | --apply]` consuming E1's `MigrationRunner`. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form initially shipped as a scope-deferred stub); resolved on the v1.x close-out push.
+
+**E1 substrate (landed 2026-05-04):**
+
+- `atelier_schema_versions` table: per-migration apply tracking (filename, applied_at, content_sha256, applied_by, atelier_template_version). Bootstrap migration at `supabase/migrations/20260504000010_atelier_schema_versions.sql` creates the table + inserts baseline rows for every existing migration.
+- `scripts/migration/manifest.ts` + `scripts/migration/runner.ts`: substrate library exposing `MigrationRunner` with `discoverMigrations()`, `loadAppliedMigrations()`, `computeStatus()` (returns `{ pending, modified, missing }`), `applyMigration()` (transactional; idempotent via ON CONFLICT DO NOTHING).
+- `docs/architecture/schema/migration-system.md`: contract documentation covering filename conventions, idempotency requirement, append-only discipline (no DOWN migrations at v1 per ADR-005), conflict semantics, and adopter guidance.
+- `scripts/migration/__smoke__/runner.smoke.ts` (39 assertions, all green against local stack) + assertion added to `scripts/test/__smoke__/schema-invariants.smoke.ts §[8]`.
+
+**E2 polished CLI (landed 2026-05-04):**
+
+- `scripts/cli/commands/upgrade.ts`: polished form replacing the scope-deferred stub. Default action is `--check` (read-only); `--apply` is opt-in. Auto-detects LOCAL vs CLOUD mode from `ATELIER_DATASTORE_URL`. LOCAL preflight reuses the shared docker / supabase-CLI / supabase-running checks. Modified-migration detection refuses `--apply` without `--force-apply-modified` opt-in. `--dry-run` prints the planned apply sequence without mutation. `--json` carries the same status buckets the human-format renders. Password redaction in datastore URL output.
+- `scripts/cli/__smoke__/upgrade.smoke.ts`: substrate-touching smoke covering --check / --apply / --dry-run / modified-detection / force-modified gating. Cleanup removes the synthetic test table + schema_versions row + migration file.
+- Updates: `scripts/cli/atelier.ts` flips `upgrade` from `scope-deferred` → `working` in the registry; `scripts/cli/__smoke__/cli.smoke.ts` replaces the stub-deferral assertions with polished argument-handling assertions.
+- `docs/user/guides/upgrade-schema.md`: adopter-facing runbook for routine upgrades + how to handle modified-migration detection.
+- `docs/architecture/schema/migration-system.md`: "How operators use it" section pointing at `atelier upgrade --check` / `--apply`.
+
+**Out-of-scope (filed for v1.x next-level):**
+
+- DOWN migrations / rollback (per ADR-005 append-only; documented in E1)
+- Automatic upgrade on init (E2 is operator-driven; auto-upgrade is an unsafe default)
+- Cross-deploy coordination (apply same migration to staging + prod atomically — adopter-side decision)
 
 ---
 
@@ -204,6 +225,31 @@ This works for adopters who cloned recently and have minimal local divergence. I
 4. Backoff on flap: exponential backoff when a metric oscillates between `warn` and `alert` (reduces alert fatigue from noisy thresholds)
 
 **Status.** OPEN. v1 ships UI alerts; out-of-band delivery deferred to v1.x with the adopter-signal trigger above. Filed 2026-05-02 as part of the M7 Track 1 observability stack PR.
+
+---
+
+### 31 · X1 close-out audit follow-ups
+
+**Context.** The X1 audit (`fix(audit): X1 — security + quality batch from review of v1.x close-out`) shipped fixes for HIGH + MEDIUM findings whose target files were reachable from the E2 close-out stack. The items below were either lower severity (LOW), out-of-scope by design (need adopter infra), or required code on stacked branches that had not yet merged when X1 landed. Each is filed with explicit activation criteria so it does not get lost.
+
+**LOW severity / scope-deferred:**
+
+- **C2 sign-out CSRF.** Switch sign-out from GET to POST. *Activate when:* an adopter reports CSRF concern OR one-form-edit polish lands.
+- **C3 invite identity-rebinding.** Invite re-issued to an attacker-controlled email could rebind a composer's identity_subject. *Activate when:* multi-admin teams onboard. *Workaround until:* runbook entry advising single-admin invite + manual identity_subject rotation.
+- **C4 LensUnauthorized info disclosure.** The `no_composer` reason names the exact failure mode. *Activate when:* an adopter classifies their deploy as user-class hostile.
+- **B3 git clone -- separator.** `atelier init` invokes `git clone <url>` without `--`; a malicious tutorial could supply a URL like `--upload-pack=...`. *Activate when:* one-form-edit polish lands.
+- **A2 webhook URL in fetch error message.** Node's `fetch` may include URL in error.toString. *Activate when:* node version drift makes this concrete.
+- **A4 deploy validation tail redaction.** `atelier deploy --validate` tails command output that may include secrets if the substrate ever logs them. *Activate when:* an adopter reports a leak, OR substrate logging changes.
+- **D3 invite race.** Two simultaneous `atelier invite` calls for the same email can both pass the duplicate check. *Activate when:* scale ceiling per ARCH §9.8 is approached, or batch-onboarding lands.
+- **E1, E2, E3 DoS items.** Endpoint rate-limit; magic-link request flood; cron-publisher fanout. *Activate when:* deploy infra (Vercel + Supabase) signals the layer below cannot absorb the rate.
+- **Code polish:** rerank adapter type widening; messaging-lib slack coupling; runner.ts re-exports; doctor JSON inline type; webhook adapter URL substring matching brittleness.
+
+**Stack-blocked at X1 (target files only on D4 / D7 unmerged branches):**
+
+- **C1 open OTP relay on `/sign-in`.** `auth.signInWithOtp({ email })` on `prototype/src/app/sign-in/SignInForm.tsx` accepts any anonymous visitor. *Fix recipe (preserved verbatim from X1 brief):* new Route Handler at `prototype/src/app/sign-in/check/route.ts` accepting `{ email }`, checks `composers.email = $1` exists in the datastore (server-side `@supabase/ssr` or pg pool), returns 200 if invited / 404 otherwise. SignInForm calls this BEFORE `auth.signInWithOtp`. On 404, show "If your email is registered, you'll receive a sign-in link" (do NOT differentiate — user-enumeration surface stays closed). Rate-limit per IP (in-memory token bucket; 10/min per IP; reset on process restart acceptable). Document where to swap in Vercel KV / Redis. Add Playwright assertions: anonymous email submit hits `/check` route; non-invited email returns 404 + form shows generic message; invited email proceeds; rate-limit test (11 rapid submits throttled). *Activates:* when D7 (sign-in UI) lands on main.
+- **A1 magic-link printed to stdout by default in `atelier invite`.** *Fix recipe (preserved verbatim):* default text output redacts the link to `<magic-link suppressed; re-run with --print-link to emit>`. Opt-in via `--print-link`. For `--json`: keep link in JSON, add top-level `warning: "magic_link_in_output"`. Update `docs/user/guides/invite-composers.md` to call out the redaction default. Add cli.smoke.ts assertions: default invite output contains the suppressed marker; `--print-link` emits the URL. *Activates:* when D4 (atelier invite) lands on main.
+
+**Status.** OPEN. Filed 2026-05-04 with X1 close-out. Each LOW item has explicit activation criteria; the two stack-blocked items will land in the same PR that merges D4 / D7 to main (or in an X2 batch immediately after). No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
 
 ---
 

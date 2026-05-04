@@ -7,9 +7,9 @@ import { spawn, spawnSync } from 'node:child_process';
 import { readFile, access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { constants as fsConstants } from 'node:fs';
-import { request } from 'node:http';
 import { Buffer } from 'node:buffer';
 import { createConnection } from 'node:net';
+import { probeEndpoint as libProbe } from '../../lib/probe.ts';
 
 export interface PreflightStatus {
   ok: boolean;
@@ -82,30 +82,33 @@ export function checkPort3030(): Promise<PreflightStatus> {
   });
 }
 
-export function checkOurDevServer(): Promise<PreflightStatus> {
-  return new Promise((resolveStatus) => {
-    const req = request(
-      { host: '127.0.0.1', port: 3030, path: '/api/mcp', method: 'POST', timeout: 1500 },
-      (res) => {
-        // Atelier MCP endpoint returns 405 to non-JSON-RPC POSTs (or 200/4xx
-        // depending on body). 405 specifically is the "POST-only, accepted"
-        // signal. Anything in the 4xx-5xx range from /api/mcp suggests our
-        // server is running.
-        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 600) {
-          resolveStatus({ ok: true, detail: `dev server reachable (HTTP ${res.statusCode})` });
-        } else {
-          resolveStatus({ ok: false, detail: `port 3030 responded with unexpected status ${res.statusCode}` });
-        }
-        res.resume();
-      },
-    );
-    req.on('error', () => resolveStatus({ ok: false, detail: 'port 3030 not reachable on /api/mcp; need to start dev server' }));
-    req.on('timeout', () => {
-      req.destroy();
-      resolveStatus({ ok: false, detail: 'port 3030 timed out on /api/mcp probe' });
-    });
-    req.end('{}');
+export async function checkOurDevServer(): Promise<PreflightStatus> {
+  // Atelier MCP endpoint returns 401/405/200-4xx depending on bearer + verb.
+  // Any reachable status in 2xx-5xx counts as "our server is up." Pure
+  // transport errors fall through to the probe lib's defaults.
+  const r = await libProbe({
+    port: 3030,
+    timeoutMs: 1500,
+    classify: (status) => {
+      if (status >= 200 && status < 600) {
+        return { ok: true, detail: `dev server reachable (HTTP ${status})`, statusCode: status };
+      }
+      return {
+        ok: false,
+        detail: `port 3030 responded with unexpected status ${status}`,
+        statusCode: status,
+      };
+    },
   });
+  // Map the lib's transport-error wording to the preflight-specific phrasing
+  // adopters expect from earlier versions of `atelier dev` output.
+  if (!r.ok && r.statusCode === undefined) {
+    if (r.detail.startsWith('timeout')) {
+      return { ok: false, detail: 'port 3030 timed out on /api/mcp probe' };
+    }
+    return { ok: false, detail: 'port 3030 not reachable on /api/mcp; need to start dev server' };
+  }
+  return r.ok ? { ok: true, detail: r.detail } : { ok: false, detail: r.detail };
 }
 
 export interface BearerStatus {

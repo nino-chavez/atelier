@@ -8,6 +8,15 @@
 // when severity transitions (ok->warn, ok->alert, warn->alert, or any
 // drop back to ok = `recovered`).
 //
+// X1 audit D1: runOnce wraps the per-tick body in a transaction-scoped
+// pg advisory lock keyed off `hashtextextended('atelier-alert-publisher', 0)`.
+// Two publishers (e.g., Vercel cron + a long-running --interval process)
+// firing simultaneously would otherwise both observe prior=ok current=alert,
+// both publish, both record state — Slack/Discord see duplicates. The
+// advisory lock serializes them: the second runner blocks until the first
+// commits, then sees the recorded last-state row and treats the metric as
+// already-published.
+//
 // State tracking: the publisher records the LAST observed severity per
 // (project_id, metric) tuple in the telemetry table under
 // `action='alert.last_state.<metric>'`. On each tick, it reads the
@@ -33,7 +42,7 @@
 // adapter (which works with Slack/Discord/Teams incoming webhooks
 // out-of-the-box per webhook-messaging.ts vendor inference).
 
-import { Client, type QueryResult } from 'pg';
+import { Client } from 'pg';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
@@ -43,6 +52,7 @@ import type {
   AlertSeverity,
   MessagingAdapter,
 } from '../coordination/lib/messaging.ts';
+import { tableExists } from '../lib/db.ts';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -243,16 +253,32 @@ async function collectMetrics(
     });
 
     // triage_pending_backlog
-    const triage = await pg.query<{ count: string }>(
-      `SELECT COUNT(*)::text AS count FROM triage_pending
-        WHERE project_id = $1 AND state = 'pending'`,
-      [p.id],
-    ).catch(() => ({ rows: [{ count: '0' }] }) as QueryResult<{ count: string }>);
+    // X1 audit Q1b + Q3c: explicit table-exists check rather than the
+    // prior `.catch(() => ({ rows: [{ count: '0' }] }))` which silently
+    // swallowed every error as "no triage backlog." Tolerates the case
+    // where a fresh datastore hasn't applied the triage_pending migration
+    // yet without masking real query failures (lock contention, RLS
+    // misconfig, etc). The pending predicate matches
+    // observability-data.ts: not yet routed AND not yet rejected.
+    const triageReady = await tableExists(pg, 'public', 'triage_pending');
+    const triageValue = triageReady
+      ? Number(
+          (
+            await pg.query<{ count: string }>(
+              `SELECT COUNT(*)::text AS count FROM triage_pending
+                WHERE project_id = $1
+                  AND routed_to_contribution_id IS NULL
+                  AND rejected_at IS NULL`,
+              [p.id],
+            )
+          ).rows[0]?.count ?? '0',
+        )
+      : 0;
     out.push({
       metric: 'triage_pending_backlog',
       projectId: p.id,
       projectName: p.name,
-      value: Number(triage.rows[0]?.count ?? '0'),
+      value: triageValue,
       envelope: thresholds.triagePendingBacklog,
     });
   }
@@ -333,7 +359,17 @@ export async function runOnce(opts: PublisherOpts): Promise<PublisherResult> {
     transitionsPublished: 0,
     errors: 0,
   };
+  let inTransaction = false;
   try {
+    // X1 audit D1: serialize concurrent publishers under one transaction-
+    // scoped advisory lock so a metric transition publishes exactly once
+    // even when two runners fire simultaneously.
+    await pg.query('BEGIN');
+    inTransaction = true;
+    await pg.query(
+      `SELECT pg_advisory_xact_lock(hashtextextended('atelier-alert-publisher', 0))`,
+    );
+
     const samples = await collectMetrics(pg, opts.config.thresholds);
     const lastSeverities = await loadLastSeverities(pg);
     result.evaluated = samples.length;
@@ -402,7 +438,18 @@ export async function runOnce(opts: PublisherOpts): Promise<PublisherResult> {
         console.log(`[alert-publisher:dry-run] would publish: ${event.metric} ${prior}→${current}`);
       }
     }
+    await pg.query('COMMIT');
+    inTransaction = false;
+  } catch (err) {
+    if (inTransaction) {
+      await pg.query('ROLLBACK').catch(() => {});
+      inTransaction = false;
+    }
+    throw err;
   } finally {
+    if (inTransaction) {
+      await pg.query('ROLLBACK').catch(() => {});
+    }
     await pg.end();
   }
   return result;

@@ -49,7 +49,7 @@ const COMMANDS: readonly Command[] = [
   { name: 'init', description: 'Scaffold a new Atelier project', status: 'working', run: runInit, usage: initUsage },
   { name: 'datastore', description: 'Manage the coordination datastore (init)', status: 'stub', run: runDatastore, usage: datastoreUsage },
   { name: 'deploy', description: 'Push prototype + endpoint to deploy target', status: 'working', run: runDeploy, usage: deployUsage },
-  { name: 'invite', description: 'Invite a remote-principal composer', status: 'stub', run: runInvite, usage: inviteUsage },
+  { name: 'invite', description: 'Invite a remote-principal composer', status: 'working', run: runInvite, usage: inviteUsage },
   { name: 'territory', description: 'Manage territory definitions (add)', status: 'stub', run: runTerritory, usage: territoryUsage },
   { name: 'doctor', description: 'Diagnose substrate health (ARCH 6.1.1 four-step)', status: 'stub', run: runDoctor, usage: doctorUsage },
   { name: 'upgrade', description: 'Apply schema migrations from supabase/migrations/', status: 'working', run: runUpgrade, usage: upgradeUsage },

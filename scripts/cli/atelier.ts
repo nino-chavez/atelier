@@ -33,7 +33,7 @@ import { runEval, evalUsage } from './commands/eval.ts';
 import { runAudit, auditUsage } from './commands/audit.ts';
 import { runReview, reviewUsage } from './commands/review.ts';
 
-type CommandStatus = 'working' | 'wrapper' | 'stub' | 'scope-deferred';
+type CommandStatus = 'working' | 'wrapper' | 'stub';
 
 interface Command {
   name: string;
@@ -52,7 +52,7 @@ const COMMANDS: readonly Command[] = [
   { name: 'invite', description: 'Invite a remote-principal composer', status: 'stub', run: runInvite, usage: inviteUsage },
   { name: 'territory', description: 'Manage territory definitions (add)', status: 'stub', run: runTerritory, usage: territoryUsage },
   { name: 'doctor', description: 'Diagnose substrate health (ARCH 6.1.1 four-step)', status: 'stub', run: runDoctor, usage: doctorUsage },
-  { name: 'upgrade', description: 'Pull new template version (v1.x scope)', status: 'scope-deferred', run: runUpgrade, usage: upgradeUsage },
+  { name: 'upgrade', description: 'Apply schema migrations from supabase/migrations/', status: 'working', run: runUpgrade, usage: upgradeUsage },
   // Sync substrate.
   { name: 'sync', description: 'Manually invoke a sync substrate script', status: 'wrapper', run: runSync, usage: syncUsage },
   { name: 'reconcile', description: 'Detect repo / external-tracker drift', status: 'wrapper', run: runReconcile, usage: reconcileUsage },
@@ -67,7 +67,6 @@ function statusLabel(s: CommandStatus): string {
     case 'working': return '';
     case 'wrapper': return '';
     case 'stub': return ' [v1.x]';
-    case 'scope-deferred': return ' [v1.x*]';
   }
 }
 
@@ -84,7 +83,6 @@ function topUsage(): string {
   lines.push('Status legend:');
   lines.push('  (no marker)  Working at v1');
   lines.push('  [v1.x]       Pointer-stub: prints v1 raw equivalent and exits 0');
-  lines.push('  [v1.x*]      Scope-deferred: capability not built at v1 (BRD-OPEN-QUESTIONS §29)');
   lines.push('');
   lines.push('Use `atelier <command> --help` for command-specific options + raw-form hints.');
   lines.push('');

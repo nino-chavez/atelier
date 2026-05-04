@@ -4,7 +4,7 @@
 
 **Primary tier served:** Tier 2 (Reference Implementation, the runner code) and Tier 3 (Specification — adopters reimplementing on a different stack follow this contract).
 
-**Status:** v1.x partial — the substrate (this doc + `scripts/migration/runner.ts` + the `atelier_schema_versions` table) ships ahead of E2 (`atelier upgrade` CLI) which consumes it. Per BRD-OPEN-QUESTIONS section 29.
+**Status:** v1 shipped — the substrate (this doc + `scripts/migration/runner.ts` + the `atelier_schema_versions` table) and its operator-facing CLI consumer (`atelier upgrade`, E2) both landed 2026-05-04. Resolves BRD-OPEN-QUESTIONS section 29.
 
 ---
 
@@ -120,26 +120,39 @@ The override pattern is documented in `docs/developer/upstreaming.md` for the br
 
 ---
 
-## Forward compatibility: what E2 (atelier upgrade) consumes
+## How operators use it
 
-The E1 substrate (this doc + `scripts/migration/`) ships ahead of E2 (the CLI). E2 will compose:
+E2 ships the operator-facing CLI consuming this substrate. Two actions, mutually exclusive:
 
 ```
-$ atelier upgrade --check
-  Checking migration status against datastore at $ATELIER_DATASTORE_URL
-  10 migrations applied; 2 pending; 0 modified; 0 missing
-  Pending:
-    20260601000011_atelier_v1_1_<feature>.sql
-    20260601000012_atelier_v1_1_<followup>.sql
-  Run \`atelier upgrade --apply\` to apply.
+# Read-only status (default action; safe to run from any state):
+atelier upgrade --check
 
-$ atelier upgrade --apply
-  Applying 20260601000011_atelier_v1_1_<feature>.sql...
-  Applying 20260601000012_atelier_v1_1_<followup>.sql...
-  2 migrations applied; recorded in atelier_schema_versions.
+# Apply pending migrations in order (opt-in; the destructive path):
+atelier upgrade --apply
 ```
 
-The CLI surface details (positional arguments, flag shapes, output formats) are E2's scope. The substrate's API contract (`MigrationRunner` class, the three buckets) is locked at E1 and will not change in incompatible ways without a new ADR.
+The default `--check` mirrors `git status` semantics: read the world, report divergence, exit 0 when clean / 1 when divergent. The `--apply` action mirrors `git pull`: explicit operator action to mutate state.
+
+Common flags:
+
+- `--dry-run` (with `--apply`) prints the planned sequence without executing.
+- `--force-apply-modified` is required to proceed with `--apply` when modified migrations are detected. Without it, the CLI refuses (exit 1) and asks the operator to either revert local changes or acknowledge the divergence.
+- `--json` emits machine-readable JSON carrying the same status buckets — suitable for CI gating.
+- `--remote` forces CLOUD mode (auto-detected by default from the host portion of `ATELIER_DATASTORE_URL`).
+
+The CLI auto-detects LOCAL vs CLOUD mode from `ATELIER_DATASTORE_URL`:
+
+- LOCAL (default when unset or `127.0.0.1` / `localhost`): preflight checks docker, supabase CLI, and `supabase status`.
+- CLOUD (any non-localhost host, or `--remote`): preflight only verifies `ATELIER_DATASTORE_URL` is set; the connection itself becomes the validity check.
+
+The CLI runs the runner's three primitives in order: `discoverMigrations()` → `computeStatus()` → conditional `applyMigration()` per pending entry. Each `applyMigration` call is wrapped in a SQL transaction; any error rolls back and stops the run (subsequent migrations are not attempted), so partial state is recorded only for migrations that succeeded.
+
+The `applied_by` field in `atelier_schema_versions` is resolved as: `ATELIER_OPERATOR_EMAIL` env if set; else `git config user.email`; else the literal `"manual"`. This is operational metadata only — the substrate does not enforce identity.
+
+For the full operator runbook (routine upgrade flow + handling modified migrations + what to do when an apply fails partway through), see `docs/user/guides/upgrade-schema.md`.
+
+The substrate's API contract (`MigrationRunner` class, the three buckets, the bootstrap-row sentinel) is locked at E1 and will not change in incompatible ways without a new ADR.
 
 ### Out of scope at E1 (filed for v1.x next-level)
 

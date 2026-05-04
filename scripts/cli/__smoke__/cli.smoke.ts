@@ -109,20 +109,27 @@ console.log('\n[5] all 12 polished commands surface --help');
 }
 
 // ---------------------------------------------------------------------------
-// [6] Pointer-stub commands print v1.x deferral message + raw equivalent
+// [6] Polished-form commands honor argument-handling contract (no stub banner)
 // ---------------------------------------------------------------------------
 //
-// Per Nino's 2026-05-02 brief: stubs must run, print "polished form lands in
-// v1.x; for v1 do X via <raw equivalent>", exit 0. `atelier init` flipped to
-// polished form at D5; `atelier deploy` flipped at D6. Polished commands
-// surface argument-handling contracts in their dedicated sections below.
-// `upgrade` remains scope-deferred at v1.x per BRD-OPEN-QUESTIONS §29.
-console.log('\n[6] pointer-stubs honor v1.x deferral contract');
+// Per Nino's 2026-05-02 brief: stubs print "polished form lands in v1.x" and
+// the v1 raw equivalent. `atelier init` flipped to polished form at D5;
+// `atelier deploy` at D6; `atelier upgrade` at E2 (this PR; consumes the E1
+// migration runner; resolves BRD-OPEN-QUESTIONS §29). Each polished command
+// has dedicated assertions further down. This section asserts the cross-
+// cutting contract: polished commands do NOT surface the v1.x deferral
+// banner, and unknown flags exit 2.
+console.log('\n[6] polished commands surface argument-handling contract');
 {
-  const stubUpgrade = run(['upgrade']);
-  check('atelier upgrade exits 0', stubUpgrade.status === 0, `got ${stubUpgrade.status}`);
-  check('atelier upgrade flags scope-deferred', stubUpgrade.stdout.includes('SCOPE-DEFERRED'));
-  check('atelier upgrade points at BRD-OPEN-QUESTIONS', stubUpgrade.stdout.includes('BRD-OPEN-QUESTIONS'));
+  // upgrade --help is asserted in [11] below. The minimal polished-contract
+  // assertion here: no v1.x deferral banner with --help.
+  const upgradeHelp = run(['upgrade', '--help']);
+  check('atelier upgrade --help exits 0', upgradeHelp.status === 0, `got ${upgradeHelp.status}`);
+  check(
+    'atelier upgrade --help does NOT print v1.x deferral banner',
+    !upgradeHelp.stdout.includes('polished form lands in v1.x') &&
+      !upgradeHelp.stdout.includes('SCOPE-DEFERRED'),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -310,6 +317,75 @@ console.log('\n[10] atelier deploy (D6 polished form)');
   check(
     'deploy (no flags) does NOT print v1.x deferral banner',
     !noFlags.stdout.includes('polished form lands in v1.x'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// [11] atelier upgrade (E2 polished form; argument-handling contract only)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching behavior (real Postgres connect + apply migrations) lives
+// in scripts/cli/__smoke__/upgrade.smoke.ts (gated on local Supabase running).
+// This section asserts the argument-handling contract: --help dispatches,
+// unknown flag exits 2, conflicting actions exit 2, --remote without
+// ATELIER_DATASTORE_URL exits 2.
+console.log('\n[11] atelier upgrade (E2 polished form)');
+{
+  const help = run(['upgrade', '--help']);
+  check('upgrade --help exits 0', help.status === 0, `got ${help.status}`);
+  check('upgrade --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('upgrade --help mentions --check', help.stdout.includes('--check'));
+  check('upgrade --help mentions --apply', help.stdout.includes('--apply'));
+  check('upgrade --help mentions --force-apply-modified', help.stdout.includes('--force-apply-modified'));
+  check('upgrade --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('upgrade --help mentions --json', help.stdout.includes('--json'));
+  check('upgrade --help mentions --remote', help.stdout.includes('--remote'));
+  check('upgrade --help mentions LOCAL / CLOUD modes', help.stdout.includes('LOCAL') && help.stdout.includes('CLOUD'));
+  check('upgrade --help cross-references ADR-005', help.stdout.includes('ADR-005'));
+  check('upgrade --help cross-references BRD-OPEN-QUESTIONS', help.stdout.includes('BRD-OPEN-QUESTIONS'));
+  check('upgrade --help cross-references migration-system.md', help.stdout.includes('migration-system.md'));
+  check('upgrade --help cross-references upgrade-schema.md', help.stdout.includes('upgrade-schema.md'));
+
+  const unknownFlag = run(['upgrade', '--bogus']);
+  check('upgrade --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+  check('upgrade --bogus names the unknown flag', unknownFlag.stderr.includes('--bogus'));
+
+  const conflicting = run(['upgrade', '--check', '--apply']);
+  check('upgrade --check --apply exits 2', conflicting.status === 2, `got ${conflicting.status}`);
+  check(
+    'upgrade --check --apply names the conflict',
+    conflicting.stderr.includes('mutually exclusive'),
+  );
+
+  // --remote without ATELIER_DATASTORE_URL must exit 2 (precondition error).
+  // We override the env for this single invocation by spawning with explicit env.
+  const remoteNoEnv = spawnSync(
+    'npx',
+    ['tsx', CLI, 'upgrade', '--remote', '--check'],
+    {
+      encoding: 'utf8',
+      cwd: REPO_ROOT,
+      // Strip ATELIER_DATASTORE_URL so the precondition fires regardless of the
+      // surrounding shell. Keep PATH + HOME so npx + tsx still resolve.
+      env: { ...process.env, ATELIER_DATASTORE_URL: '' },
+    },
+  );
+  check('upgrade --remote (no env) exits 2', remoteNoEnv.status === 2, `got ${remoteNoEnv.status}`);
+  check(
+    'upgrade --remote (no env) names the missing env var',
+    remoteNoEnv.stderr.includes('ATELIER_DATASTORE_URL'),
+  );
+
+  // Polished upgrade is no longer the v1.x stub: should NOT print the
+  // "polished form lands in v1.x" deferral banner. With no args, upgrade
+  // defaults to --check which will attempt a connection and either
+  // succeed (local stack up) or fail at the connect step (exit 2). We
+  // only assert that the stub deferral banner is absent in either case.
+  const noFlags = run(['upgrade']);
+  check(
+    'upgrade (no flags) does NOT print v1.x deferral banner',
+    !noFlags.stdout.includes('polished form lands in v1.x') &&
+      !noFlags.stdout.includes('SCOPE-DEFERRED'),
   );
 }
 

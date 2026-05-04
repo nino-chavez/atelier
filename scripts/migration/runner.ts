@@ -19,6 +19,20 @@
 // Per ADR-029 (GCP-portability): uses standard `pg` for SQL execution.
 // No Supabase RPC helpers, no @vercel/* imports. Works against any
 // Postgres-backed Atelier datastore.
+//
+// X1 audit B4 + D2:
+//   - Each migration's transaction sets a statement_timeout (default 600s)
+//     so a slow / runaway migration cannot hold locks indefinitely. Tune
+//     via `MigrationRunnerOptions.statementTimeoutMs`.
+//   - Each transaction acquires `pg_advisory_xact_lock(hashtextextended(
+//     'atelier-migration-runner', 0))` so two concurrent `atelier upgrade
+//     --apply` runners can't both pass the pending check and race to apply
+//     the same migration. The second runner blocks until the first commits;
+//     when it resumes, the migration is already recorded in
+//     atelier_schema_versions and the apply is a no-op (ON CONFLICT clause).
+//
+// Both surfaces are append-only-safe (per ADR-005); they only serialize
+// existing apply behavior.
 
 import { Client, type ClientConfig } from 'pg';
 import {
@@ -87,9 +101,19 @@ export interface MigrationRunnerOptions {
    * Useful when composing the runner inside an existing transaction.
    */
   client?: Client;
+  /**
+   * Per-migration transaction `statement_timeout` (milliseconds). Default
+   * 600_000 (10 minutes). A migration that exceeds this aborts and the
+   * transaction rolls back, freeing locks. Set to 0 to disable (NOT
+   * recommended on production datastores). X1 audit B4.
+   */
+  statementTimeoutMs?: number;
 }
 
 const DEFAULT_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+const DEFAULT_STATEMENT_TIMEOUT_MS = 600_000;
+/** Stable lock id for parallel apply serialization. X1 audit D2. */
+const MIGRATION_LOCK_KEY = 'atelier-migration-runner';
 
 // ---------------------------------------------------------------------------
 // MigrationRunner
@@ -101,6 +125,7 @@ export class MigrationRunner {
   private readonly templateVersion: string;
   private readonly appliedBy: string;
   private readonly externalClient: Client | undefined;
+  private readonly statementTimeoutMs: number;
 
   constructor(opts: MigrationRunnerOptions) {
     this.databaseUrl = opts.databaseUrl ?? process.env.ATELIER_DATASTORE_URL ?? DEFAULT_DB_URL;
@@ -108,6 +133,8 @@ export class MigrationRunner {
     this.templateVersion = opts.templateVersion;
     this.appliedBy = opts.appliedBy ?? 'manual';
     this.externalClient = opts.client;
+    this.statementTimeoutMs =
+      opts.statementTimeoutMs !== undefined ? opts.statementTimeoutMs : DEFAULT_STATEMENT_TIMEOUT_MS;
   }
 
   /**
@@ -233,7 +260,32 @@ export class MigrationRunner {
     await this.withClient(client, async (c) => {
       await c.query('BEGIN');
       try {
-        await c.query(migration.content);
+        // X1 audit D2: serialize parallel `atelier upgrade --apply` runners
+        // against this datastore. The second runner blocks until the first
+        // commits; when it resumes the ON CONFLICT clause below makes the
+        // apply a no-op for any migration the first runner already recorded.
+        await c.query(
+          `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+          [MIGRATION_LOCK_KEY],
+        );
+        // X1 audit B4: bound how long a single migration can hold locks.
+        // Skipped when statementTimeoutMs is 0 so adopters who deliberately
+        // run multi-hour migrations can opt out.
+        if (this.statementTimeoutMs > 0) {
+          await c.query(`SET LOCAL statement_timeout = ${this.statementTimeoutMs}`);
+        }
+        // Re-read applied state inside the lock; another runner may have
+        // applied this migration while we were blocked. Skip the SQL but
+        // still commit so the lock releases cleanly.
+        const already = await c.query<{ exists: boolean }>(
+          `SELECT EXISTS (
+             SELECT 1 FROM atelier_schema_versions WHERE filename = $1
+           ) AS exists`,
+          [migration.filename],
+        );
+        if (!already.rows[0]?.exists) {
+          await c.query(migration.content);
+        }
         // Record. ON CONFLICT DO NOTHING tolerates the case where this
         // migration was applied via supabase CLI before the runner was
         // wired -- the bootstrap row already exists; the SQL above was

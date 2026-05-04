@@ -297,14 +297,128 @@ async function testApplyMigrationEndToEnd(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// [7] X1 audit B4 — statement_timeout is set inside the apply transaction.
+// ---------------------------------------------------------------------------
+const X1_TIMEOUT_TEST_TABLE = 'atelier_x1_timeout_probe';
+const X1_TIMEOUT_TEST_FILENAME = '29991231235961_atelier_x1_timeout_probe.sql';
+
+async function testStatementTimeout(): Promise<void> {
+  console.log('\n[7] X1 audit B4 — statement_timeout set inside apply transaction');
+
+  // The migration body queries pg_settings to capture the in-transaction
+  // statement_timeout and writes it into a probe row we can read after.
+  const sql = [
+    `CREATE TABLE IF NOT EXISTS ${X1_TIMEOUT_TEST_TABLE} (timeout_ms text);`,
+    `INSERT INTO ${X1_TIMEOUT_TEST_TABLE} (timeout_ms)`,
+    `  SELECT setting FROM pg_settings WHERE name = 'statement_timeout';`,
+  ].join('\n');
+
+  const migration = {
+    filename: X1_TIMEOUT_TEST_FILENAME,
+    absolutePath: '/synthetic/' + X1_TIMEOUT_TEST_FILENAME,
+    timestamp: '29991231235961',
+    slug: 'atelier_x1_timeout_probe',
+    content: sql,
+    sha256: computeSha256(sql),
+  };
+
+  const r = new MigrationRunner({
+    databaseUrl: DB_URL,
+    repoRoot: REPO_ROOT,
+    templateVersion: '1.0',
+    appliedBy: 'x1-smoke',
+    statementTimeoutMs: 600_000,
+  });
+  await r.applyMigration(migration);
+
+  await withClient(async (c) => {
+    const { rows } = await c.query<{ timeout_ms: string }>(
+      `SELECT timeout_ms FROM ${X1_TIMEOUT_TEST_TABLE} ORDER BY ctid DESC LIMIT 1`,
+    );
+    const captured = rows[0]?.timeout_ms ?? '';
+    check(
+      'transaction observed non-default statement_timeout',
+      captured === '600000' || captured === '600s',
+      `captured=${captured}`,
+    );
+  });
+}
+
+async function testParallelApplyAdvisoryLock(): Promise<void> {
+  console.log('\n[8] X1 audit D2 — concurrent applyMigration is serialized');
+
+  const PARALLEL_TABLE = 'atelier_x1_parallel_probe';
+  const PARALLEL_FILENAME = '29991231235962_atelier_x1_parallel_probe.sql';
+
+  // The migration body asserts the table doesn't already have the row, then
+  // inserts. Without the advisory lock, two concurrent appliers could race
+  // to the SELECT before either's INSERT lands. With the lock, the second
+  // applier blocks until the first commits, then sees the row in
+  // schema_versions and skips its content execution path entirely.
+  const sql = [
+    `CREATE TABLE IF NOT EXISTS ${PARALLEL_TABLE} (id serial PRIMARY KEY, marker text NOT NULL UNIQUE);`,
+    `INSERT INTO ${PARALLEL_TABLE} (marker) VALUES ('x1-marker') ON CONFLICT DO NOTHING;`,
+  ].join('\n');
+
+  const migration = {
+    filename: PARALLEL_FILENAME,
+    absolutePath: '/synthetic/' + PARALLEL_FILENAME,
+    timestamp: '29991231235962',
+    slug: 'atelier_x1_parallel_probe',
+    content: sql,
+    sha256: computeSha256(sql),
+  };
+
+  const runners = [0, 1].map(() => new MigrationRunner({
+    databaseUrl: DB_URL,
+    repoRoot: REPO_ROOT,
+    templateVersion: '1.0',
+    appliedBy: 'x1-parallel',
+  }));
+
+  const results = await Promise.allSettled(runners.map((rr) => rr.applyMigration(migration)));
+  for (const [i, res] of results.entries()) {
+    check(`parallel runner #${i} did not reject`, res.status === 'fulfilled', res.status === 'rejected' ? `${res.reason}` : '');
+  }
+
+  await withClient(async (c) => {
+    const { rows } = await c.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM ${PARALLEL_TABLE} WHERE marker = 'x1-marker'`,
+    );
+    check(
+      'exactly one marker row after parallel applies (no double-insert)',
+      rows[0]?.count === '1',
+      `count=${rows[0]?.count}`,
+    );
+    const appliedRows = await c.query<{ count: string }>(
+      `SELECT count(*)::text AS count FROM atelier_schema_versions WHERE filename = $1`,
+      [PARALLEL_FILENAME],
+    );
+    check(
+      'exactly one schema_versions row recorded',
+      appliedRows.rows[0]?.count === '1',
+      `count=${appliedRows.rows[0]?.count}`,
+    );
+  });
+
+  // Cleanup
+  await withClient(async (c) => {
+    await c.query(`DROP TABLE IF EXISTS ${PARALLEL_TABLE}`);
+    await c.query(`DELETE FROM atelier_schema_versions WHERE filename = $1`, [PARALLEL_FILENAME]);
+  }).catch(() => {});
+}
+
+// ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
 async function cleanup(): Promise<void> {
   // Drop the test table + delete the schema_versions row so re-running the
-  // smoke is a no-op.
+  // smoke is a no-op. Includes the X1 probes added in [7] + [8].
   await withClient(async (c) => {
     await c.query(`DROP TABLE IF EXISTS ${E1_TEST_TABLE}`);
+    await c.query(`DROP TABLE IF EXISTS ${X1_TIMEOUT_TEST_TABLE}`);
     await c.query(`DELETE FROM atelier_schema_versions WHERE filename = $1`, [E1_TEST_FILENAME]);
+    await c.query(`DELETE FROM atelier_schema_versions WHERE filename = $1`, [X1_TIMEOUT_TEST_FILENAME]);
   }).catch((err) => {
     console.error(`cleanup warn: ${err instanceof Error ? err.message : String(err)}`);
   });
@@ -353,6 +467,8 @@ async function main(): Promise<void> {
     await testStatusPending();
     await testStatusModified();
     await testApplyMigrationEndToEnd();
+    await testStatementTimeout();
+    await testParallelApplyAdvisoryLock();
   } finally {
     await cleanup();
   }

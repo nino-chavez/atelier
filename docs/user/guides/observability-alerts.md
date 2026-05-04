@@ -195,6 +195,16 @@ If a webhook URL is permanently broken (deleted incoming-webhook, revoked Slack 
 
 ---
 
+## Concurrent publishers (advisory lock)
+
+Each `runOnce` call wraps its per-tick body in a Postgres transaction-scoped advisory lock keyed off `hashtextextended('atelier-alert-publisher', 0)`. If you run two publishers against the same datastore at the same time — for example a Vercel Cron schedule plus a long-running `npm run alert-publisher --interval 30` process — the second runner blocks until the first commits, then sees the recorded `alert.last_state.*` rows and treats every metric as already-published. The net effect: each severity transition fires exactly one notification regardless of how many publisher instances are racing.
+
+Operators do not need to configure this; it is on by default. The lock is held only for the duration of one tick (typically <1s in practice), so there is no risk of stalling a long-running publisher behind another.
+
+X1 audit D1.
+
+---
+
 ## Adopter signal (what would change v1.x)
 
 Per BRD-OPEN-QUESTIONS §30's "trigger to land" rationale, the publisher v1 implementation lands when an adopter requests out-of-band ops alerts. Future polish that v1.x signal would inform:

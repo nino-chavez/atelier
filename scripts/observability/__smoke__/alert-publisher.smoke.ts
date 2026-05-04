@@ -344,11 +344,156 @@ async function testPublisherStateTracking(): Promise<void> {
   await pg.end();
 }
 
+async function testConcurrentRunOnceSerialization(): Promise<void> {
+  console.log('# 5. X1 audit D1 — concurrent runOnce serializes via advisory lock');
+
+  const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+
+  // Pre-flight: skip when no DB is reachable.
+  let dbReachable = false;
+  try {
+    const probe = new Client({ connectionString: DB_URL });
+    await probe.connect();
+    await probe.query('SELECT 1');
+    await probe.end();
+    dbReachable = true;
+  } catch {
+    /* skip */
+  }
+  if (!dbReachable) {
+    console.log('  skipped (no local DB)');
+    return;
+  }
+
+  const pg = new Client({ connectionString: DB_URL });
+  await pg.connect();
+  const projectId = 'cccccccc-3333-3333-3333-333333333333';
+  await pg.query(`DELETE FROM telemetry WHERE project_id = $1::uuid`, [projectId]).catch(() => {});
+  await pg.query(`DELETE FROM sessions WHERE project_id = $1::uuid`, [projectId]).catch(() => {});
+  await pg.query(`DELETE FROM composers WHERE project_id = $1::uuid`, [projectId]).catch(() => {});
+  await pg.query(`DELETE FROM projects WHERE id = $1::uuid`, [projectId]).catch(() => {});
+  await pg.query(
+    `INSERT INTO projects (id, name, repo_url, template_version)
+     VALUES ($1::uuid, 'alert-publisher-d1-smoke', 'https://example.invalid/aps', '1.0')`,
+    [projectId],
+  );
+
+  // Seed 25 active sessions -> sessions_active_per_project should fire alert.
+  for (let i = 0; i < 25; i++) {
+    await pg.query(
+      `INSERT INTO composers (id, project_id, email, display_name, discipline, access_level, identity_subject, status)
+       VALUES (gen_random_uuid(), $1::uuid, $2, $3, 'dev', 'member', $4, 'active')
+       ON CONFLICT DO NOTHING`,
+      [projectId, `d1-${i}@aps.invalid`, `D1 ${i}`, `aps-d1-${i}`],
+    );
+  }
+  const { rows: comps } = await pg.query<{ id: string }>(
+    `SELECT id FROM composers WHERE project_id = $1::uuid`,
+    [projectId],
+  );
+  for (const c of comps) {
+    await pg.query(
+      `INSERT INTO sessions (project_id, composer_id, surface, agent_client, status, heartbeat_at)
+       VALUES ($1::uuid, $2::uuid, 'web', 'claude.ai', 'active', now())`,
+      [projectId, c.id],
+    );
+  }
+
+  // Mock adapter that captures publish calls per runner.
+  const captured: AlertEvent[] = [];
+  const mock: MessagingAdapter = {
+    kind: 'mock',
+    async publish(_channel, event) {
+      captured.push(event);
+      return true;
+    },
+  };
+  const { runOnce } = await import('../alert-publisher.ts');
+  const config = {
+    thresholds: {
+      sessionsActivePerProject: 20,
+      contributionsLifetimePerProject: 10000,
+      decisionsLifetimePerProject: 500,
+      locksHeldConcurrentPerProject: 20,
+      triagePendingBacklog: 25,
+      syncLagSecondsP95: 300,
+      costUsdPerDayPerProject: 10,
+    },
+    alerts: {
+      channels: [],
+      routes: [{ metric: 'sessions_active_per_project', channel: 'mock', minSeverity: 'warn' as const }],
+    },
+  };
+  const opts = {
+    databaseUrl: DB_URL,
+    config,
+    adapters: new Map([['mock', mock]]),
+    dashboardBaseUrl: undefined,
+  };
+
+  // Two simultaneous runners. With the advisory lock the second blocks
+  // until the first commits; when it resumes the recorded
+  // `alert.last_state.sessions_active_per_project` row makes the
+  // metric appear non-transitioning, so it does NOT publish a duplicate.
+  const [a, b] = await Promise.all([runOnce(opts), runOnce(opts)]);
+  const ourEvents = captured.filter(
+    (e) => e.projectId === projectId && e.metric === 'sessions_active_per_project',
+  );
+  check(
+    'concurrent runners produce exactly ONE published alert for our project',
+    ourEvents.length === 1,
+    `captured=${ourEvents.length}; A.published=${a.transitionsPublished} B.published=${b.transitionsPublished}`,
+  );
+
+  // Cleanup
+  await pg.query(`DELETE FROM telemetry WHERE project_id = $1::uuid`, [projectId]);
+  await pg.query(`DELETE FROM sessions WHERE project_id = $1::uuid`, [projectId]);
+  await pg.query(`DELETE FROM composers WHERE project_id = $1::uuid`, [projectId]);
+  await pg.query(`DELETE FROM projects WHERE id = $1::uuid`, [projectId]);
+  await pg.end();
+}
+
+async function testTriagePendingTableExistsCheck(): Promise<void> {
+  console.log('# 6. X1 audit Q1b + Q3c — triage_pending uses tableExists, no silent swallow');
+
+  const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+  let dbReachable = false;
+  try {
+    const probe = new Client({ connectionString: DB_URL });
+    await probe.connect();
+    await probe.query('SELECT 1');
+    await probe.end();
+    dbReachable = true;
+  } catch {
+    /* skip */
+  }
+  if (!dbReachable) {
+    console.log('  skipped (no local DB)');
+    return;
+  }
+
+  const pg = new Client({ connectionString: DB_URL });
+  await pg.connect();
+  const exists = await (await import('../../lib/db.ts')).tableExists(pg, 'public', 'triage_pending');
+  check(
+    'tableExists positive: triage_pending exists in healthy datastore',
+    exists,
+  );
+  const noTable = await (await import('../../lib/db.ts')).tableExists(pg, 'public', 'definitely_not_a_real_table_xy');
+  check(
+    'tableExists negative: missing table reported as false (no silent swallow)',
+    !noTable,
+  );
+  await pg.end();
+}
+
 async function main(): Promise<void> {
   await testFormattingHelpers();
   await testWebhookAdapterShapeInference();
   await testWebhookAdapterPublishMockServer();
   await testPublisherStateTracking();
+  await testConcurrentRunOnceSerialization();
+  await testTriagePendingTableExistsCheck();
 
   console.log('');
   if (failures === 0) {

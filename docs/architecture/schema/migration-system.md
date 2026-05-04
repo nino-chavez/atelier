@@ -154,6 +154,15 @@ For the full operator runbook (routine upgrade flow + handling modified migratio
 
 The substrate's API contract (`MigrationRunner` class, the three buckets, the bootstrap-row sentinel) is locked at E1 and will not change in incompatible ways without a new ADR.
 
+### Concurrency and timeouts (X1 audit hardening)
+
+Two safety surfaces ride alongside `applyMigration`:
+
+- **`statement_timeout` per transaction.** Each `applyMigration` call runs `SET LOCAL statement_timeout = <ms>` immediately after `BEGIN` (default 600_000 ms = 10 minutes). A migration that runs past the timeout aborts; the transaction rolls back; locks release. Override via the runner constructor: `new MigrationRunner({ ..., statementTimeoutMs: 1_800_000 })` for migrations expected to legitimately exceed 10 minutes (large backfills, etc.). Pass `0` to disable the timeout (NOT recommended on production datastores).
+- **Advisory lock against parallel apply.** Each `applyMigration` transaction acquires `pg_advisory_xact_lock(hashtextextended('atelier-migration-runner', 0))` after `SET LOCAL`. Two concurrent runners (e.g., a CI job + a manual `atelier upgrade --apply`) targeting the same datastore serialize; the second blocks until the first commits, then sees the migration recorded in `atelier_schema_versions` and skips its content. This prevents non-idempotent migrations from double-applying when two operators race.
+
+The lock and timeout pair are X1 audit fixes (B4 + D2). Both are enabled by default and require no operator action.
+
 ### Out of scope at E1 (filed for v1.x next-level)
 
 - **DOWN migrations / rollback.** Append-only at v1 per ADR-005. Rollback semantics deferred until adopter signal warrants.

@@ -228,6 +228,31 @@ This works for adopters who cloned recently and have minimal local divergence. I
 
 ---
 
+### 31 · X1 close-out audit follow-ups
+
+**Context.** The X1 audit (`fix(audit): X1 — security + quality batch from review of v1.x close-out`) shipped fixes for HIGH + MEDIUM findings whose target files were reachable from the E2 close-out stack. The items below were either lower severity (LOW), out-of-scope by design (need adopter infra), or required code on stacked branches that had not yet merged when X1 landed. Each is filed with explicit activation criteria so it does not get lost.
+
+**LOW severity / scope-deferred:**
+
+- **C2 sign-out CSRF.** Switch sign-out from GET to POST. *Activate when:* an adopter reports CSRF concern OR one-form-edit polish lands.
+- **C3 invite identity-rebinding.** Invite re-issued to an attacker-controlled email could rebind a composer's identity_subject. *Activate when:* multi-admin teams onboard. *Workaround until:* runbook entry advising single-admin invite + manual identity_subject rotation.
+- **C4 LensUnauthorized info disclosure.** The `no_composer` reason names the exact failure mode. *Activate when:* an adopter classifies their deploy as user-class hostile.
+- **B3 git clone -- separator.** `atelier init` invokes `git clone <url>` without `--`; a malicious tutorial could supply a URL like `--upload-pack=...`. *Activate when:* one-form-edit polish lands.
+- **A2 webhook URL in fetch error message.** Node's `fetch` may include URL in error.toString. *Activate when:* node version drift makes this concrete.
+- **A4 deploy validation tail redaction.** `atelier deploy --validate` tails command output that may include secrets if the substrate ever logs them. *Activate when:* an adopter reports a leak, OR substrate logging changes.
+- **D3 invite race.** Two simultaneous `atelier invite` calls for the same email can both pass the duplicate check. *Activate when:* scale ceiling per ARCH §9.8 is approached, or batch-onboarding lands.
+- **E1, E2, E3 DoS items.** Endpoint rate-limit; magic-link request flood; cron-publisher fanout. *Activate when:* deploy infra (Vercel + Supabase) signals the layer below cannot absorb the rate.
+- **Code polish:** rerank adapter type widening; messaging-lib slack coupling; runner.ts re-exports; doctor JSON inline type; webhook adapter URL substring matching brittleness.
+
+**Stack-blocked at X1 (target files only on D4 / D7 unmerged branches):**
+
+- **C1 open OTP relay on `/sign-in`.** `auth.signInWithOtp({ email })` on `prototype/src/app/sign-in/SignInForm.tsx` accepts any anonymous visitor. *Fix recipe (preserved verbatim from X1 brief):* new Route Handler at `prototype/src/app/sign-in/check/route.ts` accepting `{ email }`, checks `composers.email = $1` exists in the datastore (server-side `@supabase/ssr` or pg pool), returns 200 if invited / 404 otherwise. SignInForm calls this BEFORE `auth.signInWithOtp`. On 404, show "If your email is registered, you'll receive a sign-in link" (do NOT differentiate — user-enumeration surface stays closed). Rate-limit per IP (in-memory token bucket; 10/min per IP; reset on process restart acceptable). Document where to swap in Vercel KV / Redis. Add Playwright assertions: anonymous email submit hits `/check` route; non-invited email returns 404 + form shows generic message; invited email proceeds; rate-limit test (11 rapid submits throttled). *Activates:* when D7 (sign-in UI) lands on main.
+- **A1 magic-link printed to stdout by default in `atelier invite`.** *Fix recipe (preserved verbatim):* default text output redacts the link to `<magic-link suppressed; re-run with --print-link to emit>`. Opt-in via `--print-link`. For `--json`: keep link in JSON, add top-level `warning: "magic_link_in_output"`. Update `docs/user/guides/invite-composers.md` to call out the redaction default. Add cli.smoke.ts assertions: default invite output contains the suppressed marker; `--print-link` emits the URL. *Activates:* when D4 (atelier invite) lands on main.
+
+**Status.** OPEN. Filed 2026-05-04 with X1 close-out. Each LOW item has explicit activation criteria; the two stack-blocked items will land in the same PR that merges D4 / D7 to main (or in an X2 batch immediately after). No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
+
+---
+
 ## Resolved
 
 Each entry below is a one-line redirect to the canonical home where the decision now lives. Recommendations and full Q-and-A blocks have been removed to avoid parallel-summary drift per METHODOLOGY section 6.1; see git history for the original full-context entries.

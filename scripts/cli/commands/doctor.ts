@@ -20,12 +20,12 @@
 // `atelier dev` is the fix surface. This separation keeps doctor safe
 // to run from any state without side effects.
 
-import { request } from 'node:http';
 import {
   runPreflight,
   formatReport,
   type PreflightReport,
 } from '../lib/preflight.ts';
+import { probeEndpoint as libProbe, type EndpointProbeResult } from '../../lib/probe.ts';
 
 export const doctorUsage = `atelier doctor — diagnose substrate health
 
@@ -52,77 +52,44 @@ start / repair the substrate.
 Symptom -> cause hints map to ARCH 6.1.1.
 `;
 
-interface EndpointProbeResult {
-  ok: boolean;
-  detail: string;
-  /** HTTP status code observed (when reachable). */
-  statusCode?: number;
-}
-
 /**
  * Probe /api/mcp without a bearer. A healthy endpoint returns 401 with
  * a JSON-RPC-shaped body (the MCP dispatcher rejects unauthorized).
- * Any other shape indicates degraded behavior.
+ * Any other shape indicates degraded behavior. Doctor wraps the shared
+ * probe primitive so the doctor-specific error wording is preserved
+ * (X1 audit Q3b).
  */
 async function probeEndpoint(): Promise<EndpointProbeResult> {
-  return new Promise((resolve) => {
-    const req = request(
-      {
-        host: '127.0.0.1',
-        port: 3030,
-        path: '/api/mcp',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 3000,
-      },
-      (res) => {
-        const status = res.statusCode ?? 0;
-        let body = '';
-        res.setEncoding('utf-8');
-        res.on('data', (chunk: string) => (body += chunk));
-        res.on('end', () => {
-          if (status === 401) {
-            resolve({
-              ok: true,
-              detail: 'returned 401 (expected without bearer; endpoint dispatches)',
-              statusCode: status,
-            });
-          } else if (status === 405) {
-            // Some clients hit GET first; 405 with allow:POST also indicates healthy
-            resolve({
-              ok: true,
-              detail: 'returned 405 (route reachable; expecting POST)',
-              statusCode: status,
-            });
-          } else if (status >= 500) {
-            resolve({
-              ok: false,
-              detail: `returned ${status}: endpoint reachable but error path: ${body.slice(0, 200)}`,
-              statusCode: status,
-            });
-          } else {
-            resolve({
-              ok: false,
-              detail: `unexpected ${status} from /api/mcp without bearer`,
-              statusCode: status,
-            });
-          }
-        });
-      },
-    );
-    req.on('timeout', () => {
-      req.destroy();
-      resolve({ ok: false, detail: 'timeout connecting to dev server (3s)' });
-    });
-    req.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'ECONNREFUSED') {
-        resolve({ ok: false, detail: 'dev server not running on :3030' });
-      } else {
-        resolve({ ok: false, detail: `transport error: ${err.message}` });
+  return libProbe({
+    port: 3030,
+    classify: (status, body) => {
+      if (status === 401) {
+        return {
+          ok: true,
+          detail: 'returned 401 (expected without bearer; endpoint dispatches)',
+          statusCode: status,
+        };
       }
-    });
-    req.write('{}');
-    req.end();
+      if (status === 405) {
+        return {
+          ok: true,
+          detail: 'returned 405 (route reachable; expecting POST)',
+          statusCode: status,
+        };
+      }
+      if (status >= 500) {
+        return {
+          ok: false,
+          detail: `returned ${status}: endpoint reachable but error path: ${body.slice(0, 200)}`,
+          statusCode: status,
+        };
+      }
+      return {
+        ok: false,
+        detail: `unexpected ${status} from /api/mcp without bearer`,
+        statusCode: status,
+      };
+    },
   });
 }
 

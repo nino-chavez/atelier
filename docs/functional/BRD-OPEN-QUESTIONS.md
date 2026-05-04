@@ -154,6 +154,10 @@ Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing m
 
 - Rerank adapter type widening; messaging-lib slack coupling; `runner.ts` re-exports; doctor JSON inline type; webhook adapter URL substring matching brittleness.
 
+**Operator ergonomics:**
+
+- **Bearer rotation in build sessions.** Surfaced during BUILD-SEQUENCE row G's first MCP-client session: rotating the local bearer required manual password reset → `signInWithPassword` → `.mcp.json` write because the originating password was not recoverable from existing artifacts. `atelier dev` should be able to rotate non-interactively when the operator opts in to credential persistence. *Activate when:* a second build session hits the same friction OR an adopter reports the same wall during onboarding. *Design space (do not pre-decide):* `.atelier/dev-credentials.json` (gitignored) vs OS keychain integration vs `atelier dev --rotate` interactive prompt. Pre-deciding before the second data point is over-investment.
+
 **Validator polish:**
 
 - **Stale example trace IDs in milestone-exit audit docs.** `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` reference example trace IDs (matching `NF-N`, `US-N.M`, and `BRD:Epic-N` shapes) that do not resolve in `traceability.json`. The IDs are illustrative-only in audit prose, not real references. *Fix path:* either rewrite the audit-doc references with real trace IDs, or extend `scripts/traceability/validate-refs.ts` to whitelist a documented example-IDs set. *Activate when:* next traceability-validator polish pass, OR a future milestone-exit audit blocks on inheriting the false-positive.

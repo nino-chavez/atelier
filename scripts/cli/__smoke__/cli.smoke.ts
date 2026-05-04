@@ -135,18 +135,42 @@ console.log('\n[6] polished commands surface argument-handling contract');
 // ---------------------------------------------------------------------------
 // [7] Multi-word command dispatch (datastore init, territory add, eval find_similar)
 // ---------------------------------------------------------------------------
+//
+// Each multi-word command is now polished (D2 territory add, D3 datastore init,
+// E2 upgrade). This section asserts only the dispatch contract: the dispatcher
+// routes <command> <subcommand> correctly, unknown subcommands exit 2, and
+// the polished forms are not stub-deferral banners. Behavior is covered by
+// per-command sections [12]–[14] above and dedicated *.smoke.ts files.
 console.log('\n[7] multi-word commands dispatch correctly');
 {
-  const dsInit = run(['datastore', 'init']);
-  check('datastore init exits 0', dsInit.status === 0, `got ${dsInit.status}`);
-  check('datastore init shows raw form (supabase db push)', dsInit.stdout.includes('supabase db push'));
-
   const dsBad = run(['datastore', 'invalid']);
   check('datastore <invalid> exits 2', dsBad.status === 2, `got ${dsBad.status}`);
+  check('datastore <invalid> names the unknown subcommand', dsBad.stderr.includes('unknown subcommand'));
 
-  const terAdd = run(['territory', 'add']);
-  check('territory add exits 0', terAdd.status === 0, `got ${terAdd.status}`);
-  check('territory add references territories.yaml', terAdd.stdout.includes('.atelier/territories.yaml'));
+  const terBad = run(['territory', 'invalid']);
+  check('territory <invalid> exits 2', terBad.status === 2, `got ${terBad.status}`);
+  check('territory <invalid> names the unknown subcommand', terBad.stderr.includes('unknown subcommand'));
+
+  // territory add --dry-run --json is a quick polished-routing probe (no file write).
+  const terAddDry = run([
+    'territory', 'add',
+    '--name', 'sec7-routing-probe',
+    '--owner-role', 'dev',
+    '--scope-kind', 'files',
+    '--scope-pattern', '__sec7_probe__/**',
+    '--non-interactive',
+    '--dry-run',
+    '--json',
+  ]);
+  check('territory add --dry-run --json exits 0', terAddDry.status === 0, `got ${terAddDry.status}`);
+
+  // datastore init --dry-run --json is a quick polished-routing probe (no DB).
+  const dsInitDry = run(['datastore', 'init', '--dry-run', '--json']);
+  // Local mode dry-run renders a plan that doesn't require docker to actually
+  // be reachable (preflight is read-only). Exit may be 0 or 1 depending on
+  // env (preflight reports docker absence), but should not be 2 (which would
+  // be a flag/argument error).
+  check('datastore init --dry-run --json exits 0 or 1 (not 2)', dsInitDry.status === 0 || dsInitDry.status === 1, `got ${dsInitDry.status}`);
 
   const evalBad = run(['eval', 'invalid']);
   check('eval <invalid> exits 2', evalBad.status === 2, `got ${evalBad.status}`);
@@ -502,6 +526,161 @@ console.log('\n[12] atelier invite (D4 polished form + A1 redaction default)');
   // Polished invite is no longer the v1.x stub.
   check(
     'invite --help does NOT print v1.x deferral banner',
+    !help.stdout.includes('polished form lands in v1.x') &&
+      !help.stdout.includes('SCOPE-DEFERRED'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// [13] atelier territory (D2 polished form; argument-handling contract)
+// ---------------------------------------------------------------------------
+//
+// File-mutating behavior (real .atelier/territories.yaml writes) lives in
+// scripts/cli/__smoke__/territory.smoke.ts. This section asserts the
+// argument-handling contract: --help dispatches and documents every flag,
+// missing required flags in non-interactive mode exit 2, validation
+// errors exit 1, --dry-run --json renders a structured plan without
+// writing.
+console.log('\n[13] atelier territory (D2 polished form)');
+{
+  const help = run(['territory', '--help']);
+  check('territory --help exits 0', help.status === 0, `got ${help.status}`);
+  check('territory --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('territory --help mentions add', help.stdout.includes('add'));
+  check('territory --help mentions --name', help.stdout.includes('--name'));
+  check('territory --help mentions --owner-role', help.stdout.includes('--owner-role'));
+  check('territory --help mentions --review-role', help.stdout.includes('--review-role'));
+  check('territory --help mentions --scope-kind', help.stdout.includes('--scope-kind'));
+  check('territory --help mentions --scope-pattern', help.stdout.includes('--scope-pattern'));
+  check('territory --help mentions --requires-plan-review', help.stdout.includes('--requires-plan-review'));
+  check('territory --help mentions --non-interactive', help.stdout.includes('--non-interactive'));
+  check('territory --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('territory --help mentions --json', help.stdout.includes('--json'));
+  check('territory --help cross-references ADR-014', help.stdout.includes('ADR-014') || help.stdout.includes('territories.yaml'));
+  check('territory --help cross-references ADR-039', help.stdout.includes('ADR-039'));
+
+  const addHelp = run(['territory', 'add', '--help']);
+  check('territory add --help exits 0', addHelp.status === 0, `got ${addHelp.status}`);
+
+  const unknownSub = run(['territory', 'remove']);
+  check('territory <unknown-sub> exits 2', unknownSub.status === 2, `got ${unknownSub.status}`);
+  check('territory <unknown-sub> names the subcommand', unknownSub.stderr.includes('unknown subcommand'));
+
+  const missingFlags = run(['territory', 'add', '--non-interactive']);
+  check('territory add --non-interactive (no flags) exits 2', missingFlags.status === 2, `got ${missingFlags.status}`);
+  check('territory add (no flags) names required flags', missingFlags.stderr.includes('required'));
+
+  const unknownFlag = run([
+    'territory', 'add',
+    '--name', 'd2-cli-smoke-bogus',
+    '--owner-role', 'dev',
+    '--scope-kind', 'files',
+    '--scope-pattern', '__d2_cli_smoke__/**',
+    '--non-interactive',
+    '--bogus',
+  ]);
+  check('territory add --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+
+  // --dry-run --json renders the plan structure without writing.
+  const dryJson = run([
+    'territory', 'add',
+    '--name', 'd2-cli-smoke-dryrun',
+    '--owner-role', 'dev',
+    '--scope-kind', 'files',
+    '--scope-pattern', '__d2_cli_smoke__/**',
+    '--non-interactive',
+    '--dry-run',
+    '--json',
+  ]);
+  check('territory add --dry-run --json exits 0', dryJson.status === 0, `got ${dryJson.status}`);
+  let parsed: { ok?: boolean; dryRun?: boolean; entry?: { name?: string; owner_role?: string } } | null = null;
+  try {
+    parsed = JSON.parse(dryJson.stdout);
+  } catch {
+    parsed = null;
+  }
+  check('territory --dry-run --json is valid JSON', parsed !== null);
+  check('territory --dry-run --json sets ok=true', parsed?.ok === true);
+  check('territory --dry-run --json sets dryRun=true', parsed?.dryRun === true);
+  check('territory --dry-run --json carries entry.name', parsed?.entry?.name === 'd2-cli-smoke-dryrun');
+  check('territory --dry-run --json carries entry.owner_role', parsed?.entry?.owner_role === 'dev');
+
+  // Polished territory is no longer the v1.x stub.
+  check(
+    'territory --help does NOT print v1.x deferral banner',
+    !help.stdout.includes('polished form lands in v1.x') &&
+      !help.stdout.includes('SCOPE-DEFERRED'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// [14] atelier datastore (D3 polished form; argument-handling contract)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching behavior (real local Supabase orchestration + schema
+// verification) lives in scripts/cli/__smoke__/datastore.smoke.ts. This
+// section asserts the argument-handling contract: --help dispatches and
+// documents every flag, --reset gating works, --remote without env
+// surfaces the precondition error, --remote + --local mutex exits 2.
+console.log('\n[14] atelier datastore (D3 polished form)');
+{
+  const help = run(['datastore', '--help']);
+  check('datastore --help exits 0', help.status === 0, `got ${help.status}`);
+  check('datastore --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('datastore --help mentions init', help.stdout.includes('init'));
+  check('datastore --help mentions --remote / --local', help.stdout.includes('--remote') && help.stdout.includes('--local'));
+  check('datastore --help mentions --reset', help.stdout.includes('--reset'));
+  check('datastore --help mentions --seed', help.stdout.includes('--seed'));
+  check('datastore --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('datastore --help mentions --json', help.stdout.includes('--json'));
+  check('datastore --help mentions ARCH 5.1', help.stdout.includes('ARCH 5.1'));
+  check('datastore --help references local-bootstrap.md', help.stdout.includes('local-bootstrap.md'));
+  check('datastore --help references first-deploy.md', help.stdout.includes('first-deploy.md'));
+
+  const initHelp = run(['datastore', 'init', '--help']);
+  check('datastore init --help exits 0', initHelp.status === 0, `got ${initHelp.status}`);
+
+  const unknownSub = run(['datastore', 'nonexistent']);
+  check('datastore <unknown-sub> exits 2', unknownSub.status === 2, `got ${unknownSub.status}`);
+
+  const unknownFlag = run(['datastore', 'init', '--bogus']);
+  check('datastore init --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+  check('datastore init --bogus names the flag', unknownFlag.stderr.includes('--bogus'));
+
+  // --remote + --local mutex
+  const mutex = run(['datastore', 'init', '--remote', '--local']);
+  check('datastore init --remote --local exits 2', mutex.status === 2, `got ${mutex.status}`);
+  check('datastore init --remote --local names mutex', mutex.stderr.includes('mutually exclusive'));
+
+  // --remote without env, run with explicit empty env override.
+  const remoteNoEnv = spawnSync(
+    'npx',
+    ['tsx', CLI, 'datastore', 'init', '--remote', '--dry-run'],
+    {
+      encoding: 'utf8',
+      cwd: REPO_ROOT,
+      env: { ...process.env, ATELIER_DATASTORE_URL: '', DATABASE_URL: '' },
+    },
+  );
+  check('datastore init --remote (no env) exits 2', remoteNoEnv.status === 2, `got ${remoteNoEnv.status}`);
+  check(
+    'datastore init --remote (no env) names the missing env',
+    remoteNoEnv.stderr.includes('ATELIER_DATASTORE_URL') || remoteNoEnv.stderr.includes('DATABASE_URL'),
+  );
+
+  // --reset --non-interactive without --yes exits 2 (gating).
+  const resetGate = run(['datastore', 'init', '--reset', '--non-interactive']);
+  check('datastore init --reset --non-interactive (no --yes) exits 2', resetGate.status === 2, `got ${resetGate.status}`);
+  check('datastore init --reset (no --yes) names the requirement', resetGate.stderr.includes('--yes'));
+
+  // --seed --non-interactive without creds exits 2 (gating).
+  const seedGate = run(['datastore', 'init', '--seed', '--non-interactive']);
+  check('datastore init --seed --non-interactive (no creds) exits 2', seedGate.status === 2, `got ${seedGate.status}`);
+  check('datastore init --seed (no creds) names --email + --password', seedGate.stderr.includes('--email') && seedGate.stderr.includes('--password'));
+
+  // Polished datastore is no longer the v1.x stub.
+  check(
+    'datastore --help does NOT print v1.x deferral banner',
     !help.stdout.includes('polished form lands in v1.x') &&
       !help.stdout.includes('SCOPE-DEFERRED'),
   );

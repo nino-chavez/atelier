@@ -330,7 +330,7 @@ Post-M7 work that flips v1.x stubs to polished form and lands the substrates BRD
 | D1 | `atelier doctor` polished form (US-11.9) | Done 2026-05-03 | Adopter triage need (substrate connectivity is the dominant support-volume class per 2026-04-28 expert review) | #52 |
 | D2 | `atelier territory add` polished form (US-11.5) | Done | Shared substrate ergonomics | parallel branch |
 | D3 | `atelier datastore init` polished form (US-11.2) | Done | Adopter bootstrap need | parallel branch |
-| D4 | `atelier invite` polished form (US-11.4) | Done | Multi-composer enablement | parallel branch |
+| D4 | `atelier invite` polished form (US-11.4); bundles A1 magic-link redaction per BRD §31 | Done 2026-05-04 | Multi-composer enablement; A1 stack-blocked finding from X1 close-out | this PR (PR #56 superseded due to base drift) |
 | D5 | `atelier init` polished form (US-11.1) | Done 2026-05-03 | Bootstrap one-command surface | local commit (PR pending) |
 | D6 | `atelier deploy` polished form (US-11.3) | Done 2026-05-04 | Adopter deploy ergonomics post-D5 | local commit (PR pending) |
 | D7 | Magic-link sign-in for `/atelier` (bundles C1 OTP-relay gate per BRD §31) | Done 2026-05-04 | M3-late wire-up | this PR (PR #55 superseded due to base drift) |

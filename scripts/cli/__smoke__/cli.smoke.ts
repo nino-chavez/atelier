@@ -390,6 +390,124 @@ console.log('\n[11] atelier upgrade (E2 polished form)');
 }
 
 // ---------------------------------------------------------------------------
+// [12] atelier invite (D4 polished form; A1 magic-link redaction default)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching behavior (real Supabase Auth + composer insert) lives
+// in scripts/cli/__smoke__/invite.smoke.ts (gated on local Supabase running).
+// This section asserts the argument-handling contract + the A1 redaction
+// default per BRD-OPEN-QUESTIONS §31:
+//   - --help dispatches and documents required + optional flags
+//   - missing required flag exits 2
+//   - unknown flag exits 2
+//   - --dry-run renders a plan without touching Supabase (no service role
+//     env required) and renders the print_link surface line
+//   - --dry-run --json emits the redaction posture in the plan payload
+console.log('\n[12] atelier invite (D4 polished form + A1 redaction default)');
+{
+  const help = run(['invite', '--help']);
+  check('invite --help exits 0', help.status === 0, `got ${help.status}`);
+  check('invite --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('invite --help mentions --email', help.stdout.includes('--email'));
+  check('invite --help mentions --discipline', help.stdout.includes('--discipline'));
+  check('invite --help mentions --access-level', help.stdout.includes('--access-level'));
+  check('invite --help mentions --project-id', help.stdout.includes('--project-id'));
+  check('invite --help mentions --no-send-email', help.stdout.includes('--no-send-email'));
+  check('invite --help mentions --reinvite', help.stdout.includes('--reinvite'));
+  check('invite --help mentions --print-link', help.stdout.includes('--print-link'));
+  check('invite --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('invite --help mentions --json', help.stdout.includes('--json'));
+  check('invite --help cross-references ADR-009', help.stdout.includes('ADR-009'));
+  check('invite --help cross-references ADR-028', help.stdout.includes('ADR-028'));
+  check('invite --help cross-references ADR-038', help.stdout.includes('ADR-038'));
+  check(
+    'invite --help documents the redaction default (A1 / BRD §31)',
+    help.stdout.includes('magic-link suppressed'),
+  );
+
+  const noFlags = run(['invite']);
+  check('invite (no flags) exits 2', noFlags.status === 2, `got ${noFlags.status}`);
+  check(
+    'invite (no flags) names email + discipline as required',
+    noFlags.stderr.includes('email') && noFlags.stderr.includes('discipline'),
+  );
+
+  const badEmail = run(['invite', '--email', 'not-an-email', '--discipline', 'dev']);
+  check('invite --email <invalid> exits 2', badEmail.status === 2, `got ${badEmail.status}`);
+
+  const badDiscipline = run(['invite', '--email', 'a@b.co', '--discipline', 'wizard']);
+  check('invite --discipline <invalid> exits 2', badDiscipline.status === 2, `got ${badDiscipline.status}`);
+
+  const unknownFlag = run(['invite', '--email', 'a@b.co', '--discipline', 'dev', '--bogus']);
+  check('invite --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+  check('invite --bogus names the unknown flag', unknownFlag.stderr.includes('--bogus'));
+
+  // --dry-run does not touch Supabase, so it runs without env. The plan
+  // surfaces print_link so the redaction posture is visible up-front.
+  const dry = run([
+    'invite',
+    '--email', 'alice@example.com',
+    '--discipline', 'dev',
+    '--no-send-email',
+    '--dry-run',
+  ]);
+  check('invite --dry-run exits 0', dry.status === 0, `got ${dry.status}`);
+  check('invite --dry-run renders PLAN header', dry.stdout.includes('PLAN'));
+  check('invite --dry-run echoes email', dry.stdout.includes('alice@example.com'));
+  check('invite --dry-run surfaces print_link line', dry.stdout.includes('print_link'));
+  check('invite --dry-run notes no mutations', dry.stdout.includes('No mutations performed'));
+  check('invite --dry-run does NOT print DONE', !dry.stdout.includes('atelier invite -- DONE'));
+
+  // --dry-run --json carries the plan including the print_link posture.
+  const dryJson = run([
+    'invite',
+    '--email', 'alice@example.com',
+    '--discipline', 'dev',
+    '--no-send-email',
+    '--dry-run',
+    '--json',
+  ]);
+  check('invite --dry-run --json exits 0', dryJson.status === 0, `got ${dryJson.status}`);
+  let parsed: { ok?: boolean; dryRun?: boolean; plan?: { email?: string; printLink?: boolean } } | null = null;
+  try {
+    parsed = JSON.parse(dryJson.stdout);
+  } catch {
+    parsed = null;
+  }
+  check('invite --dry-run --json emits valid JSON', parsed !== null);
+  check('invite --dry-run --json sets ok=true', parsed?.ok === true);
+  check('invite --dry-run --json sets dryRun=true', parsed?.dryRun === true);
+  check('invite --dry-run --json carries plan.email', parsed?.plan?.email === 'alice@example.com');
+  check('invite --dry-run --json carries plan.printLink=false default', parsed?.plan?.printLink === false);
+
+  // --print-link flips the dry-run plan posture (still no mutations).
+  const dryPrint = run([
+    'invite',
+    '--email', 'alice@example.com',
+    '--discipline', 'dev',
+    '--no-send-email',
+    '--print-link',
+    '--dry-run',
+    '--json',
+  ]);
+  check('invite --dry-run --print-link --json exits 0', dryPrint.status === 0, `got ${dryPrint.status}`);
+  let parsedPrint: { plan?: { printLink?: boolean } } | null = null;
+  try {
+    parsedPrint = JSON.parse(dryPrint.stdout);
+  } catch {
+    parsedPrint = null;
+  }
+  check('invite --print-link sets plan.printLink=true', parsedPrint?.plan?.printLink === true);
+
+  // Polished invite is no longer the v1.x stub.
+  check(
+    'invite --help does NOT print v1.x deferral banner',
+    !help.stdout.includes('polished form lands in v1.x') &&
+      !help.stdout.includes('SCOPE-DEFERRED'),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log('');

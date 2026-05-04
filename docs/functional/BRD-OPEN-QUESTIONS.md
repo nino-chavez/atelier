@@ -245,15 +245,15 @@ This works for adopters who cloned recently and have minimal local divergence. I
 - **Code polish:** rerank adapter type widening; messaging-lib slack coupling; runner.ts re-exports; doctor JSON inline type; webhook adapter URL substring matching brittleness.
 - **Validator: stale example trace IDs in milestone-exit audit docs.** `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` reference 4 example trace IDs (matching `NF-N`, `US-N.M`, and `BRD:Epic-N` shapes) that don't resolve in `traceability.json`. The IDs are illustrative-only in audit prose, not real references. Surfaced by the F1 (Jira adapter) PR's pre-flight `validate-refs` run (18 unrelated failures pre-existing on main). *Fix path:* either rewrite the audit-doc references with real trace IDs, or extend `scripts/traceability/validate-refs.ts` to whitelist a documented example-IDs set. The literal IDs aren't reproduced here so this entry doesn't itself trip the validator. *Activate when:* next traceability-validator polish pass, OR a future milestone-exit audit blocks on inheriting the false-positive.
 
-**Stack-blocked at X1 (target files only on D4 / D7 unmerged branches):**
-
-- **A1 magic-link printed to stdout by default in `atelier invite`.** *Fix recipe (preserved verbatim):* default text output redacts the link to `<magic-link suppressed; re-run with --print-link to emit>`. Opt-in via `--print-link`. For `--json`: keep link in JSON, add top-level `warning: "magic_link_in_output"`. Update `docs/user/guides/invite-composers.md` to call out the redaction default. Add cli.smoke.ts assertions: default invite output contains the suppressed marker; `--print-link` emits the URL. *Activates:* when D4 (atelier invite) lands on main.
-
 **Resolved at D7 landing (2026-05-04):**
 
 - **C1 open OTP relay on `/sign-in`.** Resolved by the D7 PR (`feat/d7-sign-in-flow-on-current-main`); the route at `prototype/src/app/sign-in/check/route.ts` gates `auth.signInWithOtp` on `composers.email` existence, returns 200/404 indistinguishably to the browser UI, and applies an in-memory 10/min per-IP rate limit. Playwright coverage in `prototype/__smoke__/sign-in.dom.spec.ts`.
 
-**Status.** OPEN (A1 stack-blocked on D4). Filed 2026-05-04 with X1 close-out; C1 resolved 2026-05-04 with D7. Each LOW item has explicit activation criteria; A1 will land in the same PR that merges D4 to main (or in an X2 batch immediately after). No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
+**Resolved at D4 landing (2026-05-04):**
+
+- **A1 magic-link printed to stdout by default in `atelier invite`.** Resolved by the D4 PR (`feat/d4-atelier-invite-on-current-main`); default text output redacts the link to `<magic-link suppressed; re-run with --print-link to emit>` (constant exported as `SUPPRESSED_LINK_MARKER` from `scripts/cli/commands/invite.ts`). Opt-in via `--print-link`. `--json` keeps `magicLink` as a structured field plus a top-level `warning: "magic_link_in_output"`. Operator runbook `docs/user/guides/invite-composers.md` calls out the redaction default. Coverage: `scripts/cli/__smoke__/cli.smoke.ts` section [12] (dispatcher contract + `--help` documents the marker + dry-run plan surfaces `print_link` posture); `scripts/cli/__smoke__/invite.smoke.ts` section 4b (live CLI subprocess: default output contains the suppressed marker and no URL; `--print-link` emits the URL; `--json` carries `warning: "magic_link_in_output"`).
+
+**Status.** RESOLVED 2026-05-04. Filed 2026-05-04 with X1 close-out; C1 resolved 2026-05-04 with D7; A1 resolved 2026-05-04 with D4. Each LOW item retains explicit activation criteria for future work. No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
 
 ---
 

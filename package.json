@@ -19,6 +19,7 @@
     "smoke:sync-jira": "tsx scripts/sync/__smoke__/jira.smoke.ts",
     "smoke:sync-linear": "tsx scripts/sync/__smoke__/linear.smoke.ts",
     "smoke:sync-confluence": "tsx scripts/sync/__smoke__/confluence.smoke.ts",
+    "smoke:sync-notion": "tsx scripts/sync/__smoke__/notion.smoke.ts",
     "smoke:init": "tsx scripts/cli/__smoke__/init.smoke.ts",
     "smoke:invite": "tsx scripts/cli/__smoke__/invite.smoke.ts",
     "smoke:territory": "tsx scripts/cli/__smoke__/territory.smoke.ts",

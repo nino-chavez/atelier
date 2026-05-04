@@ -20,6 +20,7 @@ import { GitHubDeliveryAdapter } from './github.ts';
 import { JiraDeliveryAdapter } from './jira.ts';
 import { LinearDeliveryAdapter } from './linear.ts';
 import { ConfluenceDocAdapter } from './confluence.ts';
+import { NotionDocAdapter } from './notion.ts';
 import { registerDeliveryAdapter, registerDocAdapter } from './adapters.ts';
 
 export interface RegistryOptions {
@@ -32,6 +33,8 @@ export interface RegistryOptions {
   skipLinear?: boolean;
   /** Skip Confluence registration even if env vars are set. */
   skipConfluence?: boolean;
+  /** Skip Notion registration even if env vars are set. */
+  skipNotion?: boolean;
 }
 
 export function registerConfiguredAdapters(opts: RegistryOptions = {}): { registered: string[] } {
@@ -80,6 +83,15 @@ export function registerConfiguredAdapters(opts: RegistryOptions = {}): { regist
         ...(defaultSpaceKey ? { defaultSpaceKey } : {}),
       }));
       registered.push('confluence');
+    }
+  }
+
+  if (!opts.skipNotion) {
+    const apiToken         = process.env.ATELIER_NOTION_API_TOKEN;
+    const defaultDatabaseId = process.env.ATELIER_NOTION_DATABASE_ID;
+    if (apiToken && defaultDatabaseId) {
+      registerDocAdapter(new NotionDocAdapter({ apiToken, defaultDatabaseId }));
+      registered.push('notion');
     }
   }
 

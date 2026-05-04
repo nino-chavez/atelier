@@ -17,6 +17,7 @@
     "atelier": "tsx scripts/cli/atelier.ts",
     "smoke:cli": "tsx scripts/cli/__smoke__/cli.smoke.ts",
     "smoke:sync-jira": "tsx scripts/sync/__smoke__/jira.smoke.ts",
+    "smoke:sync-linear": "tsx scripts/sync/__smoke__/linear.smoke.ts",
     "smoke:init": "tsx scripts/cli/__smoke__/init.smoke.ts",
     "smoke:deploy": "tsx scripts/cli/__smoke__/deploy.smoke.ts",
     "smoke:migration": "tsx scripts/migration/__smoke__/runner.smoke.ts",

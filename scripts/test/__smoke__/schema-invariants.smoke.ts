@@ -26,6 +26,8 @@
 // Run:  npx tsx scripts/test/__smoke__/schema-invariants.smoke.ts
 
 import { Client } from 'pg';
+import { readdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { AtelierClient, AtelierError } from '../../sync/lib/write.ts';
 
 const DB_URL = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
@@ -495,6 +497,54 @@ async function testBroadcastSeqAllocator(): Promise<void> {
 }
 
 // =========================================================================
+// [8] E1 atelier_schema_versions baseline tracking
+//
+// Per BRD-OPEN-QUESTIONS section 29 (E1 substrate). The bootstrap migration
+// 20260504000010_atelier_schema_versions.sql creates the tracking table
+// and inserts a row for every existing migration. Assert: table exists +
+// every supabase/migrations/*.sql file has a corresponding row.
+// =========================================================================
+async function testSchemaVersionsBaseline(): Promise<void> {
+  console.log('\n[8] E1 atelier_schema_versions baseline tracking');
+  const migDir = resolve(import.meta.dirname, '..', '..', '..', 'supabase', 'migrations');
+  const onDisk = (await readdir(migDir))
+    .filter((f) => f.endsWith('.sql'))
+    .sort();
+
+  const c = new Client({ connectionString: DB_URL });
+  await c.connect();
+  try {
+    const { rows: tableRows } = await c.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM information_schema.tables
+         WHERE table_schema='public' AND table_name='atelier_schema_versions'
+       ) AS exists`,
+    );
+    check('atelier_schema_versions table exists', tableRows[0]?.exists === true);
+
+    const { rows: applied } = await c.query<{ filename: string; content_sha256: string }>(
+      `SELECT filename, content_sha256 FROM atelier_schema_versions ORDER BY filename`,
+    );
+    const appliedNames = new Set(applied.map((r) => r.filename));
+
+    for (const f of onDisk) {
+      check(`baseline row present for ${f}`, appliedNames.has(f));
+    }
+
+    // Bootstrap row uses sentinel hash; non-bootstrap rows use 64-hex SHA.
+    const bootstrap = applied.find((r) => r.filename === '20260504000010_atelier_schema_versions.sql');
+    check('bootstrap row content_sha256 is the sentinel', bootstrap?.content_sha256 === 'bootstrap');
+    const nonBootstrap = applied.filter((r) => r.filename !== '20260504000010_atelier_schema_versions.sql');
+    check(
+      'all non-bootstrap rows carry 64-hex SHA-256 hashes',
+      nonBootstrap.every((r) => /^[0-9a-f]{64}$/.test(r.content_sha256)),
+    );
+  } finally {
+    await c.end();
+  }
+}
+
+// =========================================================================
 // Run
 // =========================================================================
 async function main(): Promise<void> {
@@ -504,6 +554,7 @@ async function main(): Promise<void> {
   await testStaleFencingToken();
   await testEffectiveDecision();
   await testBroadcastSeqAllocator();
+  await testSchemaVersionsBaseline();
 
   console.log('\n=========================================');
   if (failures === 0) console.log('ALL SCHEMA INVARIANT CHECKS PASSED');

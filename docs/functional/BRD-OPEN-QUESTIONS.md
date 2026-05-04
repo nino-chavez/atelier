@@ -2,7 +2,7 @@
 
 **Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
 
-**Last updated:** 2026-05-02 (sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral alongside the 12-command CLI polish PR; section 30 ADDED as push-notification observability-alerting v1.x deferral alongside the M7 Track 1 observability stack PR; sections 21, 22, 23, 29, 30 are the genuinely-open list)
+**Last updated:** 2026-05-04 (section 29 PARTIAL — E1 migration substrate landed [`atelier_schema_versions` table + `scripts/migration/` runner]; E2 `atelier upgrade` CLI completes the resolution. Earlier 2026-05-02: sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral; section 30 ADDED as push-notification observability-alerting v1.x deferral. Genuinely-open list: 21, 22, 23, 30. Section 29 partially-resolved: substrate done, CLI pending.)
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -174,7 +174,16 @@ This works for adopters who cloned recently and have minimal local divergence. I
 3. `atelier upgrade` polished implementation: discovers the registry, applies migrations in order, reports conflicts with the team's local divergence, preserves the decision log per ARCH 9.7
 4. CHANGELOG convention enforcement: every template change that affects adopter projects requires a corresponding migration script + CHANGELOG entry
 
-**Status.** OPEN. Scope-deferred to v1.x with the trigger above. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form ships as a scope-deferred stub).
+**Status.** PARTIAL — substrate landed (E1: `atelier_schema_versions` table + `scripts/migration/` runner; PR for E1). E2 (`atelier upgrade` CLI consuming the runner) completes the resolution. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form ships as a scope-deferred stub). Substrate landed 2026-05-04 with the v1.x close-out push.
+
+**E1 substrate (landed 2026-05-04):**
+
+- `atelier_schema_versions` table: per-migration apply tracking (filename, applied_at, content_sha256, applied_by, atelier_template_version). Bootstrap migration at `supabase/migrations/20260504000010_atelier_schema_versions.sql` creates the table + inserts baseline rows for every existing migration.
+- `scripts/migration/manifest.ts` + `scripts/migration/runner.ts`: substrate library exposing `MigrationRunner` with `discoverMigrations()`, `loadAppliedMigrations()`, `computeStatus()` (returns `{ pending, modified, missing }`), `applyMigration()` (transactional; idempotent via ON CONFLICT DO NOTHING).
+- `docs/architecture/schema/migration-system.md`: contract documentation covering filename conventions, idempotency requirement, append-only discipline (no DOWN migrations at v1 per ADR-005), conflict semantics, and adopter guidance.
+- `scripts/migration/__smoke__/runner.smoke.ts` (39 assertions, all green against local stack) + assertion added to `scripts/test/__smoke__/schema-invariants.smoke.ts §[8]`.
+
+**E2 remaining work** (next session): the polished `atelier upgrade [--check | --apply]` CLI command that consumes the runner's API. Surface details (flag shapes, output formats) are E2's scope; substrate API is locked at E1.
 
 ---
 

@@ -318,3 +318,25 @@ The v1 polished-form scope review at PR #37 surfaced an honest split: 6 commands
 **Acceptance for "raw form":** the underlying capability works end-to-end via direct script invocation.
 **Acceptance for "v1 polished":** US-11.x story passes — exit-code contract, `--help` output, end-to-end smoke.
 **Acceptance for "v1.x stub":** prints v1 raw-equivalent pointer with link to runbook; exits 0; smoke asserts the pointer matches documented path.
+
+---
+
+## 10. v1.x close-out
+
+Post-M7 work that flips v1.x stubs to polished form and lands the substrates BRD-OPEN-QUESTIONS deferred. Tracked here so the trajectory from "v1 substrate shipped" to "all v1 surfaces polished" is legible. Each row links the close-out item to its trigger.
+
+| ID | Item | Status | Trigger | PR |
+|---|---|---|---|---|
+| D1 | `atelier doctor` polished form (US-11.9) | Done 2026-05-03 | Adopter triage need (substrate connectivity is the dominant support-volume class per 2026-04-28 expert review) | #52 |
+| D2 | `atelier territory add` polished form (US-11.5) | Done | Shared substrate ergonomics | parallel branch |
+| D3 | `atelier datastore init` polished form (US-11.2) | Done | Adopter bootstrap need | parallel branch |
+| D4 | `atelier invite` polished form (US-11.4) | Done | Multi-composer enablement | parallel branch |
+| D5 | `atelier init` polished form (US-11.1) | Done 2026-05-03 | Bootstrap one-command surface | local commit (PR pending) |
+| D6 | `atelier deploy` polished form (US-11.3) | Done 2026-05-04 | Adopter deploy ergonomics post-D5 | local commit (PR pending) |
+| D7 | Magic-link sign-in for `/atelier` | Done | M3-late wire-up | parallel branch |
+| **E1** | **Schema migration runner substrate** | **Done 2026-05-04** | **§29 atelier upgrade prereq** | **this PR** |
+| E2 | `atelier upgrade` polished form (US-11.10) | Pending — next | Consumes E1; closes §29 | -- |
+| F | 5 sync adapters (Discussions, Jira, Linear, Confluence, Notion, Figma per ADR-019) | Pending | Adopter signal per adapter | -- |
+| G | Dogfood closure (Atelier-built-with-Atelier per ADR-044 + M5-exit bootstrap inflection) | Pending | M6+ MCP-client posture | -- |
+
+E1 is substrate-only. The runner library (`scripts/migration/`) + tracking table (`atelier_schema_versions` via `supabase/migrations/20260504000010_*.sql`) are the primitives E2 composes into the operator-facing `atelier upgrade [--check | --apply]` CLI. No new ADR was filed for E1 because the design is operationalization of ADR-005 (append-only, applied to migrations) + ADR-027 (Supabase Postgres reference) without a load-bearing architectural choice that warrants the durability cost. The contract lives in `docs/architecture/schema/migration-system.md`.

@@ -11,10 +11,10 @@
 Per ADR-009 (remote-principal actor class), ADR-028 (Supabase Auth as default identity provider), and ADR-038 (composer discipline + access_level enums), inviting a composer is a single substrate operation that does three things atomically:
 
 1. Creates the Supabase Auth user (or reuses an existing one with `--reinvite`).
-2. Inserts the `composers` row with `identity_subject = auth.user.id` (the JWT `sub` claim per ARCH 7.9), the chosen discipline, access level, and `status = 'active'` (the schema default — D7's `/sign-in/check` route gates on this so newly-invited composers can sign in immediately).
+2. Inserts the `composers` row with `identity_subject = auth.user.id` (the JWT `sub` claim per ARCH 7.9), the chosen discipline, access level, and `status = 'active'` (the schema default — the lens authorization filter reads this column so newly-invited composers can sign in immediately).
 3. Either dispatches Supabase's invitation email (default) **or** records the magic-link URL for manual sharing (`--no-send-email`).
 
-The invitee receives a magic link, clicks it, lands at `/sign-in/callback`, the PKCE exchange seats their Supabase Auth session cookie, and the `/atelier` lens UI renders. That receiving flow is owned by D7 — see `docs/user/guides/sign-in-magic-links.md` for what the invitee experiences.
+The invitee receives a magic link, clicks it, lands at `/auth/confirm`, the token-hash verifier seats their Supabase Auth session cookie, and the `/atelier` lens UI renders. That receiving flow is owned by D7 — see `docs/user/guides/sign-in-magic-links.md` for what the invitee experiences.
 
 ---
 
@@ -63,7 +63,7 @@ That's the common case. Add `--access-level admin` or `--reinvite` as needed. Fo
 | `--no-send-email` | (off) | Do not dispatch Supabase's invitation email; record the magic-link URL for manual sharing. Use in deploys without SMTP configured. |
 | `--reinvite` | (off) | The email must already exist as a composer; returns a fresh magic link without creating a new row. |
 | `--print-link` | (off) | Emit the magic-link URL on stdout (text mode). Default is to redact to `<magic-link suppressed; ...>` per the security posture above (BRD-OPEN-QUESTIONS §31 / X1 audit A1). |
-| `--site-url <url>` | env or `localhost:3000` | Public URL of the deploy. Drives the magic-link redirect target (`<site>/sign-in/callback?redirect=/atelier`). Reads `ATELIER_PUBLIC_URL` from env when unset. |
+| `--site-url <url>` | env or `localhost:3000` | Public URL of the deploy. Drives the magic-link redirect target (`<site>/auth/confirm?next=/atelier`). Reads `ATELIER_PUBLIC_URL` from env when unset. |
 | `--remote` / `--local` | auto | Force cloud / local mode regardless of env detection. |
 | `--dry-run` | (off) | Preview without mutating. |
 | `--json` | (off) | Machine-readable output. The `magicLink` field is included; a top-level `warning: "magic_link_in_output"` flags the sensitive value. |
@@ -100,7 +100,7 @@ atelier invite \
   --access-level admin
 ```
 
-The invitee gets a Supabase-branded email; clicking the link lands them at `<site>/sign-in/callback`, which exchanges the PKCE code for a session cookie.
+The invitee gets a Supabase-branded email; clicking the link lands them at `<site>/auth/confirm`, which calls `verifyOtp({ token_hash, type })` and seats the session cookie. (Requires the email template to emit the rally-hq token-hash URL — see `docs/user/guides/sign-in-magic-links.md` for the paste-in.)
 
 ### Cloud deploy without SMTP — same as local but pointed at the cloud datastore
 

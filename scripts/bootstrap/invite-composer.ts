@@ -20,9 +20,9 @@
 // Idempotent in shape: --reinvite resends a fresh magic link without
 // duplicating the composer row.
 //
-// Composers are inserted with the schema default `status = 'active'`, which
-// is what D7's /sign-in/check route gates on (composers WHERE lower(email) =
-// lower($1) AND status = 'active'). New invitees can sign in immediately.
+// Composers are inserted with the schema default `status = 'active'`. The
+// lens authorization path filters on this column at render time; pre-active
+// rows render as "not invited yet" until an admin activates them.
 
 import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -44,8 +44,10 @@ export interface InviteOptions {
   projectId?: string | undefined;
   /** When omitted, derived from the email local-part. */
   displayName?: string | undefined;
-  /** Where the magic link lands the user after PKCE exchange. Defaults to
-   *  `<siteUrl>/sign-in/callback?redirect=/atelier`. */
+  /** Where the magic link lands the user after token-hash verify. Defaults
+   *  to `<siteUrl>/auth/confirm?next=/atelier`; templates that retain
+   *  `{{ .RedirectTo }}` thread this value through, otherwise it is unused
+   *  (the brief's reference template hardcodes `next=/atelier`). */
   redirectTo?: string | undefined;
   /** Public URL of the deploy. Falls back to ATELIER_PUBLIC_URL or
    *  http://localhost:3000. Used to build redirectTo when not supplied. */
@@ -85,7 +87,7 @@ function buildRedirectTo(opts: InviteOptions): string {
     process.env.ATELIER_ENDPOINT_URL ??
     'http://localhost:3000';
   const base = site.replace(/\/+$/, '');
-  return `${base}/sign-in/callback?redirect=/atelier`;
+  return `${base}/auth/confirm?next=/atelier`;
 }
 
 function deriveDisplayName(email: string): string {

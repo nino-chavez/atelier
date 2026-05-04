@@ -12,11 +12,11 @@
 //
 // What it asserts:
 //   1. --no-send-email path: creates Auth user + composer row, returns
-//      a magic-link URL pointing at /sign-in/callback with a redirect
-//      back to /atelier.
+//      a magic-link URL (Supabase wraps action_links via /auth/v1/verify;
+//      after verify the user lands at /auth/confirm via the email-template
+//      token-hash flow per BRD-OPEN-QUESTIONS §31).
 //   2. composer row carries identity_subject = Auth user.id (the JWT
-//      sub claim per ARCH 7.9), and status='active' (the schema default,
-//      what D7's /sign-in/check route gates on).
+//      sub claim per ARCH 7.9), and status='active' (the schema default).
 //   3. duplicate detection: re-invite without --reinvite errors out
 //      cleanly without creating a second row.
 //   4. --reinvite path: same composer.id, fresh magic link.
@@ -151,12 +151,13 @@ async function main(): Promise<void> {
     check('first invite returns user.id', typeof first.userId === 'string' && first.userId.length > 0);
     check('first invite returns magic-link URL (no email path)', typeof first.magicLink === 'string' && first.magicLink!.startsWith('http'));
     check(
-      'magic link points at /sign-in/callback',
-      (first.magicLink ?? '').includes('/sign-in/callback') ||
-        // Supabase wraps action_links via /auth/v1/verify; the redirect
-        // param is what lands at /sign-in/callback after verify.
-        (first.magicLink ?? '').includes('redirect_to=') ||
-        (first.magicLink ?? '').includes('redirect=%2Fsign-in%2Fcallback'),
+      'magic link routes through Supabase verify or our /auth/confirm',
+      (first.magicLink ?? '').includes('/auth/v1/verify') ||
+        (first.magicLink ?? '').includes('/auth/confirm') ||
+        // Operator templates that thread the redirect_to param still work:
+        // Supabase substitutes whatever we passed via `redirectTo` into the
+        // wrapped action_link's redirect_to query parameter.
+        (first.magicLink ?? '').includes('redirect_to='),
     );
     check('first invite did NOT mark as reinvited', first.reinvited === false);
 
@@ -180,11 +181,10 @@ async function main(): Promise<void> {
       'composer.display_name derived from email local-part',
       composerRow.rows[0]?.display_name === email.split('@')[0],
     );
-    // D7 /sign-in/check gates on `status = 'active'`. Schema default is
-    // 'active'; explicitly assert to lock the contract for future
-    // regressions.
+    // Schema default is 'active'. The lens authorization filter relies on
+    // this; explicitly assert to lock the contract for future regressions.
     check(
-      'composer.status = active (D7 /sign-in/check gate contract)',
+      'composer.status = active (lens authorization contract)',
       composerRow.rows[0]?.status === 'active',
     );
 

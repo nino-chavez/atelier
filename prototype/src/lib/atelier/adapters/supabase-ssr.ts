@@ -168,32 +168,58 @@ export async function signOutSupabaseSession(opts: SignOutOptions): Promise<void
   }
 }
 
-export interface ExchangeCodeOptions {
+/**
+ * Email OTP type accepted by Supabase Auth's verifyOtp({ token_hash, type }).
+ * Mirrored locally so the route handler can validate the `?type=` query
+ * parameter without itself importing `@supabase/supabase-js` (ADR-029).
+ */
+export type SupabaseEmailOtpType =
+  | 'signup'
+  | 'invite'
+  | 'magiclink'
+  | 'recovery'
+  | 'email_change'
+  | 'email';
+
+export const SUPABASE_EMAIL_OTP_TYPES: ReadonlyArray<SupabaseEmailOtpType> = [
+  'signup',
+  'invite',
+  'magiclink',
+  'recovery',
+  'email_change',
+  'email',
+];
+
+export interface VerifyOtpOptions {
   cookies: SsrCookieStore;
-  code: string;
+  tokenHash: string;
+  type: SupabaseEmailOtpType;
   env?: SupabaseSsrEnv;
 }
 
-export interface ExchangeCodeResult {
+export interface VerifyOtpResult {
   ok: boolean;
   errorMessage?: string;
 }
 
 /**
- * Exchange a magic-link PKCE code for a session, persisting the resulting
- * cookies via the supplied host store.
+ * Verify a magic-link / email-OTP token_hash and seat the session cookies.
  *
- * Used by the /sign-in/callback route. The browser hits Supabase Auth's
- * email link, which redirects to /sign-in/callback?code=... The PKCE
- * exchange validates the code against the verifier the browser stored on
- * signInWithOtp, and on success @supabase/ssr writes the access_token /
- * refresh_token cookies via the setAll bridge. Same adapter shape as
- * readSupabaseAccessToken / signOutSupabaseSession so the route handler
- * never imports `@supabase/ssr` directly (per ADR-029).
+ * Used by the /auth/confirm route. The browser hits the URL emitted by the
+ * Supabase Auth email template (`{{ .SiteURL }}/auth/confirm?token_hash=
+ * {{ .TokenHash }}&type=magiclink&next=/atelier`); this adapter calls
+ * `auth.verifyOtp({ type, token_hash })` and on success @supabase/ssr writes
+ * the access_token / refresh_token cookies via the setAll bridge. The
+ * token-hash flow replaces the older PKCE `?code=` exchange so adopters do
+ * not need a redirect-URL allowlist entry per deploy host (BRD-OPEN-QUESTIONS
+ * section 31, "Refactor sign-in to token-hash flow per rally-hq pattern").
+ *
+ * Same adapter shape as readSupabaseAccessToken / signOutSupabaseSession so
+ * the route handler never imports `@supabase/ssr` directly (per ADR-029).
  */
-export async function exchangeSupabaseCodeForSession(
-  opts: ExchangeCodeOptions,
-): Promise<ExchangeCodeResult> {
+export async function verifySupabaseOtpWithCookies(
+  opts: VerifyOtpOptions,
+): Promise<VerifyOtpResult> {
   const env = opts.env ?? supabaseEnvFromProcess();
   const { createServerClient } = await import('@supabase/ssr');
   const client = createServerClient(env.url, env.anonKey, {
@@ -213,7 +239,10 @@ export async function exchangeSupabaseCodeForSession(
     },
   });
 
-  const { error } = await client.auth.exchangeCodeForSession(opts.code);
+  const { error } = await client.auth.verifyOtp({
+    type: opts.type,
+    token_hash: opts.tokenHash,
+  });
   if (error) {
     return { ok: false, errorMessage: error.message };
   }

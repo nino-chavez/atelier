@@ -352,6 +352,18 @@ async function main(): Promise<void> {
   console.log('=========================================');
   console.log('ALL CC-MCP-CLIENT PROBE-SHAPE CHECKS PASSED');
   console.log('=========================================');
+  // Explicit exit: `next dev` spawns webpack workers as child processes
+  // that inherit the smoke's stdout/stderr pipes. Even after SIGTERM kills
+  // the parent next-dev process, the workers keep those FDs open; Node sees
+  // pending I/O and refuses to exit on its own. Empirically observed on
+  // Ubuntu CI runners where the process hung 9+ minutes after this point on
+  // the Y1 post-merge run, despite the smoke completing all assertions in 7
+  // seconds. macOS local runs cleaned up FDs differently and exited normally
+  // -- which is why the Y1 diagnosis pointed at waitForReady orphan-cleanup
+  // until CI logs showed the script reached this point fast and then
+  // stalled. Y1's orphan-cleanup-on-throw remains in startDevServer as
+  // defense-in-depth for the genuine slow-compile case.
+  process.exit(0);
 }
 
 main().catch((err) => {

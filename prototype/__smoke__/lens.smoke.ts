@@ -14,8 +14,11 @@
 //      contracts show seeded contracts; review_queue shows contributions
 //      whose territory.review_role matches the viewer's discipline.
 //   6. defaultLensFor maps disciplines + access_level correctly.
-//   7. Auth failure paths: no bearer -> reason=no_bearer; bogus sub ->
-//      reason=invalid_bearer.
+//   7. Auth failure paths: no bearer -> reason=no_bearer; bearer with
+//      a sub that no composer maps to -> reason=no_composer (D7
+//      differentiated this from invalid_bearer so the user-facing
+//      LensUnauthorized state can render an actionable "ask your admin
+//      to invite you" message instead of a generic diagnostic).
 //
 // Lives at prototype/__smoke__/ rather than prototype/src/ so Next.js does
 // not include it in the build. Import paths reach into prototype/src for
@@ -294,8 +297,8 @@ async function main(): Promise<void> {
   process.env.ATELIER_DEV_BEARER = 'stub:nonexistent-sub';
   const bogus = await loadLensViewModel('analyst', fakeRequest('analyst'), { cookies: null });
   check(
-    'unknown sub -> reason=invalid_bearer',
-    !bogus.ok && bogus.reason === 'invalid_bearer',
+    'unknown sub -> reason=no_composer',
+    !bogus.ok && bogus.reason === 'no_composer',
     bogus.ok ? 'unexpected ok' : `actual reason=${bogus.reason}`,
   );
 

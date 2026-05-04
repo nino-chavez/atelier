@@ -108,7 +108,23 @@ async function startDevServer(port: number): Promise<DevServer> {
     }
   });
 
-  await waitForReady(`${baseUrl}/api/mcp`, 60_000);
+  // 180s budget: PR #58 grew the prototype's compile surface enough that the
+  // first-request `next dev` compile on Ubuntu CI runners exceeded the prior
+  // 60s budget, causing this smoke to hang on every push to main (PR #58, F1
+  // merge, F2 merge -- 3 confirmed). Local Mac runs finish well under 60s.
+  // If waitForReady fails we MUST kill the spawned dev server: throwing here
+  // before returning means no caller has the proc reference, and Node won't
+  // exit while the orphan child runs -- the step appears to hang forever
+  // instead of failing fast at the timeout.
+  try {
+    await waitForReady(`${baseUrl}/api/mcp`, 180_000);
+  } catch (err) {
+    proc.kill('SIGTERM');
+    setTimeout(() => {
+      if (proc.exitCode === null) proc.kill('SIGKILL');
+    }, 5_000);
+    throw err;
+  }
   return { port, baseUrl, proc };
 }
 

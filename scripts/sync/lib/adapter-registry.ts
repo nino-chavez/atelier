@@ -19,7 +19,8 @@
 import { GitHubDeliveryAdapter } from './github.ts';
 import { JiraDeliveryAdapter } from './jira.ts';
 import { LinearDeliveryAdapter } from './linear.ts';
-import { registerDeliveryAdapter } from './adapters.ts';
+import { ConfluenceDocAdapter } from './confluence.ts';
+import { registerDeliveryAdapter, registerDocAdapter } from './adapters.ts';
 
 export interface RegistryOptions {
   /** Skip GitHub registration even if env vars are set. Tests use this to
@@ -29,6 +30,8 @@ export interface RegistryOptions {
   skipJira?: boolean;
   /** Skip Linear registration even if env vars are set. */
   skipLinear?: boolean;
+  /** Skip Confluence registration even if env vars are set. */
+  skipConfluence?: boolean;
 }
 
 export function registerConfiguredAdapters(opts: RegistryOptions = {}): { registered: string[] } {
@@ -61,6 +64,22 @@ export function registerConfiguredAdapters(opts: RegistryOptions = {}): { regist
     if (apiKey && teamId) {
       registerDeliveryAdapter(new LinearDeliveryAdapter({ apiKey, teamId }));
       registered.push('linear');
+    }
+  }
+
+  if (!opts.skipConfluence) {
+    const baseUrl  = process.env.ATELIER_CONFLUENCE_BASE_URL;
+    const email    = process.env.ATELIER_CONFLUENCE_EMAIL;
+    const apiToken = process.env.ATELIER_CONFLUENCE_API_TOKEN;
+    const defaultSpaceKey = process.env.ATELIER_CONFLUENCE_SPACE_KEY;
+    if (baseUrl && email && apiToken) {
+      registerDocAdapter(new ConfluenceDocAdapter({
+        baseUrl,
+        email,
+        apiToken,
+        ...(defaultSpaceKey ? { defaultSpaceKey } : {}),
+      }));
+      registered.push('confluence');
     }
   }
 

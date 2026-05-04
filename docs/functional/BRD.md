@@ -582,13 +582,13 @@ Acceptance:
 As a team standing up a guild, I want `atelier datastore init` so that the coordination datastore tables, indexes, and RLS policies exist.
 
 Acceptance:
-- Given valid `ATELIER_DATASTORE_URL`, when `atelier datastore init` runs, then the schema from ARCH §5.1 is applied, indexes from §5.2 exist, RLS policies from §5.3 are enforced; re-running is idempotent.
+- Given a valid datastore URL (canonical `POSTGRES_URL` or legacy `ATELIER_DATASTORE_URL`), when `atelier datastore init` runs, then the schema from ARCH §5.1 is applied, indexes from §5.2 exist, RLS policies from §5.3 are enforced; re-running is idempotent.
 
 **US-11.3 — atelier deploy**
 As a team, I want `atelier deploy` so that the prototype web app and agent endpoint go live on the configured hosting.
 
 Acceptance:
-- Given valid `ATELIER_PROTOTYPE_DEPLOY_URL` and `ATELIER_ENDPOINT_URL`, when `atelier deploy` runs, then both surfaces are reachable and the endpoint passes a synthetic register/heartbeat/deregister check.
+- Given a valid public site URL (canonical `NEXT_PUBLIC_SITE_URL` / `VERCEL_URL` or legacy `ATELIER_PROTOTYPE_DEPLOY_URL` / `ATELIER_ENDPOINT_URL`), when `atelier deploy` runs, then both surfaces are reachable and the endpoint passes a synthetic register/heartbeat/deregister check.
 
 **US-11.4 — atelier invite**
 As an admin, I want `atelier invite <email> --role <r>` so that a composer gets a usable bearer token (OAuth setup link or static API token per ARCH §7.9).

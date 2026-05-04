@@ -81,10 +81,16 @@ const DEFAULT_LOCAL_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/pos
 
 function buildRedirectTo(opts: InviteOptions): string {
   if (opts.redirectTo) return opts.redirectTo;
+  // Canonical: NEXT_PUBLIC_SITE_URL (community Next.js convention) or
+  // VERCEL_URL (auto-set by Vercel runtime; bare host, must be prefixed).
+  // Legacy ATELIER_PUBLIC_URL / ATELIER_ENDPOINT_URL still accepted.
+  const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
   const site =
     opts.siteUrl ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.ATELIER_PUBLIC_URL ??
     process.env.ATELIER_ENDPOINT_URL ??
+    vercelUrl ??
     'http://localhost:3000';
   const base = site.replace(/\/+$/, '');
   return `${base}/auth/confirm?next=/atelier`;
@@ -165,6 +171,7 @@ export async function inviteComposer(opts: InviteOptions): Promise<InviteResult>
 
   const databaseUrl =
     opts.databaseUrl ??
+    process.env.POSTGRES_URL ??
     process.env.ATELIER_DATASTORE_URL ??
     process.env.DATABASE_URL ??
     DEFAULT_LOCAL_DB_URL;

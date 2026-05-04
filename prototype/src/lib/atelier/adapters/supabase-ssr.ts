@@ -39,7 +39,14 @@ export interface SupabaseSsrEnv {
  */
 export function supabaseEnvFromProcess(env: NodeJS.ProcessEnv = process.env): SupabaseSsrEnv {
   const url = env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL;
-  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.SUPABASE_ANON_KEY;
+  // Canonical: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (post-2025 Supabase paradigm,
+  // sb_publishable_* values). Legacy NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_ANON_KEY
+  // accept the same value as drop-in replacements per @supabase/supabase-js.
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    env.SUPABASE_PUBLISHABLE_KEY ??
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    env.SUPABASE_ANON_KEY;
   if (!url) {
     throw new Error(
       'NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) not set; the /atelier lens cannot read the Supabase Auth cookie (ADR-028).',
@@ -47,7 +54,7 @@ export function supabaseEnvFromProcess(env: NodeJS.ProcessEnv = process.env): Su
   }
   if (!anonKey) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_ANON_KEY) not set; @supabase/ssr requires the anon key to construct the SSR client (ADR-028).',
+      'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or legacy NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_PUBLISHABLE_KEY / SUPABASE_ANON_KEY) not set; @supabase/ssr requires the publishable key to construct the SSR client (ADR-028).',
     );
   }
   return { url, anonKey };

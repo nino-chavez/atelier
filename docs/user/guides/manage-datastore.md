@@ -2,7 +2,7 @@
 
 **Audience:** an operator (architect/admin role) standing up Atelier's coordination datastore for the first time, OR resetting the local Supabase environment between runs. For ongoing schema migrations on a populated deploy, use `atelier upgrade` instead — see the boundary section below.
 
-**Scope:** both local-bootstrap (`supabase start` on `127.0.0.1`) and cloud Supabase deploys. Mode is auto-detected from `ATELIER_DATASTORE_URL`.
+**Scope:** both local-bootstrap (`supabase start` on `127.0.0.1`) and cloud Supabase deploys. Mode is auto-detected from `POSTGRES_URL` (canonical) or legacy `ATELIER_DATASTORE_URL`.
 
 ---
 
@@ -12,7 +12,7 @@ Per ARCH 5.1 (the 11 user-facing tables), ADR-027 (reference impl: GitHub + Supa
 
 | Phase | Local mode | Cloud mode |
 |---|---|---|
-| Pre-flight | `docker` reachable; `supabase` CLI installed | `ATELIER_DATASTORE_URL` set; `supabase` CLI present when using `db push` |
+| Pre-flight | `docker` reachable; `supabase` CLI installed | `POSTGRES_URL` set; `supabase` CLI present when using `db push` |
 | Apply migrations | `supabase start` (auto-applies during bring-up) OR `supabase db reset --local` with `--reset --yes` | `supabase db push` when project is linked; falls back to direct `psql` over the migrations in lexicographic order |
 | Verify schema | Counts the 11 ARCH 5.1 tables in `public`; missing-table report | Same |
 | Seed (optional) | `--seed --email <X> --password <Y>`: delegates to `scripts/bootstrap/seed-composer.ts` to create `atelier-self` project + admin composer | Same |
@@ -50,7 +50,7 @@ atelier datastore init
 atelier datastore init --seed --email you@example.com --password '<strong>'
 
 # Cloud bootstrap (Supabase project already linked):
-ATELIER_DATASTORE_URL=postgresql://... \
+POSTGRES_URL=postgresql://... \
   SUPABASE_URL=https://<ref>.supabase.co \
   SUPABASE_SERVICE_ROLE_KEY=<key> \
   atelier datastore init --remote
@@ -100,13 +100,13 @@ This sequences: `supabase start` (auto-applies migrations) → schema verificati
 After `supabase link --project-ref <ref>` and exporting credentials:
 
 ```bash
-ATELIER_DATASTORE_URL=postgresql://...supabase.co:5432/postgres \
+POSTGRES_URL=postgresql://...supabase.co:5432/postgres \
 SUPABASE_URL=https://<ref>.supabase.co \
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
 atelier datastore init --remote
 ```
 
-Mode auto-detects from the non-localhost `ATELIER_DATASTORE_URL`. Migration application path is `supabase db push` if the project is linked (`supabase/.temp/project-ref` present), or direct `psql` over the migrations otherwise.
+Mode auto-detects from the non-localhost `POSTGRES_URL`. Migration application path is `supabase db push` if the project is linked (`supabase/.temp/project-ref` present), or direct `psql` over the migrations otherwise.
 
 ### Reset local to a clean slate
 
@@ -140,10 +140,10 @@ The JSON output carries `{ ok, mode, reason, databaseUrl, dryRun, local|cloud, s
 |---|---|
 | `--local` flag passed | local |
 | `--remote` flag passed | cloud |
-| `ATELIER_DATASTORE_URL` points at non-localhost | cloud |
-| `ATELIER_DATASTORE_URL` unset or points at localhost | local |
+| `POSTGRES_URL` points at non-localhost | cloud |
+| `POSTGRES_URL` unset or points at localhost | local |
 
-Cloud mode requires `ATELIER_DATASTORE_URL` (or `DATABASE_URL`) to be set. `--seed` in cloud mode also requires `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` per `first-deploy.md` Step 4. Local mode reads them from `supabase status -o env` automatically.
+Cloud mode requires `POSTGRES_URL` (canonical; legacy `ATELIER_DATASTORE_URL` or `DATABASE_URL` accepted as fallback) to be set. `--seed` in cloud mode also requires `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` per `first-deploy.md` Step 4. Local mode reads them from `supabase status -o env` automatically.
 
 ---
 

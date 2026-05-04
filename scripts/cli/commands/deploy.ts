@@ -41,16 +41,28 @@ const PROTOTYPE_DIR = resolve(REPO_ROOT, 'prototype');
 const PROJECT_LINK_PATH = resolve(PROTOTYPE_DIR, '.vercel', 'project.json');
 
 // Per docs/user/tutorials/first-deploy.md Step 3.4 + the prototype's
-// supabase-ssr adapter (NEXT_PUBLIC_SUPABASE_ANON_KEY is required for
-// /atelier SSR despite not being in the .env.example header).
-const REQUIRED_ENV_VARS = [
-  'ATELIER_DATASTORE_URL',
-  'ATELIER_OIDC_ISSUER',
-  'ATELIER_JWT_AUDIENCE',
-  'NEXT_PUBLIC_SUPABASE_URL',
-  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'OPENAI_API_KEY',
-] as const;
+// supabase-ssr adapter. Each entry lists the canonical name first followed
+// by acceptable legacy fallbacks (the runtime fallback chain in deps.ts +
+// adapters/supabase-ssr.ts mirrors this — preflight passes when ANY name in
+// the row is set in Vercel). Vercel's native Supabase Marketplace integration
+// auto-provisions the canonical names.
+const REQUIRED_ENV_VAR_GROUPS: ReadonlyArray<{
+  canonical: string;
+  legacy: ReadonlyArray<string>;
+}> = [
+  { canonical: 'POSTGRES_URL', legacy: ['ATELIER_DATASTORE_URL', 'DATABASE_URL'] },
+  { canonical: 'NEXT_PUBLIC_SUPABASE_URL', legacy: ['ATELIER_OIDC_ISSUER', 'SUPABASE_URL'] },
+  {
+    canonical: 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    legacy: ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_ANON_KEY'],
+  },
+  { canonical: 'OPENAI_API_KEY', legacy: [] },
+];
+
+// Flat list used by the help text + the preflight scanner. Canonical names
+// surface first; legacy names follow so the smoke + adopter docs that grep for
+// the legacy ATELIER_*-prefixed names continue to find them.
+const REQUIRED_ENV_VARS = REQUIRED_ENV_VAR_GROUPS.flatMap((g) => [g.canonical, ...g.legacy]);
 
 export const deployUsage = `atelier deploy — push prototype + endpoint to Vercel
 
@@ -241,22 +253,30 @@ function checkVercelEnvVars(envScope: 'production' | 'preview'): EnvCheckResult 
     };
   }
   // `vercel env ls <env>` prints a table; each var name appears as a token in
-  // the leading columns. We match by whole-word presence on any line.
+  // the leading columns. We match by whole-word presence on any line. A group
+  // is satisfied when the canonical OR any legacy name is present (mirrors the
+  // runtime fallback chain).
   const out = r.stdout;
-  const missing = REQUIRED_ENV_VARS.filter((name) => {
-    const re = new RegExp(`(^|\\s)${name}(\\s|$)`, 'm');
-    return !re.test(out);
+  const matches = (name: string): boolean => new RegExp(`(^|\\s)${name}(\\s|$)`, 'm').test(out);
+  const missingGroups = REQUIRED_ENV_VAR_GROUPS.filter((g) => {
+    if (matches(g.canonical)) return false;
+    if (g.legacy.some(matches)) return false;
+    return true;
   });
+  const missing = missingGroups.map((g) => g.canonical);
   if (missing.length > 0) {
     return {
       ok: false,
       missing,
       detail: [
         `${missing.length} required env var(s) missing in Vercel ${envScope} scope:`,
-        ...missing.map((n) => `  - ${n}`),
+        ...missingGroups.map((g) => {
+          const legacyHint = g.legacy.length > 0 ? ` (or legacy: ${g.legacy.join(', ')})` : '';
+          return `  - ${g.canonical}${legacyHint}`;
+        }),
         `  Set via:`,
         ...missing.map((n) => `    vercel env add ${n} ${envScope}`),
-        `  (or via the Vercel dashboard UI; see first-deploy.md Step 3.4 for sources)`,
+        `  (or via the Vercel dashboard UI / native Supabase Marketplace integration; see first-deploy.md Step 3.4)`,
       ].join('\n'),
     };
   }

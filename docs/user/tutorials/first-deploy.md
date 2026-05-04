@@ -72,7 +72,7 @@ The reference impl runs Supabase Cloud (per ADR-027). Adopters using an alternat
    - **Project URL:** `https://<project-ref>.supabase.co`
    - **Service role key:** a long JWT starting with `eyJ...`. Treat it like a root password — it bypasses RLS.
    - **Anon key:** another JWT. Public; safe to expose in client-side code.
-6. **Note the auth issuer URL.** Always `https://<project-ref>.supabase.co/auth/v1`. Atelier uses this as `ATELIER_OIDC_ISSUER` for JWKS-based bearer verification.
+6. **Note the auth issuer URL.** Always `https://<project-ref>.supabase.co/auth/v1`. Atelier derives this automatically from `NEXT_PUBLIC_SUPABASE_URL` (canonical) for JWKS-based bearer verification — you don't need to set it explicitly. Legacy `ATELIER_OIDC_ISSUER` is still accepted as an override.
 
 ---
 
@@ -130,17 +130,26 @@ The deploy convention is `rootDirectory=prototype` because the Next.js app lives
    - **Build Command:** `next build` (auto-detected)
    - **Install Command:** `npm install` (auto-detected)
    - **Output Directory:** `.next` (auto-detected)
-4. **Set environment variables.** Add each of these (Production scope; you can add Preview / Development separately later). Take care to **paste values without trailing whitespace** — see the env-var trim gotcha in Troubleshooting.
+4. **Set environment variables.** Take care to **paste values without trailing whitespace** — see the env-var trim gotcha in Troubleshooting.
+
+   **Recommended path: Vercel's native Supabase Marketplace integration.** From the Vercel project's Storage tab, install the Supabase integration and link the project from Step 1. The integration auto-provisions the canonical names (`POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, etc.) automatically — you skip the manual paste-each-value dance below.
+
+   **Manual path (if not using the integration):** add each of these in Production scope. Atelier reads canonical Vercel + Supabase + Next.js env-var names; the legacy `ATELIER_*`-prefixed names are still accepted via the fallback chain for backward compatibility.
 
    | Variable | Value | Source |
    |---|---|---|
-   | `ATELIER_DATASTORE_URL` | The pooler URI from Step 1.4 | Cloud Supabase pooler (port 6543) |
-   | `ATELIER_OIDC_ISSUER` | `https://<project-ref>.supabase.co/auth/v1` | Cloud Supabase auth issuer |
-   | `ATELIER_JWT_AUDIENCE` | `authenticated` | Supabase Auth default |
+   | `POSTGRES_URL` | The Session-mode pooler URI from Step 1.4 | Cloud Supabase pooler (port **5432**, NOT direct port 5432 on `db.<ref>...`) |
+   | `POSTGRES_URL_NON_POOLING` | The direct connection URI | Cloud Supabase direct host (used by migrations only) |
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` | Cloud Supabase project URL — also derives the OIDC issuer (`<url>/auth/v1`) |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | The `sb_publishable_*` value from Step 1.5 | Browser client + SSR adapter |
+   | `NEXT_PUBLIC_SITE_URL` | `https://<your-project>.vercel.app` | Public deploy URL (drives magic-link redirects + OAuth discovery) |
+   | `SUPABASE_URL` | `https://<project-ref>.supabase.co` | Operator scripts (atelier invite, atelier datastore --seed) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | The `sb_secret_*` (or legacy JWT) value from Step 1.5 | Operator scripts only |
    | `OPENAI_API_KEY` | Your OpenAI API key | https://platform.openai.com/api-keys |
-   | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` | Cloud Supabase project URL |
 
-   For the `BroadcastService` (per ADR-029) the default Supabase Realtime impl reads the same `NEXT_PUBLIC_SUPABASE_URL` and the anon key from the runtime; no separate env var needed.
+   The JWT audience defaults to `authenticated` (Supabase Auth default) when the issuer derives from `NEXT_PUBLIC_SUPABASE_URL`. BYO IdPs that don't follow the Supabase shape can override with `ATELIER_OIDC_ISSUER` and `ATELIER_JWT_AUDIENCE`.
+
+   For the `BroadcastService` (per ADR-029) the default Supabase Realtime impl reads the same `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the runtime; no separate env var needed.
 
 5. **Deploy.** Vercel kicks off the first build. Expect 60-120 seconds for the install + build + deploy cycle. Watch the build log; if it fails, the most likely causes are listed in Troubleshooting.
 
@@ -182,7 +191,7 @@ Same pattern as local-bootstrap Step 3, with cloud values:
 ```bash
 SUPABASE_URL=https://<project-ref>.supabase.co \
 SUPABASE_SERVICE_ROLE_KEY=<service_role key from Step 1.5> \
-ATELIER_DATASTORE_URL=<pooler URI from Step 1.4> \
+POSTGRES_URL=<pooler URI from Step 1.4> \
 npx tsx scripts/bootstrap/seed-composer.ts \
   --email you@example.com \
   --password <pick-a-strong-throwaway-password> \
@@ -244,7 +253,7 @@ In a Claude Code session pointed at the deploy:
 
 Expected: the agent calls `get_context` against the deployed endpoint, gets back the cloud `atelier-self` project info (or whichever project name you seeded), your composer's territory data, and the charter paths. The `recent_decisions.direct` list will be empty until the first ADR is filed via `log_decision` against the cloud datastore (per ADR-005 only `log_decision` writes the table; canonical ADRs predate the substrate).
 
-If `get_context` returns 401, your bearer expired (1-hour default) or the JWT audience doesn't match. Re-issue with Step 6 and check `ATELIER_JWT_AUDIENCE` is set to `authenticated` in Vercel env vars.
+If `get_context` returns 401, your bearer expired (1-hour default) or the JWT audience doesn't match. Re-issue with Step 6. The audience defaults to `authenticated` (Supabase Auth default) when the issuer is derived from `NEXT_PUBLIC_SUPABASE_URL`; only set `ATELIER_JWT_AUDIENCE` explicitly when running against a non-Supabase IdP.
 
 ---
 
@@ -273,7 +282,7 @@ For most teams, leave both enabled — Preview URLs per PR are load-bearing for 
 
 **`/.well-known/oauth-authorization-server` returns HTML 404 instead of JSON 404.** The catch-all route from PR #16 isn't deployed. Pull main + redeploy. Verify with `curl -i $DEPLOY/.well-known/oauth-authorization-server`; the response should have `content-type: application/json` and body `{"error":"not_found"}`.
 
-**Discovery metadata `registration_endpoint` is a relative URL or missing.** PR #11 + PR #13 fixes. Confirm you're on a version that emits `registration_endpoint` as an absolute URL derived from request origin or `ATELIER_ENDPOINT_URL` override.
+**Discovery metadata `registration_endpoint` is a relative URL or missing.** PR #11 + PR #13 fixes. Confirm you're on a version that emits `registration_endpoint` as an absolute URL derived from request origin or `NEXT_PUBLIC_SITE_URL` (canonical; legacy `ATELIER_ENDPOINT_URL` still accepted) override.
 
 **claude.ai Connectors authenticates but tool calls 401.** The composer row doesn't exist in cloud `composers` for the email you authenticated as. Re-run Step 5 against the cloud datastore. Check via `psql "<connection-string>" -c "SELECT id, email, discipline, access_level FROM composers;"` that your row exists.
 

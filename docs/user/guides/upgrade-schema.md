@@ -96,7 +96,7 @@ If you run scripts off the dashboard or other automated checks, re-running them 
 
 ## Mode selection: LOCAL vs CLOUD
 
-The CLI auto-detects mode from `ATELIER_DATASTORE_URL`:
+The CLI auto-detects mode from the datastore URL. Migrations prefer the direct (non-pooling) URL when set: `POSTGRES_URL_NON_POOLING` → `POSTGRES_URL` → legacy `ATELIER_DATASTORE_URL` → `DATABASE_URL`.
 
 - **LOCAL** (default when env unset, or set to `127.0.0.1` / `localhost`):
   - Connects to `postgresql://postgres:postgres@127.0.0.1:54322/postgres` by default.
@@ -104,14 +104,14 @@ The CLI auto-detects mode from `ATELIER_DATASTORE_URL`:
   - If supabase isn't running, the preflight fails with a hint to run `atelier dev`.
 
 - **CLOUD** (any non-localhost host, OR `--remote` flag):
-  - Connects to whatever `ATELIER_DATASTORE_URL` resolves to.
-  - Preflight only verifies the env var is set.
+  - Connects to whatever the datastore URL chain resolves to.
+  - Preflight only verifies a connection string is set.
   - The connection itself becomes the validity check; an unreachable host surfaces as a clear `failed to connect` error.
 
 Force CLOUD mode explicitly:
 
 ```bash
-ATELIER_DATASTORE_URL=postgresql://... atelier upgrade --check --remote
+POSTGRES_URL_NON_POOLING=postgresql://... atelier upgrade --check --remote
 ```
 
 ---
@@ -226,7 +226,7 @@ To recover:
 - name: Verify schema is up-to-date
   run: atelier upgrade --check --json
   env:
-    ATELIER_DATASTORE_URL: ${{ secrets.STAGING_DATASTORE_URL }}
+    POSTGRES_URL_NON_POOLING: ${{ secrets.STAGING_DATASTORE_URL }}
 ```
 
 For staging vs production: each deploy has its own datastore; run the check against each. Cross-deploy atomic apply (apply same migration to staging + prod in lockstep) is an adopter-side decision involving your CI/CD pipeline; it is not built into `atelier upgrade`.

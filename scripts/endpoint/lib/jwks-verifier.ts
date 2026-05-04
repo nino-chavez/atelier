@@ -67,15 +67,27 @@ function deriveJwksUri(issuer: string): string {
  * Resolve verifier configuration from env. Throws with a concrete error
  * if either value is missing -- the endpoint must fail closed when auth
  * is misconfigured per ARCH 7.9 failure boundaries.
+ *
+ * Canonical (preferred): the issuer is derived from `NEXT_PUBLIC_SUPABASE_URL`
+ * (Supabase Auth lives at `<supabase-url>/auth/v1`) and the audience defaults
+ * to `authenticated` (Supabase Auth default). Legacy `ATELIER_OIDC_ISSUER`
+ * and `ATELIER_JWT_AUDIENCE` still override when set so existing operator
+ * setups keep working.
  */
 export function jwksVerifierFromEnv(env: NodeJS.ProcessEnv = process.env): BearerVerifier {
-  const issuer = env.ATELIER_OIDC_ISSUER;
-  const audience = env.ATELIER_JWT_AUDIENCE;
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL;
+  const derivedIssuer = supabaseUrl ? `${supabaseUrl.replace(/\/$/, '')}/auth/v1` : undefined;
+  const issuer = env.ATELIER_OIDC_ISSUER ?? derivedIssuer;
+  const audience = env.ATELIER_JWT_AUDIENCE ?? (issuer ? 'authenticated' : undefined);
   if (!issuer) {
-    throw new Error('ATELIER_OIDC_ISSUER not set; endpoint cannot validate bearer tokens (ARCH 7.9)');
+    throw new Error(
+      'OIDC issuer not resolvable. Set NEXT_PUBLIC_SUPABASE_URL (canonical; issuer derived as `<url>/auth/v1`) or ATELIER_OIDC_ISSUER (legacy override). Endpoint cannot validate bearer tokens (ARCH 7.9).',
+    );
   }
   if (!audience) {
-    throw new Error('ATELIER_JWT_AUDIENCE not set; endpoint cannot validate bearer tokens (ARCH 7.9)');
+    throw new Error(
+      'JWT audience not resolvable. Set ATELIER_JWT_AUDIENCE explicitly (defaults to "authenticated" for Supabase Auth when the issuer derives from NEXT_PUBLIC_SUPABASE_URL). Endpoint cannot validate bearer tokens (ARCH 7.9).',
+    );
   }
   return createJwksVerifier({ issuer, audience });
 }

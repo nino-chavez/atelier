@@ -89,13 +89,25 @@ function parseArgs(argv: string[]): Args {
   }
   const scenario = scenarioRaw === 'ALL' ? 'all' : (scenarioRaw as 'A' | 'B' | 'C' | 'D' | 'E');
 
-  const databaseUrl = process.env.ATELIER_DATASTORE_URL ?? process.env.DATABASE_URL;
-  const endpointUrl = process.env.ATELIER_ENDPOINT_URL ?? out['endpoint-url'];
+  const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.ATELIER_PUBLIC_URL ??
+    process.env.ATELIER_ENDPOINT_URL ??
+    vercelUrl;
+  const databaseUrl =
+    process.env.POSTGRES_URL ??
+    process.env.ATELIER_DATASTORE_URL ??
+    process.env.DATABASE_URL;
+  const endpointUrl =
+    process.env.ATELIER_ENDPOINT_URL ??
+    out['endpoint-url'] ??
+    (siteUrl ? `${siteUrl.replace(/\/+$/, '')}/api/mcp` : undefined);
   const bearer = process.env.ATELIER_BEARER ?? out.bearer;
   const projectId = process.env.ATELIER_PROJECT_ID ?? out['project-id'];
 
-  if (!databaseUrl) throw new Error('ATELIER_DATASTORE_URL (or DATABASE_URL) env var required');
-  if (!endpointUrl) throw new Error('ATELIER_ENDPOINT_URL env var (or --endpoint-url flag) required');
+  if (!databaseUrl) throw new Error('POSTGRES_URL (or legacy ATELIER_DATASTORE_URL / DATABASE_URL) env var required');
+  if (!endpointUrl) throw new Error('--endpoint-url flag (or NEXT_PUBLIC_SITE_URL / legacy ATELIER_ENDPOINT_URL env) required');
   if (!bearer) throw new Error('ATELIER_BEARER env var (or --bearer flag) required');
   if (!projectId) throw new Error('ATELIER_PROJECT_ID env var (or --project-id flag) required');
 

@@ -225,7 +225,18 @@ interface ModeDecision {
 }
 
 function decideMode(parsed: ParsedArgs): ModeDecision {
-  const envUrl = process.env.ATELIER_DATASTORE_URL ?? process.env.DATABASE_URL;
+  // Canonical POSTGRES_URL (Vercel-provisioned by the native Supabase
+  // integration) takes precedence; legacy ATELIER_DATASTORE_URL kept as
+  // fallback for existing operator setups. POSTGRES_URL_NON_POOLING preferred
+  // for migrations -- direct connection bypasses the transaction pooler so
+  // session-scoped statements (CREATE INDEX CONCURRENTLY, advisory locks)
+  // work. The CLI prefers it for `init` / `migrate` paths; runtime code uses
+  // the pooled URL. See first-deploy.md "pooler vs direct" footgun.
+  const envUrl =
+    process.env.POSTGRES_URL_NON_POOLING ??
+    process.env.POSTGRES_URL ??
+    process.env.ATELIER_DATASTORE_URL ??
+    process.env.DATABASE_URL;
   if (parsed.local) {
     return {
       mode: 'local',
@@ -236,7 +247,7 @@ function decideMode(parsed: ParsedArgs): ModeDecision {
   if (parsed.remote) {
     if (!envUrl) {
       throw new Error(
-        '--remote requires ATELIER_DATASTORE_URL or DATABASE_URL to be set',
+        '--remote requires POSTGRES_URL_NON_POOLING / POSTGRES_URL (or legacy ATELIER_DATASTORE_URL / DATABASE_URL) to be set',
       );
     }
     return {

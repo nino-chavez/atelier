@@ -480,6 +480,7 @@ async function cli(): Promise<void> {
   const repoRoot = args.repoRoot ?? process.cwd();
   const databaseUrl =
     args.databaseUrl ??
+    process.env.POSTGRES_URL ??
     process.env.ATELIER_DATASTORE_URL ??
     process.env.DATABASE_URL ??
     'postgresql://postgres:postgres@127.0.0.1:54322/postgres';

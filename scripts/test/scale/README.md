@@ -7,8 +7,8 @@
 **Invocation:**
 
 ```bash
-ATELIER_DATASTORE_URL=postgresql://... \
-ATELIER_ENDPOINT_URL=http://localhost:3030/api/mcp \
+POSTGRES_URL=postgresql://... \
+NEXT_PUBLIC_SITE_URL=http://localhost:3030 \
 ATELIER_BEARER=<token from scripts/bootstrap/issue-bearer.ts> \
 ATELIER_PROJECT_ID=<seeded project uuid> \
   npx tsx scripts/test/scale/load-runner.ts \
@@ -16,6 +16,8 @@ ATELIER_PROJECT_ID=<seeded project uuid> \
     --duration 60 \
     --concurrent-sessions 5
 ```
+
+(`ATELIER_DATASTORE_URL` and `ATELIER_ENDPOINT_URL` are still accepted via the fallback chain. The endpoint URL is appended `/api/mcp` automatically when only `NEXT_PUBLIC_SITE_URL` is set; pass `--endpoint-url` to override.)
 
 **Scenario coverage:**
 

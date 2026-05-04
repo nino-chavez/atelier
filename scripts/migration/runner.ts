@@ -128,7 +128,16 @@ export class MigrationRunner {
   private readonly statementTimeoutMs: number;
 
   constructor(opts: MigrationRunnerOptions) {
-    this.databaseUrl = opts.databaseUrl ?? process.env.ATELIER_DATASTORE_URL ?? DEFAULT_DB_URL;
+    // Migrations prefer the direct (non-pooling) URL when available — the
+    // session pooler can't run advisory locks the migration runner relies on.
+    // Fall through pooled URL → legacy ATELIER_DATASTORE_URL → DATABASE_URL.
+    this.databaseUrl =
+      opts.databaseUrl ??
+      process.env.POSTGRES_URL_NON_POOLING ??
+      process.env.POSTGRES_URL ??
+      process.env.ATELIER_DATASTORE_URL ??
+      process.env.DATABASE_URL ??
+      DEFAULT_DB_URL;
     this.repoRoot = opts.repoRoot ?? process.cwd();
     this.templateVersion = opts.templateVersion;
     this.appliedBy = opts.appliedBy ?? 'manual';

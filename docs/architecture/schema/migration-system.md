@@ -139,12 +139,12 @@ Common flags:
 - `--dry-run` (with `--apply`) prints the planned sequence without executing.
 - `--force-apply-modified` is required to proceed with `--apply` when modified migrations are detected. Without it, the CLI refuses (exit 1) and asks the operator to either revert local changes or acknowledge the divergence.
 - `--json` emits machine-readable JSON carrying the same status buckets — suitable for CI gating.
-- `--remote` forces CLOUD mode (auto-detected by default from the host portion of `ATELIER_DATASTORE_URL`).
+- `--remote` forces CLOUD mode (auto-detected by default from the host portion of the datastore URL: `POSTGRES_URL_NON_POOLING` → `POSTGRES_URL` → legacy `ATELIER_DATASTORE_URL` → `DATABASE_URL`).
 
-The CLI auto-detects LOCAL vs CLOUD mode from `ATELIER_DATASTORE_URL`:
+The CLI auto-detects LOCAL vs CLOUD mode from the datastore URL chain:
 
 - LOCAL (default when unset or `127.0.0.1` / `localhost`): preflight checks docker, supabase CLI, and `supabase status`.
-- CLOUD (any non-localhost host, or `--remote`): preflight only verifies `ATELIER_DATASTORE_URL` is set; the connection itself becomes the validity check.
+- CLOUD (any non-localhost host, or `--remote`): preflight only verifies the URL is set; the connection itself becomes the validity check.
 
 The CLI runs the runner's three primitives in order: `discoverMigrations()` → `computeStatus()` → conditional `applyMigration()` per pending entry. Each `applyMigration` call is wrapped in a SQL transaction; any error rolls back and stops the run (subsequent migrations are not attempted), so partial state is recorded only for migrations that succeeded.
 

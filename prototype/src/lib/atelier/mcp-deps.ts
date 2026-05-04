@@ -39,10 +39,15 @@ import {
 let cachedClient: AtelierClient | null = null;
 function getClient(): AtelierClient {
   if (cachedClient) return cachedClient;
-  const databaseUrl = process.env.ATELIER_DATASTORE_URL;
+  // Canonical POSTGRES_URL (Vercel-provisioned by the native Supabase
+  // integration); legacy ATELIER_DATASTORE_URL kept for backward compat.
+  const databaseUrl =
+    process.env.POSTGRES_URL ??
+    process.env.ATELIER_DATASTORE_URL ??
+    process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error(
-      'ATELIER_DATASTORE_URL not set; the MCP endpoint cannot connect to the coordination datastore (ARCH 9.3)',
+      'POSTGRES_URL (or legacy ATELIER_DATASTORE_URL / DATABASE_URL) not set; the MCP endpoint cannot connect to the coordination datastore (ARCH 9.3)',
     );
   }
   cachedClient = new AtelierClient({ databaseUrl });

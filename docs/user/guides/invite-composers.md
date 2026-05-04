@@ -2,7 +2,7 @@
 
 **Audience:** an operator (architect/admin role) bringing a new human teammate onto an Atelier project. Agent-onboarding follows a different path (OAuth at `/oauth/api/mcp`); see the appropriate `docs/user/connectors/<client>.md` runbook.
 
-**Scope:** both local-bootstrap (`supabase start` on `127.0.0.1`) and cloud Supabase deploys. Mode is auto-detected from `ATELIER_DATASTORE_URL`.
+**Scope:** both local-bootstrap (`supabase start` on `127.0.0.1`) and cloud Supabase deploys. Mode is auto-detected from `POSTGRES_URL` (canonical) or legacy `ATELIER_DATASTORE_URL`.
 
 ---
 
@@ -63,7 +63,7 @@ That's the common case. Add `--access-level admin` or `--reinvite` as needed. Fo
 | `--no-send-email` | (off) | Do not dispatch Supabase's invitation email; record the magic-link URL for manual sharing. Use in deploys without SMTP configured. |
 | `--reinvite` | (off) | The email must already exist as a composer; returns a fresh magic link without creating a new row. |
 | `--print-link` | (off) | Emit the magic-link URL on stdout (text mode). Default is to redact to `<magic-link suppressed; ...>` per the security posture above (BRD-OPEN-QUESTIONS §31 / X1 audit A1). |
-| `--site-url <url>` | env or `localhost:3000` | Public URL of the deploy. Drives the magic-link redirect target (`<site>/auth/confirm?next=/atelier`). Reads `ATELIER_PUBLIC_URL` from env when unset. |
+| `--site-url <url>` | env or `localhost:3000` | Public URL of the deploy. Drives the magic-link redirect target (`<site>/auth/confirm?next=/atelier`). When unset, reads `NEXT_PUBLIC_SITE_URL` (canonical) → legacy `ATELIER_PUBLIC_URL` → `ATELIER_ENDPOINT_URL` → `VERCEL_URL` from env. |
 | `--remote` / `--local` | auto | Force cloud / local mode regardless of env detection. |
 | `--dry-run` | (off) | Preview without mutating. |
 | `--json` | (off) | Machine-readable output. The `magicLink` field is included; a top-level `warning: "magic_link_in_output"` flags the sensitive value. |
@@ -93,7 +93,7 @@ If you forget `--print-link`, the output prints `<magic-link suppressed; re-run 
 When the deploy has Supabase Auth's SMTP configured (Project Settings → Auth → Email Templates), the default path dispatches the invitation email automatically. No `--print-link` is needed because the URL never crosses the operator's terminal:
 
 ```bash
-ATELIER_PUBLIC_URL=https://atelier.example.com \
+NEXT_PUBLIC_SITE_URL=https://atelier.example.com \
 atelier invite \
   --email alice@example.com \
   --discipline pm \
@@ -107,10 +107,10 @@ The invitee gets a Supabase-branded email; clicking the link lands them at `<sit
 The reference deploy does not have SMTP configured (per `first-deploy.md`); use `--no-send-email --print-link`:
 
 ```bash
-ATELIER_DATASTORE_URL=postgresql://...supabase.co:5432/postgres \
+POSTGRES_URL=postgresql://...supabase.co:5432/postgres \
 SUPABASE_URL=https://<ref>.supabase.co \
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
-ATELIER_PUBLIC_URL=https://<your-deploy>.vercel.app \
+NEXT_PUBLIC_SITE_URL=https://<your-deploy>.vercel.app \
 atelier invite \
   --email alice@example.com \
   --discipline dev \
@@ -142,14 +142,14 @@ atelier invite --email alice@example.com --discipline dev --reinvite --print-lin
 
 ## Mode auto-detection
 
-The CLI decides between local and cloud mode by inspecting `ATELIER_DATASTORE_URL`:
+The CLI decides between local and cloud mode by inspecting the datastore URL (canonical `POSTGRES_URL`, legacy `ATELIER_DATASTORE_URL` or `DATABASE_URL` accepted as fallback):
 
 | Condition | Mode |
 |---|---|
 | `--local` flag passed | local |
 | `--remote` flag passed | cloud |
-| `ATELIER_DATASTORE_URL` points at non-localhost | cloud |
-| `ATELIER_DATASTORE_URL` unset or points at localhost | local |
+| `POSTGRES_URL` (or fallback) points at non-localhost | cloud |
+| `POSTGRES_URL` (or fallback) unset or points at localhost | local |
 
 Local mode reads `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` from env, falling back to `supabase status -o env` when running locally. Cloud mode requires both env vars to be set explicitly (matches `first-deploy.md` Step 4).
 

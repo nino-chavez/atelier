@@ -76,15 +76,16 @@ async function startDevServer(port: number): Promise<DevServer> {
     cwd: PROTOTYPE_DIR,
     env: {
       ...process.env,
-      // Required by the route handlers; CI has these already exported
-      // via `supabase status -o env`. Local runs may need supabase up.
-      ATELIER_DATASTORE_URL:
+      // Required by the route handlers; CI has these already exported via
+      // `supabase status -o env`. Local runs may need supabase up.
+      // Canonical names: POSTGRES_URL + NEXT_PUBLIC_SUPABASE_URL (issuer is
+      // derived as `<url>/auth/v1`, audience defaults to "authenticated").
+      // Legacy ATELIER_* names are still accepted by the fallback chain.
+      POSTGRES_URL:
+        process.env.POSTGRES_URL ??
         process.env.ATELIER_DATASTORE_URL ??
         process.env.DATABASE_URL ??
         'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
-      ATELIER_OIDC_ISSUER:
-        process.env.ATELIER_OIDC_ISSUER ?? 'http://127.0.0.1:54321/auth/v1',
-      ATELIER_JWT_AUDIENCE: process.env.ATELIER_JWT_AUDIENCE ?? 'authenticated',
       NEXT_PUBLIC_SUPABASE_URL:
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321',
       NEXT_TELEMETRY_DISABLED: '1',

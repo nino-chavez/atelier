@@ -32,6 +32,7 @@
     "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts",
     "smoke:real-client": "tsx scripts/endpoint/__smoke__/real-client.smoke.ts",
     "smoke:broadcast": "tsx scripts/coordination/__smoke__/broadcast.smoke.ts",
+    "smoke:canonical-env-vars": "tsx prototype/__smoke__/canonical-env-vars.smoke.ts",
     "smoke:lens": "tsx prototype/__smoke__/lens.smoke.ts",
     "smoke:observability": "tsx prototype/__smoke__/observability.smoke.ts",
     "smoke:iaux": "tsx prototype/__smoke__/iaux.smoke.ts",

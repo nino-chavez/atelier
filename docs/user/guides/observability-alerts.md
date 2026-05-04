@@ -69,7 +69,7 @@ The `${VAR_NAME}` substitution lets you keep webhook secrets out of the repo. Re
 **One-shot** (good for cron / scheduler integration):
 
 ```bash
-ATELIER_DATASTORE_URL=postgresql://... \
+POSTGRES_URL=postgresql://... \
 OPS_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/... \
   npm run alert-publisher
 ```
@@ -77,7 +77,7 @@ OPS_SLACK_WEBHOOK_URL=https://hooks.slack.com/services/... \
 **Continuous** (good for long-running deployments without a cron):
 
 ```bash
-ATELIER_DATASTORE_URL=... OPS_SLACK_WEBHOOK_URL=... \
+POSTGRES_URL=... OPS_SLACK_WEBHOOK_URL=... \
   npx tsx scripts/observability/alert-publisher.ts --interval 300
 ```
 
@@ -86,7 +86,7 @@ ATELIER_DATASTORE_URL=... OPS_SLACK_WEBHOOK_URL=... \
 **Dry run** (evaluates state but doesn't publish or persist):
 
 ```bash
-ATELIER_DATASTORE_URL=... npm run alert-publisher -- --dry-run
+POSTGRES_URL=... npm run alert-publisher -- --dry-run
 ```
 
 ### 4. Wire to your scheduler (recommended for production)
@@ -167,7 +167,7 @@ To send one real test alert through your configured channel without seeding metr
 
 ```bash
 # 1. Manually insert a transition row in telemetry
-psql $ATELIER_DATASTORE_URL -c "
+psql $POSTGRES_URL -c "
   INSERT INTO telemetry (project_id, action, outcome, metadata)
   VALUES (
     '<your-project-uuid>'::uuid,

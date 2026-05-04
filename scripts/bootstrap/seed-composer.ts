@@ -58,6 +58,7 @@ function parseArgs(argv: string[]): Args {
     projectName: out['project-name'] ?? 'atelier-self',
     databaseUrl:
       out['database-url'] ??
+      process.env.POSTGRES_URL ??
       process.env.ATELIER_DATASTORE_URL ??
       process.env.DATABASE_URL ??
       'postgresql://postgres:postgres@127.0.0.1:54322/postgres',

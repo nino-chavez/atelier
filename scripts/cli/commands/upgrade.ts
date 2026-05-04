@@ -169,11 +169,18 @@ function parseArgs(args: readonly string[]): ParsedArgs {
 // ---------------------------------------------------------------------------
 
 function resolveDatastoreUrl(remote: boolean): { url: string; mode: Mode } {
-  const env = process.env.ATELIER_DATASTORE_URL;
+  // Migrations prefer the direct (non-pooling) URL when available -- session
+  // pooler can't run advisory locks needed by the migration runner. Fall
+  // through pooled URL → legacy ATELIER_DATASTORE_URL → DATABASE_URL.
+  const env =
+    process.env.POSTGRES_URL_NON_POOLING ??
+    process.env.POSTGRES_URL ??
+    process.env.ATELIER_DATASTORE_URL ??
+    process.env.DATABASE_URL;
   if (remote) {
     if (!env) {
       throw new Error(
-        '--remote requires ATELIER_DATASTORE_URL to be set; export it or drop --remote for LOCAL mode',
+        '--remote requires POSTGRES_URL_NON_POOLING / POSTGRES_URL (or legacy ATELIER_DATASTORE_URL / DATABASE_URL) to be set; export one or drop --remote for LOCAL mode',
       );
     }
     return { url: env, mode: 'cloud' };

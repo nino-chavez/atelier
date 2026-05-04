@@ -39,7 +39,7 @@ Status entries are updated by PR. The PR must include either smoke-test output (
 
 A client is Atelier-compatible if it can:
 
-1. Connect to a remote MCP server URL (the project's `ATELIER_ENDPOINT_URL`) over Streamable HTTP.
+1. Connect to a remote MCP server URL (the project's deploy URL — `NEXT_PUBLIC_SITE_URL` plus `/api/mcp` or `/oauth/api/mcp`) over Streamable HTTP.
 2. Present an `Authorization: Bearer <jwt>` header on every request, where the JWT comes from the project's identity provider.
 3. Discover the 12 tools per ADR-013 via the MCP `tools/list` call.
 4. Invoke the smoke-test sequence (ARCH section 6.1.1) and parse its responses.

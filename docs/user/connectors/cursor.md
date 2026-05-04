@@ -82,7 +82,7 @@ The smoke test sequence is the same; the bridge is transparent to the agent.
 | Symptom | Likely cause | Resolution |
 |---|---|---|
 | Cursor's MCP panel shows the server but no tools appear | Bearer header not attached OR endpoint returns 401 on `tools/list` | Inspect Cursor's MCP log; ensure `${env:ATELIER_BEARER_TOKEN}` resolved to a non-empty value before launching |
-| `register` returns `FORBIDDEN: bearer validation failed` | Token signed by an unrelated issuer, expired, or wrong audience | `atelier invite <your-email> --rotate`; confirm `ATELIER_JWT_AUDIENCE=authenticated` for Supabase Auth |
+| `register` returns `FORBIDDEN: bearer validation failed` | Token signed by an unrelated issuer, expired, or wrong audience | `atelier invite <your-email> --rotate`; the audience defaults to `authenticated` (Supabase Auth default) when the issuer is derived from `NEXT_PUBLIC_SUPABASE_URL`. Set `ATELIER_JWT_AUDIENCE` explicitly only for non-Supabase IdPs |
 | `register` returns `FORBIDDEN: no active composer for identity_subject` | The `sub` claim in your token does not match any `composers.identity_subject` row | Admin issue; the invite flow must populate `identity_subject` from the IdP's user ID |
 | Tools listed but every call returns 502 / 504 | Endpoint cold-start exceeds Cursor's per-call timeout | Project hosting issue; consider serverless min-instances or migrate to a warm-runtime tier |
 | Workspace config gets committed by accident with the raw token | `mcp.json` was committed as-is instead of using `${env:VAR}` substitution | Rotate the token immediately via `atelier invite --rotate`; add `.cursor/mcp.json` to `.gitignore` if your workflow committed it inadvertently |

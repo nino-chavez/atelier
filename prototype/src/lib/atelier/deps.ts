@@ -49,8 +49,11 @@ export interface LensDeps {
  * Resolve the client + verifier the lens code uses for dispatch() calls.
  *
  * Verifier mode:
- *   - Production: ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE present →
- *     remote-JWKS verifier (real Supabase Auth or any OIDC provider).
+ *   - Production: a resolvable OIDC issuer + audience pair (canonical:
+ *     NEXT_PUBLIC_SUPABASE_URL → derived `<url>/auth/v1` issuer + audience
+ *     "authenticated"; legacy: ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE
+ *     overrides) → remote-JWKS verifier (real Supabase Auth or any OIDC
+ *     provider).
  *   - Development: ATELIER_DEV_BEARER + ATELIER_ALLOW_DEV_BEARER=true →
  *     stub verifier accepts tokens shaped "stub:<sub>". The opt-in env gate
  *     prevents a stray dev var in a prod container from silently bypassing
@@ -59,10 +62,13 @@ export interface LensDeps {
  */
 export function getLensDeps(): LensDeps {
   if (!cachedClient) {
-    const databaseUrl = process.env.ATELIER_DATASTORE_URL ?? process.env.DATABASE_URL;
+    const databaseUrl =
+      process.env.POSTGRES_URL ??
+      process.env.ATELIER_DATASTORE_URL ??
+      process.env.DATABASE_URL;
     if (!databaseUrl) {
       throw new Error(
-        'ATELIER_DATASTORE_URL (or DATABASE_URL) not set; the /atelier lens cannot connect to the coordination datastore (ARCH 9.3)',
+        'POSTGRES_URL (or legacy ATELIER_DATASTORE_URL / DATABASE_URL) not set; the /atelier lens cannot connect to the coordination datastore (ARCH 9.3)',
       );
     }
     cachedClient = new AtelierClient({ databaseUrl });
@@ -132,8 +138,16 @@ function resolveEmbeddingDeps(): { embedder: EmbeddingService; config: FindSimil
 }
 
 function resolveVerifier(): BearerVerifier {
-  const oidcIssuer = process.env.ATELIER_OIDC_ISSUER;
-  const oidcAudience = process.env.ATELIER_JWT_AUDIENCE;
+  // Canonical: derive issuer from NEXT_PUBLIC_SUPABASE_URL (Supabase Auth lives
+  // at <url>/auth/v1) and default audience to "authenticated" (Supabase default).
+  // Legacy ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE still override when set.
+  // The actual jwksVerifierFromEnv() reads its config the same way (see
+  // scripts/endpoint/lib/jwks-verifier.ts).
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const oidcIssuer =
+    process.env.ATELIER_OIDC_ISSUER ??
+    (supabaseUrl ? `${supabaseUrl.replace(/\/$/, '')}/auth/v1` : undefined);
+  const oidcAudience = process.env.ATELIER_JWT_AUDIENCE ?? (oidcIssuer ? 'authenticated' : undefined);
   if (oidcIssuer && oidcAudience) {
     return jwksVerifierFromEnv();
   }
@@ -141,6 +155,6 @@ function resolveVerifier(): BearerVerifier {
     return stubVerifier;
   }
   throw new Error(
-    'No bearer verifier configured. Set ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE (production) or ATELIER_DEV_BEARER (development).',
+    'No bearer verifier configured. Set NEXT_PUBLIC_SUPABASE_URL (canonical; audience defaults to "authenticated") or ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE (legacy override) for production, or ATELIER_DEV_BEARER for development.',
   );
 }

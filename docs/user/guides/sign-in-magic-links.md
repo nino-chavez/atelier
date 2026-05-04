@@ -134,7 +134,7 @@ See ADR-028 for the BYO-via-`.atelier/config.yaml` shape; the IdP swap involves 
 | Email arrives, link 404s on `/sign-in/callback` | Email template still emits the legacy `?code=` URL pointing at the deleted callback route | Update the email template to the `?token_hash=` shape (see above) |
 | `verifyOtp` returns "Invalid login credentials" or "Token has expired" | Code typo or 1-hour OTP expiry passed | Click "Use a different email" and retry |
 | Sign-in succeeds, lens shows "Your account is not invited yet" | Supabase Auth user has no Atelier composer row (auth user provisioned outside `atelier invite`) | Have an admin run `atelier invite <email>` (D4) |
-| Lens shows "Bearer rejected" instead of sign-in CTA | `ATELIER_OIDC_ISSUER` / `ATELIER_JWT_AUDIENCE` mismatch or stale cookie from a previous IdP | Click "Sign out and start over" in the diagnostic block |
+| Lens shows "Bearer rejected" instead of sign-in CTA | OIDC issuer / audience mismatch (`NEXT_PUBLIC_SUPABASE_URL` derives `<url>/auth/v1`; legacy `ATELIER_OIDC_ISSUER` / `ATELIER_JWT_AUDIENCE` overrides) or stale cookie from a previous IdP | Click "Sign out and start over" in the diagnostic block |
 
 ---
 

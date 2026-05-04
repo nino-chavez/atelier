@@ -318,10 +318,20 @@ console.log('\n[10] atelier deploy (D6 polished form)');
   check('deploy --help cross-references ADR-046', help.stdout.includes('ADR-046'));
   check('deploy --help cross-references first-deploy.md', help.stdout.includes('first-deploy.md'));
   check('deploy --help cross-references enable-auto-deploy.md', help.stdout.includes('enable-auto-deploy.md'));
+  // Canonical names + legacy fallbacks both surface in the help text per the
+  // env-var fallback chain. Assert canonical names are present (the new
+  // primary), and confirm the legacy ATELIER_*-prefixed names are still
+  // listed so adopters following older first-deploy.md instructions find
+  // them too.
   check(
-    'deploy --help lists required env vars',
+    'deploy --help lists canonical env vars',
+    help.stdout.includes('POSTGRES_URL') &&
+      help.stdout.includes('NEXT_PUBLIC_SUPABASE_URL') &&
+      help.stdout.includes('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+  );
+  check(
+    'deploy --help still lists legacy env-var names as fallbacks',
     help.stdout.includes('ATELIER_DATASTORE_URL') &&
-      help.stdout.includes('ATELIER_OIDC_ISSUER') &&
       help.stdout.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
   );
 

@@ -403,7 +403,7 @@ A deterministic smoke-test sequence verifies that a client + endpoint + identity
 |---|---|---|
 | Step 1 returns 401 | Bearer token invalid, expired, or AS metadata misconfigured | ARCH section 7.9; identity-provider config |
 | Step 1 returns 403 | composer_id from token does not match a valid composers row for the project | atelier invite history; `composers` table |
-| Step 1 returns 500 | Datastore connection failure or schema not migrated | atelier datastore init; ATELIER_DATASTORE_URL |
+| Step 1 returns 500 | Datastore connection failure or schema not migrated | atelier datastore init; POSTGRES_URL (legacy ATELIER_DATASTORE_URL) |
 | Step 2 returns 401 | session_token invalidated by reaper before heartbeat fired | session_ttl_seconds policy; clock skew |
 | Step 3 returns empty charter.paths | Charter files not committed; ATELIER_REPO not pointed at a real repo | repo configuration; webhook setup |
 | Step 4 succeeds but step-2-replay also succeeds | deregister did not actually delete the session row | endpoint implementation bug |

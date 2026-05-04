@@ -29,10 +29,15 @@ export function getSupabaseBrowserClient(): SupabaseClient {
   if (cached) return cached;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Canonical: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (post-2025 Supabase paradigm,
+  // sb_publishable_* values). Legacy NEXT_PUBLIC_SUPABASE_ANON_KEY accepts the
+  // same value as a drop-in per @supabase/supabase-js.
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY not set; the broadcast island cannot subscribe to Realtime (ADR-027 / ADR-029).',
+      'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or legacy NEXT_PUBLIC_SUPABASE_ANON_KEY) not set; the broadcast island cannot subscribe to Realtime (ADR-027 / ADR-029).',
     );
   }
   cached = createBrowserClient(url, anonKey);

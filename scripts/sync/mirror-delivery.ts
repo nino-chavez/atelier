@@ -22,6 +22,7 @@
 
 import { Client } from 'pg';
 import { resolveDeliveryAdapter } from './lib/adapters.ts';
+import { registerConfiguredAdapters } from './lib/adapter-registry.ts';
 
 interface Args {
   adapter: string;
@@ -140,6 +141,7 @@ async function main(): Promise<void> {
   const dbUrl = process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
   const db = new Client({ connectionString: dbUrl });
   await db.connect();
+  registerConfiguredAdapters();
   try {
     const start = Date.now();
     const result = await pullForProject({ db, projectId, adapterName: args.adapter, dryRun: args.dryRun });

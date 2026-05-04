@@ -31,6 +31,7 @@ import {
   getEventBus,
 } from './lib/event-bus.ts';
 import { resolveDeliveryAdapter, type DeliveryAdapter } from './lib/adapters.ts';
+import { registerConfiguredAdapters } from './lib/adapter-registry.ts';
 
 interface Args {
   once: boolean;
@@ -230,6 +231,7 @@ async function main(): Promise<void> {
   const db = new Client({ connectionString: dbUrl });
   await db.connect();
 
+  registerConfiguredAdapters();
   const bus = getEventBus();
   const adapter = resolveDeliveryAdapter(args.adapter);
   registerSubscriber(bus, db, adapter, args.dryRun);

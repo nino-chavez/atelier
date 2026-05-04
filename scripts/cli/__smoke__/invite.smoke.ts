@@ -41,8 +41,7 @@ const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 const CLI = resolve(REPO_ROOT, 'scripts/cli/atelier.ts');
 
 const DB_URL =
-  process.env.ATELIER_DATASTORE_URL ??
-  process.env.DATABASE_URL ??
+  process.env.POSTGRES_URL ??
   'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 let failures = 0;
@@ -307,7 +306,7 @@ async function main(): Promise<void> {
         cwd: REPO_ROOT,
         env: {
           ...process.env,
-          ATELIER_DATASTORE_URL: DB_URL,
+          POSTGRES_URL: DB_URL,
           SUPABASE_URL: env.url,
           SUPABASE_SERVICE_ROLE_KEY: env.serviceRoleKey,
         },
@@ -344,7 +343,7 @@ async function main(): Promise<void> {
         cwd: REPO_ROOT,
         env: {
           ...process.env,
-          ATELIER_DATASTORE_URL: DB_URL,
+          POSTGRES_URL: DB_URL,
           SUPABASE_URL: env.url,
           SUPABASE_SERVICE_ROLE_KEY: env.serviceRoleKey,
         },
@@ -377,7 +376,7 @@ async function main(): Promise<void> {
         cwd: REPO_ROOT,
         env: {
           ...process.env,
-          ATELIER_DATASTORE_URL: DB_URL,
+          POSTGRES_URL: DB_URL,
           SUPABASE_URL: env.url,
           SUPABASE_SERVICE_ROLE_KEY: env.serviceRoleKey,
         },

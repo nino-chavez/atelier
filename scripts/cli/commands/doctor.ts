@@ -154,7 +154,7 @@ function deriveHints(report: PreflightReport, endpoint: EndpointProbeResult): Di
     out.push({
       symptom: `/api/mcp returned ${endpoint.statusCode}`,
       cause: 'endpoint code path errored — likely missing OIDC env or schema drift',
-      fix: 'check dev server stderr: ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE must be set; supabase migrations must be applied',
+      fix: 'check dev server stderr: NEXT_PUBLIC_SUPABASE_URL must be set (the JWKS issuer derives from it via /auth/v1); supabase migrations must be applied',
     });
   }
   return out;

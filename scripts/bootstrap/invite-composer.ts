@@ -49,11 +49,12 @@ export interface InviteOptions {
    *  `{{ .RedirectTo }}` thread this value through, otherwise it is unused
    *  (the brief's reference template hardcodes `next=/atelier`). */
   redirectTo?: string | undefined;
-  /** Public URL of the deploy. Falls back to ATELIER_PUBLIC_URL or
-   *  http://localhost:3000. Used to build redirectTo when not supplied. */
+  /** Public URL of the deploy. Falls back to NEXT_PUBLIC_SITE_URL or
+   *  http(s)://VERCEL_URL or http://localhost:3000. Used to build
+   *  redirectTo when not supplied. */
   siteUrl?: string | undefined;
-  /** Postgres connection string. Falls back to ATELIER_DATASTORE_URL,
-   *  DATABASE_URL, or the Supabase CLI local default. */
+  /** Postgres connection string. Falls back to POSTGRES_URL or the
+   *  Supabase CLI local default. */
   databaseUrl?: string | undefined;
   /** Supabase project URL (cloud or local). Falls back to SUPABASE_URL env. */
   supabaseUrl?: string | undefined;
@@ -83,8 +84,8 @@ function buildRedirectTo(opts: InviteOptions): string {
   if (opts.redirectTo) return opts.redirectTo;
   const site =
     opts.siteUrl ??
-    process.env.ATELIER_PUBLIC_URL ??
-    process.env.ATELIER_ENDPOINT_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ??
     'http://localhost:3000';
   const base = site.replace(/\/+$/, '');
   return `${base}/auth/confirm?next=/atelier`;
@@ -165,8 +166,7 @@ export async function inviteComposer(opts: InviteOptions): Promise<InviteResult>
 
   const databaseUrl =
     opts.databaseUrl ??
-    process.env.ATELIER_DATASTORE_URL ??
-    process.env.DATABASE_URL ??
+    process.env.POSTGRES_URL ??
     DEFAULT_LOCAL_DB_URL;
 
   const redirectTo = buildRedirectTo(opts);

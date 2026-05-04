@@ -4,24 +4,17 @@
 //
 // Calls dispatch() in-process per the M3 brief (server actions / server
 // components hit the dispatcher directly, avoiding an HTTP round trip to
-// /api/mcp). Mirrors the pattern other panels use to fetch data through
-// getLensDeps() + resolveLensViewer.
+// /api/mcp). Post canonical-rebuild the deps come from getMcpDeps() (the
+// MCP-side warm singleton); the lens does not allocate its own AtelierClient.
 //
-// Wire shape returned matches ARCH 6.4.1 with two additions for the UI:
-//   - a top-level `error: string | null` for unauthorized / malformed
-//     query paths so the client can render the affordance distinctly
-//     from "ran but found nothing"
-//   - per-match `score` already in the response shape (no changes there)
-//
-// What this action does NOT do:
-//   - call any logger or analytics; the dispatch() path emits telemetry
-//     itself (write.ts recordTelemetry).
-//   - cache results. Each call is a fresh search.
+// The bearer is read from the same Supabase Auth cookie chain the rest of
+// the lens uses (resolveBearer → readSupabaseAccessToken via the named
+// adapter per ADR-029).
 
 import { cookies } from 'next/headers';
 
 import { dispatch } from '../../../../../../scripts/endpoint/lib/dispatch.ts';
-import { getLensDeps } from '../../../../lib/atelier/deps.ts';
+import { getMcpDeps } from '../../../../lib/atelier/mcp-deps.ts';
 import { LensAuthError, resolveBearer } from '../../../../lib/atelier/session.ts';
 import { nextCookieAdapter } from '../../../../lib/atelier/adapters/next-cookies.ts';
 import type { FindSimilarResponse } from '../../../../../../scripts/endpoint/lib/find-similar.ts';
@@ -48,7 +41,6 @@ export async function runFindSimilar(
     };
   }
 
-  const deps = getLensDeps();
   const cookieStore = await cookies();
   const bearer = await resolveBearer(new Request('http://internal/find-similar'), {
     cookies: nextCookieAdapter(cookieStore),
@@ -73,7 +65,7 @@ export async function runFindSimilar(
         ? { description: trimmedQuery, trace_id: trimmedTrace }
         : { description: trimmedQuery },
     },
-    deps,
+    getMcpDeps(),
   );
 
   if (result.ok) {
@@ -93,6 +85,4 @@ export async function runFindSimilar(
   };
 }
 
-// Re-export for the unauthorized-path handling. Avoids an unused-import
-// warning and keeps the import surface explicit for the client component.
 export { LensAuthError };

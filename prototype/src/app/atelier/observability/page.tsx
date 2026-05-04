@@ -14,13 +14,11 @@
 // Tab selection via ?tab= search param keeps the affordance shape
 // of /atelier 5-lens precedent without per-route file proliferation.
 // All section data still loads on every render - the cost is bounded
-// (~8 indexed queries) and the operator's reload toggles the section
+// (one RPC) and the operator's reload toggles the section
 // they care about.
 
-import { cookies, headers } from 'next/headers';
-import { getLensDeps } from '../../../lib/atelier/deps.ts';
-import { nextCookieAdapter } from '../../../lib/atelier/adapters/next-cookies.ts';
 import { LensAuthError } from '../../../lib/atelier/session.ts';
+import { getRequestSupabaseClient } from '../../../lib/atelier/session.ts';
 import {
   ObservabilityForbiddenError,
   resolveObservabilityViewer,
@@ -40,18 +38,11 @@ export default async function ObservabilityPage({
   const params = await searchParams;
   const tab: SectionId = isSectionId(params.tab ?? '') ? (params.tab as SectionId) : 'sessions';
 
-  const deps = getLensDeps();
-  const reqHeaders = await headers();
-  const cookieStore = await cookies();
-  const request = new Request(`http://internal/atelier/observability?tab=${tab}`, {
-    headers: reqHeaders,
-  });
-
   let viewer: Awaited<ReturnType<typeof resolveObservabilityViewer>>;
+  let supabase: Awaited<ReturnType<typeof getRequestSupabaseClient>>;
   try {
-    viewer = await resolveObservabilityViewer(request, deps, {
-      cookies: nextCookieAdapter(cookieStore),
-    });
+    supabase = await getRequestSupabaseClient();
+    viewer = await resolveObservabilityViewer(supabase);
   } catch (err) {
     if (err instanceof LensAuthError) {
       return <LensUnauthorized lensId="observability" reason={err.kind} message={err.message} />;
@@ -68,7 +59,7 @@ export default async function ObservabilityPage({
     throw err;
   }
 
-  const viewModel = await loadObservabilityViewModel(viewer.auth.projectId);
+  const viewModel = await loadObservabilityViewModel(supabase);
   return (
     <ObservabilityShell
       tab={tab}

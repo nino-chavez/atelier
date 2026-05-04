@@ -9,7 +9,7 @@
 // precision >= ci_precision_gate.
 //
 // Usage:
-//   ATELIER_DATASTORE_URL=... OPENAI_API_KEY=... \
+//   POSTGRES_URL=... OPENAI_API_KEY=... \
 //     npx tsx scripts/eval/find_similar/calibrate.ts --project <uuid>
 //
 // Output is a precision/recall table across the grid + a recommended
@@ -41,9 +41,9 @@ async function main(): Promise<void> {
     console.error('--project <uuid> required');
     process.exit(2);
   }
-  const datastoreUrl = process.env['ATELIER_DATASTORE_URL'];
+  const datastoreUrl = process.env['POSTGRES_URL'];
   if (!datastoreUrl) {
-    console.error('ATELIER_DATASTORE_URL not set');
+    console.error('POSTGRES_URL not set');
     process.exit(2);
   }
 

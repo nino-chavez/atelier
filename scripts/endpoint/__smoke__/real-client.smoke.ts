@@ -166,7 +166,7 @@ async function startMcpServer(deps: {
         const requestUrl = `http://${req.headers.host ?? '127.0.0.1'}${url.pathname}`;
         const webRes = oauthDiscoveryResponse(
           oauthDiscoveryConfigFromEnv(
-            { ATELIER_OIDC_ISSUER: deps.oauthIssuer } as NodeJS.ProcessEnv,
+            { NEXT_PUBLIC_SUPABASE_URL: deps.oauthIssuer.replace(/\/auth\/v1\/?$/, '') } as NodeJS.ProcessEnv,
             requestUrl,
           ),
         );

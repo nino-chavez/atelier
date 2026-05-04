@@ -39,10 +39,10 @@ import {
 let cachedClient: AtelierClient | null = null;
 function getClient(): AtelierClient {
   if (cachedClient) return cachedClient;
-  const databaseUrl = process.env.ATELIER_DATASTORE_URL;
+  const databaseUrl = process.env.POSTGRES_URL;
   if (!databaseUrl) {
     throw new Error(
-      'ATELIER_DATASTORE_URL not set; the MCP endpoint cannot connect to the coordination datastore (ARCH 9.3)',
+      'POSTGRES_URL not set; the MCP endpoint cannot connect to the coordination datastore (ARCH 9.3)',
     );
   }
   cachedClient = new AtelierClient({ databaseUrl });

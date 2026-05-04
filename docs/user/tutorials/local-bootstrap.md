@@ -174,7 +174,7 @@ In a fresh terminal (Supabase keeps running in the background from step 1):
 ```bash
 cp prototype/.env.example prototype/.env.local
 # Edit prototype/.env.local: set OPENAI_API_KEY (from step 5b below).
-# The other ATELIER_* + NEXT_PUBLIC_SUPABASE_URL defaults already match
+# The POSTGRES_URL + NEXT_PUBLIC_SUPABASE_URL defaults already match
 # the local-bootstrap stack; leave them as-is unless you've customized.
 
 cd prototype && npm run dev

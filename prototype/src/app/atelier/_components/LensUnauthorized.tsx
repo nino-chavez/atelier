@@ -98,7 +98,7 @@ function InvalidBearerHelp() {
       <strong>What to check:</strong>
       <pre className={styles.codeblock}>
         {[
-          'Verify ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE match your identity provider.',
+          'Verify NEXT_PUBLIC_SUPABASE_URL points at your Supabase project (the JWKS issuer derives from it).',
           'Dev path: confirm ATELIER_DEV_BEARER format is "stub:<sub>".',
         ].join('\n')}
       </pre>

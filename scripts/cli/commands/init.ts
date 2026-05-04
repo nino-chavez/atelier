@@ -750,8 +750,9 @@ async function runMutation(plan: Plan, parsed: ParsedArgs): Promise<RunResult> {
       console.log('');
       console.log('Cloud datastore configuration (operator-side):');
       console.log('  1. Create a Supabase Cloud project (or pick an existing one).');
-      console.log('  2. Set ATELIER_DATASTORE_URL to your Supabase Cloud Postgres URL.');
-      console.log(`     Example: export ATELIER_DATASTORE_URL=postgresql://...`);
+      console.log('  2. Install the Vercel-Supabase Marketplace integration on your Vercel project (recommended);');
+      console.log('     it auto-provisions POSTGRES_URL + NEXT_PUBLIC_SUPABASE_URL + keys.');
+      console.log('     Or set POSTGRES_URL manually: export POSTGRES_URL=postgresql://...');
       console.log(`  3. From inside ${plan.outputDir}, run: atelier datastore init --remote`);
       console.log('');
       console.log('Atelier does not provision Supabase projects automatically — tier,');

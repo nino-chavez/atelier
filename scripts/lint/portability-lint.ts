@@ -74,12 +74,19 @@ const SKIP_PATTERNS: readonly RegExp[] = [
 // Adapter-only allowlist: paths under here may import the adapter-only
 // surfaces. Per ADR-029 the named-adapter directory.
 //
-// Two locations qualify as "named adapter":
+// Three locations qualify as "named adapter":
 //
 //   1. scripts/coordination/adapters/* — server-side Supabase / OpenAI-
 //      compatible adapter implementations per ARCH §6.8 + ADR-041.
 //
-//   2. Specific prototype client-side files that subscribe to broadcasts.
+//   2. prototype/src/lib/atelier/adapters/* — server-side SSR adapter
+//      modules per ADR-027 / ADR-028 / ADR-029. The lens runtime's
+//      Supabase JS client + RPC calls live exclusively here (canonical
+//      rebuild, BRD-OPEN-QUESTIONS section 31). Swapping IdPs (Auth0,
+//      Keycloak, custom OIDC) means writing a sibling adapter, not
+//      editing session.ts.
+//
+//   3. Specific prototype client-side files that subscribe to broadcasts.
 //      Client-side React components running in the browser cannot consume
 //      a server-side BroadcastService wrapper; the realtime subscription
 //      MUST happen in the client. The shape preserves portability: the
@@ -88,6 +95,7 @@ const SKIP_PATTERNS: readonly RegExp[] = [
 //      migration impl) requires editing only the listed files.
 const ADAPTER_ALLOWLIST_PATTERNS: readonly RegExp[] = [
   /^scripts\/coordination\/adapters\//,
+  /^prototype\/src\/lib\/atelier\/adapters\//,
   /^prototype\/src\/app\/atelier\/_components\/LiveUpdater\.tsx$/,
 ];
 

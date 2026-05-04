@@ -66,18 +66,18 @@ Options:
                            from the recorded hash (adopter-edited from
                            upstream). Opt-in acknowledgment.
   --remote                 Force CLOUD mode. Disables LOCAL preflight and
-                           requires ATELIER_DATASTORE_URL to point at a
+                           requires POSTGRES_URL to point at a
                            non-localhost Postgres. Default: auto-detect
-                           from ATELIER_DATASTORE_URL host.
+                           from POSTGRES_URL host.
   --dry-run                With --apply: print the planned apply sequence
                            without executing. With --check: same as --check.
   --json                   Machine-readable JSON output.
   -h, --help               Show this help.
 
 Mode auto-detection:
-  LOCAL  — when ATELIER_DATASTORE_URL is unset or points at 127.0.0.1
+  LOCAL  — when POSTGRES_URL is unset or points at 127.0.0.1
            (default ${DEFAULT_LOCAL_DB_URL})
-  CLOUD  — when ATELIER_DATASTORE_URL points at a non-localhost host,
+  CLOUD  — when POSTGRES_URL points at a non-localhost host,
            OR --remote is passed
 
 Pre-flight (LOCAL mode):
@@ -86,7 +86,7 @@ Pre-flight (LOCAL mode):
   - supabase services running
 
 Pre-flight (CLOUD mode):
-  - ATELIER_DATASTORE_URL set to a non-localhost Postgres URL
+  - POSTGRES_URL set to a non-localhost Postgres URL
 
 Behavior contract:
   Exit 0 on:
@@ -99,7 +99,7 @@ Behavior contract:
     - --apply: SQL error during apply, or modified migrations detected
       without --force-apply-modified
   Exit 2 on argument or precondition error (unknown flag, conflicting
-  actions, preflight failure, missing ATELIER_DATASTORE_URL in CLOUD mode).
+  actions, preflight failure, missing POSTGRES_URL in CLOUD mode).
 
 Cross-references:
   - ADR-005 (append-only; no rollback at v1; v1.x next-level)
@@ -169,11 +169,11 @@ function parseArgs(args: readonly string[]): ParsedArgs {
 // ---------------------------------------------------------------------------
 
 function resolveDatastoreUrl(remote: boolean): { url: string; mode: Mode } {
-  const env = process.env.ATELIER_DATASTORE_URL;
+  const env = process.env.POSTGRES_URL;
   if (remote) {
     if (!env) {
       throw new Error(
-        '--remote requires ATELIER_DATASTORE_URL to be set; export it or drop --remote for LOCAL mode',
+        '--remote requires POSTGRES_URL to be set; export it or drop --remote for LOCAL mode',
       );
     }
     return { url: env, mode: 'cloud' };
@@ -468,7 +468,7 @@ export async function runUpgrade(args: readonly string[]): Promise<number> {
     // guaranteed by resolveDatastoreUrl when --remote is passed; otherwise
     // the env was non-localhost so it's also fine).
     if (!parsed.json) {
-      console.log('Pre-flight (CLOUD): ATELIER_DATASTORE_URL set to non-localhost host');
+      console.log('Pre-flight (CLOUD): POSTGRES_URL set to non-localhost host');
       console.log('');
     }
   }

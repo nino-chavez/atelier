@@ -1,24 +1,22 @@
-// Observability admin gate.
+// Observability admin gate (post canonical-rebuild).
 //
 // Mirrors session.ts:resolveLensViewer but additionally requires
 // composers.access_level='admin' (per ARCH 8.2 admin-gated route).
 // Stakeholder + member access levels see a clean unauthorized state.
+//
+// Single Supabase RPC (`atelier_obs_admin_viewer`) does the resolve +
+// admin gate + dashboard-session ensure. No pg.Pool.
 
-import type { Pool } from 'pg';
-import type { LensDeps } from './deps.ts';
-import {
-  LensAuthError,
-  resolveLensViewer,
-} from './session.ts';
-import type { ResolveBearerOptions } from './session.ts';
-import type { AuthContext } from '../../../../scripts/endpoint/lib/auth.ts';
+import type { ServerSupabaseClient } from './adapters/supabase-ssr.ts';
+import { LensAuthError, getRequestSupabaseClient } from './session.ts';
 
 export interface ObservabilityViewer {
-  auth: AuthContext;
-  sessionId: string;
+  composerId: string;
+  projectId: string;
   composerName: string;
   projectName: string;
   accessLevel: string | null;
+  sessionId: string;
 }
 
 export class ObservabilityForbiddenError extends Error {
@@ -28,37 +26,43 @@ export class ObservabilityForbiddenError extends Error {
   }
 }
 
+interface RawAdminViewer {
+  composer_id: string;
+  project_id: string;
+  composer_name: string;
+  project_name: string;
+  access_level: string | null;
+  session_id: string;
+}
+
 export async function resolveObservabilityViewer(
-  request: Request,
-  deps: LensDeps,
-  opts: ResolveBearerOptions,
+  client?: ServerSupabaseClient,
 ): Promise<ObservabilityViewer> {
-  const { auth, sessionId } = await resolveLensViewer(request, deps, opts);
-  const pool = (deps.client as unknown as { pool: Pool }).pool;
-  const { rows } = await pool.query<{
-    display_name: string;
-    access_level: string | null;
-    project_name: string;
-  }>(
-    `SELECT c.display_name, c.access_level::text AS access_level, p.name AS project_name
-       FROM composers c JOIN projects p ON p.id = c.project_id
-      WHERE c.id = $1 AND p.id = $2`,
-    [auth.composerId, auth.projectId],
+  const supabase = client ?? (await getRequestSupabaseClient());
+  const { data, error } = await supabase.rpc<Record<string, never>, RawAdminViewer>(
+    'atelier_obs_admin_viewer',
   );
-  const row = rows[0];
-  if (!row) {
-    throw new LensAuthError('no_composer', 'Composer record not found.');
+  if (error) {
+    const msg = error.message ?? '';
+    if (msg.includes('observability_forbidden')) {
+      throw new ObservabilityForbiddenError(
+        `Observability dashboard is admin-gated; ${msg}`,
+      );
+    }
+    if (msg.includes('no_composer')) {
+      throw new LensAuthError('no_composer', msg);
+    }
+    throw new LensAuthError('invalid_bearer', `atelier_obs_admin_viewer failed: ${msg}`);
   }
-  if (row.access_level !== 'admin') {
-    throw new ObservabilityForbiddenError(
-      `Observability dashboard is admin-gated; your access_level is ${row.access_level ?? 'unset'}.`,
-    );
+  if (!data) {
+    throw new LensAuthError('no_composer', 'No active composer for the current Auth session.');
   }
   return {
-    auth,
-    sessionId,
-    composerName: row.display_name,
-    projectName: row.project_name,
-    accessLevel: row.access_level,
+    composerId: data.composer_id,
+    projectId: data.project_id,
+    composerName: data.composer_name,
+    projectName: data.project_name,
+    accessLevel: data.access_level,
+    sessionId: data.session_id,
   };
 }

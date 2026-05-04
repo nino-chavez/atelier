@@ -12,13 +12,13 @@
 2. Land on the unauthorized state -- "Sign in to view the dashboard" -- with a "Sign in" button.
 3. Click "Sign in" -- arrive at `/sign-in?redirect=<original-path>`.
 4. Enter email, click "Send sign-in link".
-5. The form advances to the code-entry view with a generic confirmation. Behind the scenes, Atelier silently checks whether an admin has invited that email (the C1 OTP-relay gate, per BRD-OPEN-QUESTIONS section 31). If invited: an email goes out. If not invited: nothing goes out -- the UI advances anyway so the form is not a user-enumeration oracle.
-6. If the email is invited, receive an email containing **both** a clickable link AND a 6-digit code. Use whichever path your environment allows:
-   - **Link path:** click the link in the email -- the browser hits `/sign-in/callback?code=...`, the server exchanges the PKCE code for a session cookie, and bounces to the original path.
-   - **Code path:** type the 6 digits into the form -- the browser calls `verifyOtp`, the cookie is set, the page navigates to the original path.
+5. The form advances to the code-entry view with a generic confirmation. Behind the scenes, the form calls `signInWithOtp` with `shouldCreateUser:false`; Supabase Auth dispatches mail iff the address resolves to an existing auth user. The form swallows the error and advances regardless so it is not a user-enumeration oracle.
+6. If the email resolves to an invited account, receive an email containing **both** a clickable link AND a 6-digit code. Use whichever path your environment allows:
+   - **Link path:** click the link in the email -- the browser hits `/auth/confirm?token_hash=<hash>&type=magiclink&next=/atelier`, the server calls `auth.verifyOtp({ type, token_hash })`, seats the session cookie, and redirects to `next`.
+   - **Code path:** type the 6 digits into the form -- the browser calls `verifyOtp({ email, token, type: 'email' })`, the cookie is set, the page navigates to the original path.
 7. The lens renders. The header shows the email + a "Sign out" link.
 
-If the user is invited but the cookie is set without an Atelier composer row mapped to their identity, the lens shows "Your account is not invited yet -- ask your admin to invite you via `atelier invite`". This path is unreachable through the normal flow (the C1 gate would have blocked at step 5), but exists as a defense-in-depth state for sessions established outside the form (e.g. an admin manually creating an auth user without an `atelier invite`).
+If a user is signed in but no Atelier composer row is mapped to their identity, the lens shows "Your account is not invited yet -- ask your admin to invite you via `atelier invite`". This path is unreachable through the normal flow (Supabase Auth would not have minted mail), but exists as a defense-in-depth state for sessions established outside the form (e.g. an admin manually creating an auth user without an `atelier invite`).
 
 ---
 
@@ -33,13 +33,16 @@ Same security posture either way (both are single-use, time-limited, derived fro
 
 ---
 
-## C1 OTP-relay gate
+## OTP-relay structural protection
 
-`prototype/src/app/sign-in/check/route.ts` runs as a server-side filter between the form and Supabase Auth's `signInWithOtp`. Without it, anyone could use Atelier's deployed `/sign-in` form as a free OTP relay against any email address (Supabase would happily mint magic-link emails for arbitrary recipients). With it, only emails that have a corresponding `composers` row receive a magic-link email; uninvited submissions are silently dropped.
+The dedicated `/sign-in/check` server gate has been removed (BRD-OPEN-QUESTIONS section 31, "Refactor sign-in to token-hash flow per rally-hq pattern"). The same OTP-relay surface is now closed structurally by two defenses:
 
-The gate also enforces an in-memory rate limit (10 requests per minute, per IP) to keep an attacker from fanning out invitation lookups against a list of emails. Single-instance Vercel projects (or local dev) are fine on the in-memory path; **multi-region or auto-scaled deploys need shared state to enforce the limit globally** -- swap `ipBuckets` in the route handler for a Redis-backed limiter (Vercel KV / Upstash Redis) before scaling out.
+1. **`shouldCreateUser:false` on `signInWithOtp`.** Supabase Auth refuses to mint mail for non-existent users, so the form cannot be used as a free magic-link relay against arbitrary recipients.
+2. **Token-hash verify on `/auth/confirm`.** The route only succeeds for tokens Supabase issued; an attacker cannot forge a session by guessing.
 
-The gate is invisible to the user: 200 (invited) and 404 (not invited) both progress the UI to the code-entry view with the same generic confirmation copy. Only Mailpit / your SMTP provider sees the difference.
+The form swallows the `signInWithOtp` error and advances the UI to the code-entry view regardless of outcome, so the response shape does not reveal whether an email is on the auth-users list (no enumeration oracle).
+
+Supabase Auth's own per-IP and per-email rate limits cap brute-force attempts. If you need stricter limits, configure them in the Supabase Dashboard -> Authentication -> Rate Limits panel; the substrate does not layer its own limiter at the app level any more.
 
 ---
 
@@ -53,7 +56,7 @@ Supabase ships **Mailpit** (image `public.ecr.aws/supabase/mailpit`) with `supab
 http://127.0.0.1:54324
 ```
 
-Every sign-in attempt during local development surfaces the OTP email here (assuming the C1 gate let it through). The 6-digit code is in the email body. Useful for development; useless for actual humans.
+Every sign-in attempt for a known auth user surfaces the OTP email here. The 6-digit code is in the email body. Useful for development; useless for actual humans.
 
 ### Production (Supabase Cloud)
 
@@ -69,34 +72,27 @@ For a production deploy (per ADR-046), configure SMTP through the Supabase Cloud
 
 Supabase rotates the email template through your provider; the magic-link token + 6-digit code are still generated server-side and embedded in the template body.
 
-### Custom email template (optional)
+### Custom email template (REQUIRED for the magic-link path)
 
-Supabase's default `Magic Link` template embeds both `{{ .ConfirmationURL }}` and `{{ .Token }}` (the OTP code). Most teams do not need to customize it. If you want a branded version, edit the template in the Auth dashboard or, for local-bootstrap, set `[auth.email.template.magic_link]` in `supabase/config.toml`.
+Atelier's `/auth/confirm` route uses Supabase's token-hash verify flow, which requires the email template to emit a `?token_hash=` URL pointing at our app rather than Supabase's default verifier. Paste the following into Supabase Dashboard -> Authentication -> Email Templates -> Magic Link:
+
+```
+{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next=/atelier
+```
+
+The 6-digit code path works without this change (Supabase's default template includes `{{ .Token }}` already), but the link path will land on Supabase's PKCE verify URL and fail unless this template is in place.
+
+For local-bootstrap, edit `[auth.email.template.magic_link]` in `supabase/config.toml`. For Supabase Cloud, edit the template in the Auth dashboard.
 
 ---
 
 ## Allowed redirect URLs
 
-Supabase Auth only redirects to URLs in its allowlist. Local-bootstrap is configured in `supabase/config.toml`:
+The token-hash flow does not depend on the Supabase redirect-URL allowlist for the human-sign-in path -- the email template controls the URL via `{{ .SiteURL }}/auth/confirm?...`, which already routes through your app. You only need to keep `Site URL` set to your deploy URL (e.g. `https://atelier-three-coral.vercel.app` or `http://127.0.0.1:3030` for local).
 
-```toml
-[auth]
-site_url = "http://127.0.0.1:3030"
-additional_redirect_urls = [
-  "http://127.0.0.1:3030/**",
-  "http://localhost:3030/**",
-]
-```
+If you also use OAuth Connectors (`/oauth/api/mcp` for claude.ai / ChatGPT MCP integrations), keep their redirect URLs allowlisted -- those flows still depend on the allowlist. The human-sign-in path is decoupled.
 
-For a Vercel + Supabase Cloud deploy, add your deployed origin via the dashboard:
-
-```
-https://supabase.com/dashboard/project/<project-ref>/auth/url-configuration
-```
-
-Add: `https://<your-domain>/**` (or the exact `/sign-in/callback` path -- glob is friendlier).
-
-If a sign-in attempt redirects to `/sign-in?error=expired` even though the OTP code itself worked, the most common cause is that the magic-link URL's redirect target is not in the allowlist; Supabase silently strips the `?code=` query and the callback handler has no exchange to perform.
+If a sign-in attempt redirects to `/sign-in?error=expired` even though the OTP code itself worked, the most common cause is that the email template has not been updated to the token-hash shape (the link still points at Supabase's PKCE verify endpoint, which redirects to the now-deleted `/sign-in/callback`). Verify the template body matches the snippet above.
 
 ---
 
@@ -120,7 +116,7 @@ identity:
   audience: atelier
 ```
 
-The lens reads the OIDC bearer through the same JWKS verifier; only the sign-in UI is Supabase-specific. If you switch to BYO OIDC, you replace `/sign-in` and `/sign-in/callback` with your IdP's hosted login -- typically a redirect to the IdP, then a callback that drops the bearer into your cookie store.
+The lens reads the OIDC bearer through the same JWKS verifier; only the sign-in UI is Supabase-specific. If you switch to BYO OIDC, you replace `/sign-in` and `/auth/confirm` with your IdP's hosted login -- typically a redirect to the IdP, then a callback that drops the bearer into your cookie store.
 
 See ADR-028 for the BYO-via-`.atelier/config.yaml` shape; the IdP swap involves writing a sibling adapter to `prototype/src/lib/atelier/adapters/supabase-ssr.ts` (per ADR-029, the IdP-specific code lives in named adapter files only).
 
@@ -130,12 +126,12 @@ See ADR-028 for the BYO-via-`.atelier/config.yaml` shape; the IdP swap involves 
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| Form advances to code-entry but no email arrives (and the email is supposed to be invited) | C1 gate returned 404 (composer row missing) OR SMTP misconfigured | Verify `composers.email` row exists; check Supabase SMTP config |
-| Form advances to code-entry but no email arrives (no invite issued) | Expected behavior -- C1 gate dropped the request | Have an admin run `atelier invite <email>` first |
-| Form returns "Too many sign-in attempts from this network" | Per-IP rate limit (10/min) tripped | Wait a minute; if persistent, swap in shared-state limiter (see C1 gate section) |
+| Form advances to code-entry but no email arrives (and the email is supposed to be invited) | Auth user not provisioned (`atelier invite` did not complete the Supabase side) OR SMTP misconfigured | Verify the user exists in Supabase Auth + the `composers` row carries the matching `identity_subject`; check Supabase SMTP config |
+| Form advances to code-entry but no email arrives (no invite issued) | Expected behavior -- `shouldCreateUser:false` blocks unknown emails | Have an admin run `atelier invite <email>` first |
+| Form returns "Too many sign-in attempts from this network" | Supabase Auth's per-IP / per-email rate limit tripped | Wait a few minutes; for production, configure custom limits in the Auth dashboard |
 | `Send sign-in link` succeeds but no email arrives (local) | Mailpit container not running | `supabase status` to confirm; otherwise `supabase stop && supabase start` |
-| Email arrives, link returns `/sign-in?error=expired` | Email gateway pre-fetched the link OR the code was already used | Use the 6-digit code path instead |
-| Email arrives, link returns `/sign-in?error=exchange_failed` | Redirect URL not in Supabase allowlist OR PKCE verifier missing (private/incognito tab cleared localStorage between request and click) | Add the origin to allowlist; for incognito, use the code path |
+| Email arrives, link returns `/sign-in?error=expired` | Email template not yet updated to token-hash shape OR the link was already used / expired | Paste the rally-hq email-template body into Supabase Dashboard (see "Custom email template" above); use a fresh code path if expired |
+| Email arrives, link 404s on `/sign-in/callback` | Email template still emits the legacy `?code=` URL pointing at the deleted callback route | Update the email template to the `?token_hash=` shape (see above) |
 | `verifyOtp` returns "Invalid login credentials" or "Token has expired" | Code typo or 1-hour OTP expiry passed | Click "Use a different email" and retry |
 | Sign-in succeeds, lens shows "Your account is not invited yet" | Supabase Auth user has no Atelier composer row (auth user provisioned outside `atelier invite`) | Have an admin run `atelier invite <email>` (D4) |
 | Lens shows "Bearer rejected" instead of sign-in CTA | `ATELIER_OIDC_ISSUER` / `ATELIER_JWT_AUDIENCE` mismatch or stale cookie from a previous IdP | Click "Sign out and start over" in the diagnostic block |

@@ -6,9 +6,9 @@
 // URL the operator shares manually (--no-send-email, for SMTP-not-configured
 // deploys).
 //
-// Couples with D7 (magic-link sign-in at /sign-in -> /sign-in/callback).
-// The invitee receives the link, clicks it, lands at /sign-in/callback,
-// the PKCE exchange seats a Supabase Auth session cookie, the lens UI at
+// Couples with D7 (magic-link sign-in at /sign-in -> /auth/confirm).
+// The invitee receives the link, clicks it, lands at /auth/confirm, the
+// token-hash verifier seats a Supabase Auth session cookie, the lens UI at
 // /atelier renders. Agent-onboarding is unchanged: agents authenticate
 // to /oauth/api/mcp via OAuth 2.1 (D7 covers humans only).
 //
@@ -88,7 +88,7 @@ Optional:
   --site-url <url>           Public URL of the deploy. Default:
                              ATELIER_PUBLIC_URL env, then localhost:3000.
                              Used to build the magic-link redirect target
-                             (\`<site>/sign-in/callback?redirect=/atelier\`).
+                             (\`<site>/auth/confirm?next=/atelier\`).
   --remote                   Force cloud mode regardless of env detection.
   --local                    Force local mode regardless of env detection.
   --dry-run                  Preview the invite without mutating anything.
@@ -103,8 +103,8 @@ Behavior contract:
   duplicate without --reinvite, project ambiguity, missing service role).
 
 Couples with D7 (magic-link sign-in at /sign-in). The invitee receives
-the link, clicks it, lands at /sign-in/callback, the PKCE exchange seats
-a Supabase Auth session cookie, the /atelier lens UI renders.
+the link, clicks it, lands at /auth/confirm, the token-hash verifier
+seats a Supabase Auth session cookie, the /atelier lens UI renders.
 
 Cross-references:
   - ADR-009 (remote-principal actor class)

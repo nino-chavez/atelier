@@ -11,14 +11,16 @@
 // Per ADR-029 the Supabase browser client is reached only through the
 // supabase-browser.ts adapter; this file does not import @supabase/*.
 //
-// Per BRD-OPEN-QUESTIONS section 31 (X1 close-out / C1 OTP relay) the
-// email submit path POSTs to /sign-in/check FIRST. The check route
-// returns 200 if an Atelier composer with that email exists and 404
-// otherwise; both responses progress the UI to the same code-entry
-// view with the same generic confirmation, so the form is not a
-// user-enumeration oracle. Only on a 200 do we actually call
-// signInWithOtp -- the 404 path silently drops the request, which is
-// the expected closed posture against an open-OTP-relay attacker.
+// Auth shape (BRD-OPEN-QUESTIONS §31, "Refactor sign-in to token-hash flow
+// per rally-hq pattern"). The form calls `signInWithOtp` with
+// `shouldCreateUser:false`; Supabase Auth dispatches the email IFF the
+// address resolves to an existing auth user (otherwise it returns an error
+// without sending mail, closing the OTP-relay surface). The email's
+// magic-link URL routes through `/auth/confirm` (token-hash verify, not
+// PKCE exchange); the 6-digit code path lands in `verifyOtp({ email, token,
+// type: 'email' })` directly. We deliberately advance the UI to the code
+// view on every submit (success or error) so the form is not a user-
+// enumeration oracle.
 
 import { useState } from 'react';
 import * as React from 'react';
@@ -58,51 +60,25 @@ export default function SignInForm({
     }
     setBusy(true);
     try {
-      // Server-side enumeration gate (C1, BRD §31). Only 200 unlocks
-      // the OTP send; on 404 (or any non-200) we still progress to
-      // code-entry so the UI is identical for invited and uninvited
-      // emails. Rate-limit responses (429) bubble up as a generic
-      // error instead of revealing the limiter exists.
-      let allowSend = false;
-      try {
-        const checkResponse = await fetch('/sign-in/check', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-        if (checkResponse.status === 200) {
-          allowSend = true;
-        } else if (checkResponse.status === 429) {
-          setError(
-            'Too many sign-in attempts from this network. Wait a minute and try again.',
-          );
-          return;
-        }
-        // 404 / other: silently treat as not invited; UI advances anyway.
-      } catch {
-        // Network failure on the gate -- fail closed (do NOT call OTP).
-        // Still advance the UI so behavior matches the gate-rejected case.
-      }
-
-      if (allowSend) {
-        const callbackUrl = buildCallbackUrl(redirectTo);
-        const supabase = getSupabaseBrowserClient();
-        const { error: otpError } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: callbackUrl,
-            // Defense in depth: even if the gate ever misfires open,
-            // shouldCreateUser:false prevents Supabase Auth from
-            // auto-provisioning an account for an uninvited email.
-            shouldCreateUser: false,
-          },
-        });
-        if (otpError) {
-          // Don't surface the underlying error -- it would leak
-          // whether the email exists in Supabase Auth's user table
-          // (a separate enumeration surface from composers).
-          // Generic-progress is the right answer.
-        }
+      const callbackUrl = buildCallbackUrl(redirectTo);
+      const supabase = getSupabaseBrowserClient();
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: callbackUrl,
+          // Defense in depth: structural protection is the token-hash
+          // verifier (only Supabase-issued tokens succeed at /auth/confirm),
+          // but `shouldCreateUser:false` also prevents Supabase Auth from
+          // auto-provisioning an account for an uninvited email. The
+          // combination keeps the form from acting as a user-enumeration
+          // oracle and from being usable as an open OTP relay.
+          shouldCreateUser: false,
+        },
+      });
+      if (otpError) {
+        // Don't surface the underlying error -- it would reveal whether the
+        // email exists in Supabase Auth's user table. Generic-progress is
+        // the right answer; the UI advances regardless.
       }
       setStage('code');
     } finally {
@@ -233,8 +209,15 @@ function isPlausibleEmail(value: string): boolean {
 }
 
 function buildCallbackUrl(redirectTo: string): string {
+  // The magic-link URL is ultimately controlled by the Supabase Auth email
+  // template, which in the rally-hq pattern emits
+  // `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink
+  // &next=/atelier`. We still pass `emailRedirectTo` so operators who keep
+  // `{{ .RedirectTo }}` in their template thread the per-request `next`
+  // parameter through; with the brief's literal template `next=/atelier` is
+  // hardcoded and this value is unused.
   const origin = window.location.origin;
   const params = new URLSearchParams();
-  params.set('redirect', redirectTo);
-  return `${origin}/sign-in/callback?${params.toString()}`;
+  params.set('next', redirectTo);
+  return `${origin}/auth/confirm?${params.toString()}`;
 }

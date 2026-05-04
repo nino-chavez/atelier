@@ -187,9 +187,10 @@ export async function waitForOtpEmail(toEmail: string, timeoutMs = 15_000): Prom
 
 /**
  * Wait briefly to confirm NO email arrived for the given address. Used
- * by the C1 enumeration tests: an uninvited email submission must NOT
- * trigger Supabase Auth's signInWithOtp on the server, so Mailpit's
- * inbox stays empty for that recipient.
+ * by the generic-progress tests (BRD-OQ §31): an uninvited email submit
+ * still advances the UI but Supabase Auth's `shouldCreateUser:false`
+ * refuses to mint mail for the non-existent user, so Mailpit's inbox
+ * stays empty for that recipient.
  */
 export async function expectNoOtpEmail(toEmail: string, windowMs = 3_000): Promise<void> {
   const deadline = Date.now() + windowMs;
@@ -201,7 +202,7 @@ export async function expectNoOtpEmail(toEmail: string, windowMs = 3_000): Promi
     ).json()) as MailpitSearchResult;
     if ((search.messages?.length ?? 0) > 0) {
       throw new Error(
-        `Expected no OTP email for ${toEmail} but Mailpit captured one (the C1 gate let an uninvited address through).`,
+        `Expected no OTP email for ${toEmail} but Mailpit captured one (Supabase Auth minted mail for an uninvited address; verify shouldCreateUser:false is set on the signInWithOtp call).`,
       );
     }
     await sleep(250);

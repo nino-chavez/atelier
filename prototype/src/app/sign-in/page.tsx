@@ -1,7 +1,9 @@
 // /sign-in -- magic-link + 6-digit code sign-in for /atelier (D7).
 //
 // Two paths from a single email submission per the auth-shape decision:
-//   1. Magic link in the email body (clickable URL hits /sign-in/callback)
+//   1. Magic link in the email body (clickable URL hits /auth/confirm,
+//      which calls auth.verifyOtp({ token_hash, type }) per the rally-hq
+//      reference pattern -- BRD-OPEN-QUESTIONS §31)
 //   2. 6-digit code in the same email (entered into the second form view)
 //
 // Both paths use Supabase Auth's email-OTP. The link path is convenient

@@ -2,21 +2,23 @@
 //
 // The DeliveryAdapter registry in `./adapters.ts` is a generic Map<name, adapter>;
 // only the no-op adapter auto-registers from that module. The concrete external
-// adapters (GitHub, Jira) carry their own credentials + config and must not
-// instantiate at module-load (the smoke tests inject mocked instances; doing
-// it from the lib would make the smokes harder to isolate). This factory is
-// the single explicit-registration seam: each script (`publish-delivery`,
-// `mirror-delivery`, `reconcile`) calls it once at startup.
+// adapters (GitHub, Jira, Linear) carry their own credentials + config and
+// must not instantiate at module-load (the smoke tests inject mocked
+// instances; doing it from the lib would make the smokes harder to isolate).
+// This factory is the single explicit-registration seam: each script
+// (`publish-delivery`, `mirror-delivery`, `reconcile`) calls it once at
+// startup.
 //
 // The factory is conservative -- it skips an adapter when the required env
 // vars are missing rather than throwing. That way an operator who runs
-// `publish-delivery --adapter noop` does not need to set GitHub or Jira
-// credentials. If the resolved adapter name is unregistered after this call,
-// `resolveDeliveryAdapter` will throw with the clear "no delivery adapter
-// registered" error from `./adapters.ts`.
+// `publish-delivery --adapter noop` does not need to set GitHub, Jira, or
+// Linear credentials. If the resolved adapter name is unregistered after
+// this call, `resolveDeliveryAdapter` will throw with the clear "no delivery
+// adapter registered" error from `./adapters.ts`.
 
 import { GitHubDeliveryAdapter } from './github.ts';
 import { JiraDeliveryAdapter } from './jira.ts';
+import { LinearDeliveryAdapter } from './linear.ts';
 import { registerDeliveryAdapter } from './adapters.ts';
 
 export interface RegistryOptions {
@@ -25,6 +27,8 @@ export interface RegistryOptions {
   skipGithub?: boolean;
   /** Skip Jira registration even if env vars are set. */
   skipJira?: boolean;
+  /** Skip Linear registration even if env vars are set. */
+  skipLinear?: boolean;
 }
 
 export function registerConfiguredAdapters(opts: RegistryOptions = {}): { registered: string[] } {
@@ -48,6 +52,15 @@ export function registerConfiguredAdapters(opts: RegistryOptions = {}): { regist
     if (baseUrl && email && apiToken && projectKey) {
       registerDeliveryAdapter(new JiraDeliveryAdapter({ baseUrl, email, apiToken, projectKey }));
       registered.push('jira');
+    }
+  }
+
+  if (!opts.skipLinear) {
+    const apiKey = process.env.ATELIER_LINEAR_API_KEY;
+    const teamId = process.env.ATELIER_LINEAR_TEAM_ID;
+    if (apiKey && teamId) {
+      registerDeliveryAdapter(new LinearDeliveryAdapter({ apiKey, teamId }));
+      registered.push('linear');
     }
   }
 

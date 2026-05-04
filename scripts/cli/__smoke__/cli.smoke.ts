@@ -114,10 +114,9 @@ console.log('\n[5] all 12 polished commands surface --help');
 //
 // Per Nino's 2026-05-02 brief: stubs must run, print "polished form lands in
 // v1.x; for v1 do X via <raw equivalent>", exit 0. `atelier init` flipped to
-// polished form at D5; the polished argument-handling contract is asserted
-// in the init section below. Substrate-touching scaffolding lives in
-// scripts/cli/__smoke__/init.smoke.ts. `upgrade` remains scope-deferred at
-// v1.x per BRD-OPEN-QUESTIONS §29.
+// polished form at D5; `atelier deploy` flipped at D6. Polished commands
+// surface argument-handling contracts in their dedicated sections below.
+// `upgrade` remains scope-deferred at v1.x per BRD-OPEN-QUESTIONS §29.
 console.log('\n[6] pointer-stubs honor v1.x deferral contract');
 {
   const stubUpgrade = run(['upgrade']);
@@ -262,6 +261,55 @@ console.log('\n[9] atelier init (D5 polished form)');
   check(
     'init --dry-run --json carries plan.projectUuid',
     typeof parsed?.plan?.projectUuid === 'string' && /^[0-9a-f-]{36}$/.test(parsed!.plan!.projectUuid!),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// [10] atelier deploy (D6 polished form; argument-handling contract only)
+// ---------------------------------------------------------------------------
+//
+// Real deploy invokes the `vercel` CLI against a real Vercel project; not
+// testable in CI without a staging Vercel project + bound credentials.
+// The dry-run path + preflight rejection paths live in
+// scripts/cli/__smoke__/deploy.smoke.ts. This section asserts the
+// argument-handling contract: --help dispatches, unknown flag exits 2,
+// flags are documented, no positional args.
+console.log('\n[10] atelier deploy (D6 polished form)');
+{
+  const help = run(['deploy', '--help']);
+  check('deploy --help exits 0', help.status === 0, `got ${help.status}`);
+  check('deploy --help mentions Usage:', help.stdout.includes('Usage:'));
+  check('deploy --help mentions --preview', help.stdout.includes('--preview'));
+  check('deploy --help mentions --skip-checks', help.stdout.includes('--skip-checks'));
+  check('deploy --help mentions --skip-build', help.stdout.includes('--skip-build'));
+  check('deploy --help mentions --dry-run', help.stdout.includes('--dry-run'));
+  check('deploy --help mentions --json', help.stdout.includes('--json'));
+  check('deploy --help cross-references ADR-046', help.stdout.includes('ADR-046'));
+  check('deploy --help cross-references first-deploy.md', help.stdout.includes('first-deploy.md'));
+  check('deploy --help cross-references enable-auto-deploy.md', help.stdout.includes('enable-auto-deploy.md'));
+  check(
+    'deploy --help lists required env vars',
+    help.stdout.includes('ATELIER_DATASTORE_URL') &&
+      help.stdout.includes('ATELIER_OIDC_ISSUER') &&
+      help.stdout.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+  );
+
+  const unknownFlag = run(['deploy', '--bogus']);
+  check('deploy --bogus exits 2', unknownFlag.status === 2, `got ${unknownFlag.status}`);
+  check(
+    'deploy --bogus names the unknown flag',
+    unknownFlag.stderr.includes('--bogus'),
+  );
+
+  // Polished deploy is no longer the v1.x stub: should NOT print the
+  // "polished form lands in v1.x" deferral banner with no flags.
+  // Without --dry-run, deploy enters preflight which will fail in this
+  // smoke env (no vercel CLI / not logged in / not linked); we only
+  // assert that it does not surface the stub deferral banner.
+  const noFlags = run(['deploy']);
+  check(
+    'deploy (no flags) does NOT print v1.x deferral banner',
+    !noFlags.stdout.includes('polished form lands in v1.x'),
   );
 }
 

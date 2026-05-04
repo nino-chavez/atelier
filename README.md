@@ -10,7 +10,7 @@ Atelier exists as **three engagement tiers**, all first-class at v1, all open so
 
 1. **Specification** — the methodology and the 12-tool open protocol. Transferable to any project, any stack.
 2. **Reference Implementation** — this codebase. Built on the GitHub + Supabase + Vercel + MCP stack (per ADR-027). **Status: v1 substrate shipped (M0–M7 done as of 2026-05-03; see [`docs/strategic/BUILD-SEQUENCE.md`](./docs/strategic/BUILD-SEQUENCE.md) and [`docs/architecture/audits/milestone-M7-exit.md`](./docs/architecture/audits/milestone-M7-exit.md)).** Live deploy: `https://atelier-three-coral.vercel.app`.
-3. **Reference Deployment** — what you get from `atelier init <project-name>` (D5) for a fresh local-stack project, or following [`docs/user/tutorials/first-deploy.md`](./docs/user/tutorials/first-deploy.md) for a Vercel + Supabase Cloud deploy (per ADR-046). `atelier init` consolidates the local-bootstrap clone-and-customize dance into one command; [`docs/user/tutorials/local-bootstrap.md`](./docs/user/tutorials/local-bootstrap.md) preserves the manual steps as an appendix. Cloud-mode auto-provisioning and `atelier deploy`'s polished form remain v1.x scope per BUILD-SEQUENCE §9.
+3. **Reference Deployment** — what you get from `atelier init <project-name>` (D5) for a fresh local-stack project, or `atelier deploy` (D6) for the Vercel + Supabase Cloud deploy (per ADR-046; one-time provisioning per [`docs/user/tutorials/first-deploy.md`](./docs/user/tutorials/first-deploy.md)). Both lifecycle commands consolidate the manual runbooks into one command; [`docs/user/tutorials/local-bootstrap.md`](./docs/user/tutorials/local-bootstrap.md) and [`docs/user/tutorials/first-deploy.md`](./docs/user/tutorials/first-deploy.md) preserve the manual steps as appendices. Cloud-mode auto-provisioning of the Supabase + Vercel projects themselves remains v1.x scope per BUILD-SEQUENCE §9.
 
 Pick your path in the table below.
 
@@ -20,7 +20,7 @@ Pick your path in the table below.
 
 | Tier | Action | What you do | Start here |
 |---|---|---|---|
-| **1. Reference Deployment** | **Deploy** | Run Atelier as-is for your team. | `atelier init <project-name>` (local; D5) or [`docs/user/tutorials/first-deploy.md`](./docs/user/tutorials/first-deploy.md) (Vercel + Supabase Cloud). The manual local steps remain at [`docs/user/tutorials/local-bootstrap.md`](./docs/user/tutorials/local-bootstrap.md) for adopters who want them. |
+| **1. Reference Deployment** | **Deploy** | Run Atelier as-is for your team. | `atelier init <project-name>` (local; D5), then `atelier deploy` (D6) for Vercel + Supabase Cloud once one-time provisioning per [`docs/user/tutorials/first-deploy.md`](./docs/user/tutorials/first-deploy.md) is complete. Manual local steps remain at [`docs/user/tutorials/local-bootstrap.md`](./docs/user/tutorials/local-bootstrap.md). |
 | **2. Reference Implementation** | **Extend** | Fork this repo. Modify schema, add lenses, swap find_similar model, write new sync adapters. | [`docs/developer/fork-and-customize.md`](./docs/developer/fork-and-customize.md) |
 | **3. Specification** | **Implement** | Implement the 12-tool protocol on a different stack, OR apply Atelier's methodology to a project that does not use this codebase. | [`docs/methodology/adoption-guide.md`](./docs/methodology/adoption-guide.md) (methodology) or [`docs/architecture/protocol/`](./docs/architecture/protocol/) (protocol) |
 

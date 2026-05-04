@@ -25,6 +25,7 @@
     "smoke:observability": "tsx prototype/__smoke__/observability.smoke.ts",
     "smoke:iaux": "tsx prototype/__smoke__/iaux.smoke.ts",
     "smoke:iaux:dom": "cd prototype && npx playwright test",
+    "smoke:signin:dom": "cd prototype && npx playwright test --config=playwright.signin.config.ts",
     "smoke:alert-publisher": "tsx scripts/observability/__smoke__/alert-publisher.smoke.ts",
     "alert-publisher": "tsx scripts/observability/alert-publisher.ts",
     "smoke:semantic-contradiction": "tsx scripts/traceability/__smoke__/semantic-contradiction.smoke.ts",

@@ -333,7 +333,7 @@ Post-M7 work that flips v1.x stubs to polished form and lands the substrates BRD
 | D4 | `atelier invite` polished form (US-11.4) | Done | Multi-composer enablement | parallel branch |
 | D5 | `atelier init` polished form (US-11.1) | Done 2026-05-03 | Bootstrap one-command surface | local commit (PR pending) |
 | D6 | `atelier deploy` polished form (US-11.3) | Done 2026-05-04 | Adopter deploy ergonomics post-D5 | local commit (PR pending) |
-| D7 | Magic-link sign-in for `/atelier` | Done | M3-late wire-up | parallel branch |
+| D7 | Magic-link sign-in for `/atelier` (bundles C1 OTP-relay gate per BRD §31) | Done 2026-05-04 | M3-late wire-up | this PR (PR #55 superseded due to base drift) |
 | E1 | Schema migration runner substrate | Done 2026-05-04 | §29 atelier upgrade prereq | local commit (PR pending) |
 | E2 | `atelier upgrade` polished form (US-11.10) | Done 2026-05-04 | Consumes E1; closes §29 (PARTIAL → RESOLVED) | local commit (PR pending) |
 | **X1** | **Security + quality batch from review of v1.x close-out** | **Done 2026-05-04** | **HIGH + MEDIUM findings from coding-standards + security review of D6/E1/E2 + #46-#57; gates F-series** | **this PR** |

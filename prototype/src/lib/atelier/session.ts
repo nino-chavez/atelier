@@ -173,7 +173,16 @@ export async function resolveLensViewer(
     auth = await authenticate(bearer, deps.verifier, pool);
   } catch (err) {
     if (err instanceof AtelierError && err.code === 'FORBIDDEN') {
-      throw new LensAuthError('invalid_bearer', err.message);
+      // The auth.ts FORBIDDEN path covers two distinct failures:
+      //   1. JWT invalid (bad signature, wrong audience/issuer, expired)
+      //   2. JWT valid but no composer row matches identity_subject
+      // Differentiate so adopters who magic-link-sign-in without an
+      // invitation see "ask your admin to invite you" instead of a
+      // generic "bearer rejected" diagnostic. The string match is
+      // load-bearing -- auth.ts emits exactly "no active composer
+      // for identity_subject <sub>" for case 2.
+      const kind = err.message.includes('no active composer') ? 'no_composer' : 'invalid_bearer';
+      throw new LensAuthError(kind, err.message);
     }
     throw new LensAuthError(
       'invalid_bearer',

@@ -247,10 +247,13 @@ This works for adopters who cloned recently and have minimal local divergence. I
 
 **Stack-blocked at X1 (target files only on D4 / D7 unmerged branches):**
 
-- **C1 open OTP relay on `/sign-in`.** `auth.signInWithOtp({ email })` on `prototype/src/app/sign-in/SignInForm.tsx` accepts any anonymous visitor. *Fix recipe (preserved verbatim from X1 brief):* new Route Handler at `prototype/src/app/sign-in/check/route.ts` accepting `{ email }`, checks `composers.email = $1` exists in the datastore (server-side `@supabase/ssr` or pg pool), returns 200 if invited / 404 otherwise. SignInForm calls this BEFORE `auth.signInWithOtp`. On 404, show "If your email is registered, you'll receive a sign-in link" (do NOT differentiate — user-enumeration surface stays closed). Rate-limit per IP (in-memory token bucket; 10/min per IP; reset on process restart acceptable). Document where to swap in Vercel KV / Redis. Add Playwright assertions: anonymous email submit hits `/check` route; non-invited email returns 404 + form shows generic message; invited email proceeds; rate-limit test (11 rapid submits throttled). *Activates:* when D7 (sign-in UI) lands on main.
 - **A1 magic-link printed to stdout by default in `atelier invite`.** *Fix recipe (preserved verbatim):* default text output redacts the link to `<magic-link suppressed; re-run with --print-link to emit>`. Opt-in via `--print-link`. For `--json`: keep link in JSON, add top-level `warning: "magic_link_in_output"`. Update `docs/user/guides/invite-composers.md` to call out the redaction default. Add cli.smoke.ts assertions: default invite output contains the suppressed marker; `--print-link` emits the URL. *Activates:* when D4 (atelier invite) lands on main.
 
-**Status.** OPEN. Filed 2026-05-04 with X1 close-out. Each LOW item has explicit activation criteria; the two stack-blocked items will land in the same PR that merges D4 / D7 to main (or in an X2 batch immediately after). No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
+**Resolved at D7 landing (2026-05-04):**
+
+- **C1 open OTP relay on `/sign-in`.** Resolved by the D7 PR (`feat/d7-sign-in-flow-on-current-main`); the route at `prototype/src/app/sign-in/check/route.ts` gates `auth.signInWithOtp` on `composers.email` existence, returns 200/404 indistinguishably to the browser UI, and applies an in-memory 10/min per-IP rate limit. Playwright coverage in `prototype/__smoke__/sign-in.dom.spec.ts`.
+
+**Status.** OPEN (A1 stack-blocked on D4). Filed 2026-05-04 with X1 close-out; C1 resolved 2026-05-04 with D7. Each LOW item has explicit activation criteria; A1 will land in the same PR that merges D4 to main (or in an X2 batch immediately after). No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
 
 ---
 

@@ -2,10 +2,23 @@
 //
 // The lens path can fail at three points: no bearer at all, bearer
 // validation rejected, or bearer-resolves-to-no-composer. Each renders a
-// distinct message so the operator (or a developer running the smoke
-// test) can debug which step failed.
+// distinct affordance:
+//
+//   no_bearer       -> sign-in CTA with the originating route threaded
+//                      through ?redirect=, so post-sign-in lands the user
+//                      back where they started.
+//   no_composer     -> "ask your admin to invite you" -- magic-link auth
+//                      succeeded (Supabase Auth user exists) but no
+//                      Atelier composer row maps to that identity_subject;
+//                      composer rows are created by `atelier invite`.
+//   invalid_bearer  -> diagnostic "what to check" block for operators;
+//                      this is a configuration error path, not a
+//                      sign-in path.
 
+import Link from 'next/link';
 import styles from './LensUnauthorized.module.css';
+
+export type LensUnauthorizedReason = 'no_bearer' | 'invalid_bearer' | 'no_composer';
 
 // `lensId` is a display label here (rendered into the eyebrow); the
 // /atelier/observability surface reuses this component with id="observability"
@@ -16,37 +29,84 @@ export default function LensUnauthorized({
   message,
 }: {
   lensId: string;
-  reason: 'no_bearer' | 'invalid_bearer' | 'no_composer';
+  reason: LensUnauthorizedReason;
   message: string;
 }) {
   const title = TITLES[reason];
-  const help = HELP[reason];
   return (
     <main className={styles.shell}>
       <div className={styles.card}>
-        <div className={styles.eyebrow}>/atelier/{lensId} · unauthorized</div>
+        <div className={styles.eyebrow}>/atelier/{lensId} -- unauthorized</div>
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.message}>{message}</p>
-        <div className={styles.help}>
-          <strong>What to do:</strong>
-          <pre className={styles.codeblock}>{help}</pre>
-        </div>
+        {reason === 'no_bearer' && <SignInCTA lensId={lensId} />}
+        {reason === 'no_composer' && <NoComposerHelp />}
+        {reason === 'invalid_bearer' && <InvalidBearerHelp />}
       </div>
     </main>
   );
 }
 
-const TITLES: Record<'no_bearer' | 'invalid_bearer' | 'no_composer', string> = {
+const TITLES: Record<LensUnauthorizedReason, string> = {
   no_bearer: 'Sign in to view the dashboard',
   invalid_bearer: 'Bearer rejected',
-  no_composer: 'No composer for this identity',
+  no_composer: 'Your account is not invited yet',
 };
 
-const HELP: Record<'no_bearer' | 'invalid_bearer' | 'no_composer', string> = {
-  no_bearer:
-    'Production: sign in via Supabase Auth (M3-late wire-up).\nDevelopment: set ATELIER_DEV_BEARER=stub:<sub> and seed a composer with identity_subject=<sub>.',
-  invalid_bearer:
-    'Verify ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE match your identity provider.\nDev path: confirm ATELIER_DEV_BEARER format is "stub:<sub>".',
-  no_composer:
-    'A composer row with identity_subject=<sub> and status=active must exist for the project.\nseed via INSERT INTO composers (...).',
-};
+function SignInCTA({ lensId }: { lensId: string }) {
+  // The originating route is a same-origin path; Next's Link encodes
+  // the query string for us.
+  const returnTo = `/atelier/${lensId}`;
+  return (
+    <div className={styles.cta}>
+      <Link
+        href={{ pathname: '/sign-in', query: { redirect: returnTo } }}
+        className={styles.primary}
+        data-testid="signin-cta"
+      >
+        Sign in
+      </Link>
+      <p className={styles.ctaHint}>
+        Atelier sends a sign-in link AND a 6-digit code; use whichever
+        path your environment allows.
+      </p>
+    </div>
+  );
+}
+
+function NoComposerHelp() {
+  return (
+    <div className={styles.help}>
+      <p>
+        Sign-in succeeded, but no Atelier composer is mapped to this
+        identity. Composer rows are created by an admin via{' '}
+        <code>atelier invite &lt;email&gt;</code>; contact whoever runs
+        this Atelier instance and ask to be invited.
+      </p>
+      <p className={styles.helpFooter}>
+        <Link href="/sign-out" className={styles.signOut}>
+          Sign out
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function InvalidBearerHelp() {
+  return (
+    <div className={styles.help}>
+      <strong>What to check:</strong>
+      <pre className={styles.codeblock}>
+        {[
+          'Verify ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE match your identity provider.',
+          'Dev path: confirm ATELIER_DEV_BEARER format is "stub:<sub>".',
+        ].join('\n')}
+      </pre>
+      <p className={styles.helpFooter}>
+        <Link href="/sign-out" className={styles.signOut}>
+          Sign out and start over
+        </Link>
+      </p>
+    </div>
+  );
+}

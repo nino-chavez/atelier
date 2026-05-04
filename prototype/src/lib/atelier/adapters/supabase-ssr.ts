@@ -125,6 +125,101 @@ export async function readSupabaseAccessToken(
   return data.session?.access_token ?? null;
 }
 
+export interface SignOutOptions {
+  cookies: SsrCookieStore;
+  env?: SupabaseSsrEnv;
+}
+
+/**
+ * Clear the Supabase Auth session by signing out via @supabase/ssr.
+ *
+ * Mirrors readSupabaseAccessToken's adapter shape so the route handler
+ * never imports `@supabase/ssr` directly (per ADR-029). The SSR client
+ * issues `setAll` with empty values for the chunked-cookie envelope; we
+ * route those through the host cookie store, which in a Next.js route
+ * handler is mutable and persists the deletions on the response.
+ */
+export async function signOutSupabaseSession(opts: SignOutOptions): Promise<void> {
+  const env = opts.env ?? supabaseEnvFromProcess();
+  const { createServerClient } = await import('@supabase/ssr');
+  const client = createServerClient(env.url, env.anonKey, {
+    cookies: {
+      getAll() {
+        return readAllCookies(opts.cookies);
+      },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options?: CookieOptions }>) {
+        for (const { name, value, options } of cookiesToSet) {
+          if (value === '' || value === undefined) {
+            opts.cookies.delete?.(name, options);
+          } else {
+            opts.cookies.set?.(name, value, options);
+          }
+        }
+      },
+    },
+  });
+
+  const { error } = await client.auth.signOut();
+  if (error) {
+    // signOut hits Supabase Auth to invalidate the refresh token; on
+    // network failure the cookies are still cleared via setAll. Log and
+    // continue -- the cookie clearing is the user-facing contract.
+    console.warn('[supabase-ssr] signOut failed:', error.message);
+  }
+}
+
+export interface ExchangeCodeOptions {
+  cookies: SsrCookieStore;
+  code: string;
+  env?: SupabaseSsrEnv;
+}
+
+export interface ExchangeCodeResult {
+  ok: boolean;
+  errorMessage?: string;
+}
+
+/**
+ * Exchange a magic-link PKCE code for a session, persisting the resulting
+ * cookies via the supplied host store.
+ *
+ * Used by the /sign-in/callback route. The browser hits Supabase Auth's
+ * email link, which redirects to /sign-in/callback?code=... The PKCE
+ * exchange validates the code against the verifier the browser stored on
+ * signInWithOtp, and on success @supabase/ssr writes the access_token /
+ * refresh_token cookies via the setAll bridge. Same adapter shape as
+ * readSupabaseAccessToken / signOutSupabaseSession so the route handler
+ * never imports `@supabase/ssr` directly (per ADR-029).
+ */
+export async function exchangeSupabaseCodeForSession(
+  opts: ExchangeCodeOptions,
+): Promise<ExchangeCodeResult> {
+  const env = opts.env ?? supabaseEnvFromProcess();
+  const { createServerClient } = await import('@supabase/ssr');
+  const client = createServerClient(env.url, env.anonKey, {
+    cookies: {
+      getAll() {
+        return readAllCookies(opts.cookies);
+      },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options?: CookieOptions }>) {
+        for (const { name, value, options } of cookiesToSet) {
+          if (value === '' || value === undefined) {
+            opts.cookies.delete?.(name, options);
+          } else {
+            opts.cookies.set?.(name, value, options);
+          }
+        }
+      },
+    },
+  });
+
+  const { error } = await client.auth.exchangeCodeForSession(opts.code);
+  if (error) {
+    return { ok: false, errorMessage: error.message };
+  }
+  return { ok: true };
+}
+
 /**
  * Read all cookies from the host store. Next.js `cookies()` exposes
  * `getAll()` directly; for stores that only expose `get()` we fall back

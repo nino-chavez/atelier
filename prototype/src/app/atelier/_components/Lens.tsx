@@ -4,6 +4,7 @@
 // selector), then the panel grid in the order config.panels declares.
 // Each panel is its own server component; the shell is purely composition.
 
+import Link from 'next/link';
 import type { LensViewModel } from '../../../lib/atelier/lens-data.ts';
 import LensSelector from './LensSelector.tsx';
 import LiveUpdater from './LiveUpdater.tsx';
@@ -23,6 +24,9 @@ export default function Lens({ viewModel }: { viewModel: LensViewModel }) {
         </div>
         <div className={styles.viewer}>
           <div className={styles.viewerName}>{viewer.composerName}</div>
+          <div className={styles.viewerEmail} data-testid="viewer-email">
+            {viewer.composerEmail}
+          </div>
           <div className={styles.viewerMeta}>
             {viewer.discipline ?? 'no-discipline'} ·{' '}
             {viewer.accessLevel ?? 'member'} · session {viewer.sessionId.slice(0, 8)}…
@@ -30,6 +34,9 @@ export default function Lens({ viewModel }: { viewModel: LensViewModel }) {
           <div className={styles.staleness}>
             Snapshot at {viewModel.staleAsOf.toISOString()}
           </div>
+          <Link href="/sign-out" className={styles.signOut} data-testid="signout-link">
+            Sign out
+          </Link>
         </div>
       </header>
       <LensSelector currentLens={config.id} />

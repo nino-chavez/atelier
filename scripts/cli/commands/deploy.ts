@@ -40,15 +40,17 @@ const REPO_ROOT = resolve(import.meta.dirname, '..', '..', '..');
 const PROTOTYPE_DIR = resolve(REPO_ROOT, 'prototype');
 const PROJECT_LINK_PATH = resolve(PROTOTYPE_DIR, '.vercel', 'project.json');
 
-// Per docs/user/tutorials/first-deploy.md Step 3.4 + the prototype's
-// supabase-ssr adapter (NEXT_PUBLIC_SUPABASE_ANON_KEY is required for
-// /atelier SSR despite not being in the .env.example header).
+// Per docs/user/tutorials/first-deploy.md (rewritten for the canonical
+// rebuild) the recommended env-provisioning path is the Vercel-Supabase
+// Marketplace integration, which auto-provisions POSTGRES_URL,
+// NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY (Supabase keeps
+// the legacy name in the integration), SUPABASE_SERVICE_ROLE_KEY, and
+// POSTGRES_URL_NON_POOLING. OPENAI_API_KEY remains a manual setting.
 const REQUIRED_ENV_VARS = [
-  'ATELIER_DATASTORE_URL',
-  'ATELIER_OIDC_ISSUER',
-  'ATELIER_JWT_AUDIENCE',
+  'POSTGRES_URL',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
   'OPENAI_API_KEY',
 ] as const;
 

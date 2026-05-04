@@ -78,13 +78,13 @@ async function startDevServer(port: number): Promise<DevServer> {
       ...process.env,
       // Required by the route handlers; CI has these already exported
       // via `supabase status -o env`. Local runs may need supabase up.
-      ATELIER_DATASTORE_URL:
-        process.env.ATELIER_DATASTORE_URL ??
-        process.env.DATABASE_URL ??
+      POSTGRES_URL:
+        process.env.POSTGRES_URL ??
         'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
-      ATELIER_OIDC_ISSUER:
-        process.env.ATELIER_OIDC_ISSUER ?? 'http://127.0.0.1:54321/auth/v1',
-      ATELIER_JWT_AUDIENCE: process.env.ATELIER_JWT_AUDIENCE ?? 'authenticated',
+      // The JWKS issuer derives from NEXT_PUBLIC_SUPABASE_URL/auth/v1 and
+      // the audience is the Supabase default 'authenticated'. No more
+      // ATELIER_OIDC_ISSUER / ATELIER_JWT_AUDIENCE env vars (post canonical
+      // rebuild, BRD-OPEN-QUESTIONS section 31).
       NEXT_PUBLIC_SUPABASE_URL:
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321',
       NEXT_TELEMETRY_DISABLED: '1',

@@ -96,13 +96,13 @@ console.log('\n  [A.3] init unknown flag');
 }
 
 // [A.4] --remote without env
-console.log('\n  [A.4] --remote without ATELIER_DATASTORE_URL exits 2');
+console.log('\n  [A.4] --remote without POSTGRES_URL exits 2');
 {
-  const r = run(['init', '--remote', '--dry-run'], { ATELIER_DATASTORE_URL: '', DATABASE_URL: '' });
+  const r = run(['init', '--remote', '--dry-run'], { POSTGRES_URL: '' });
   check('--remote (no env) exits 2', r.status === 2, `got ${r.status}`);
   check(
     '--remote (no env) names the missing env var',
-    r.stderr.includes('ATELIER_DATASTORE_URL') || r.stderr.includes('DATABASE_URL'),
+    r.stderr.includes('POSTGRES_URL'),
   );
 }
 

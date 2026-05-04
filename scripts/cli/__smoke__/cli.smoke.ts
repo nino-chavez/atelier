@@ -320,8 +320,8 @@ console.log('\n[10] atelier deploy (D6 polished form)');
   check('deploy --help cross-references enable-auto-deploy.md', help.stdout.includes('enable-auto-deploy.md'));
   check(
     'deploy --help lists required env vars',
-    help.stdout.includes('ATELIER_DATASTORE_URL') &&
-      help.stdout.includes('ATELIER_OIDC_ISSUER') &&
+    help.stdout.includes('POSTGRES_URL') &&
+      help.stdout.includes('NEXT_PUBLIC_SUPABASE_URL') &&
       help.stdout.includes('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
   );
 
@@ -352,7 +352,7 @@ console.log('\n[10] atelier deploy (D6 polished form)');
 // in scripts/cli/__smoke__/upgrade.smoke.ts (gated on local Supabase running).
 // This section asserts the argument-handling contract: --help dispatches,
 // unknown flag exits 2, conflicting actions exit 2, --remote without
-// ATELIER_DATASTORE_URL exits 2.
+// POSTGRES_URL exits 2.
 console.log('\n[11] atelier upgrade (E2 polished form)');
 {
   const help = run(['upgrade', '--help']);
@@ -381,7 +381,7 @@ console.log('\n[11] atelier upgrade (E2 polished form)');
     conflicting.stderr.includes('mutually exclusive'),
   );
 
-  // --remote without ATELIER_DATASTORE_URL must exit 2 (precondition error).
+  // --remote without POSTGRES_URL must exit 2 (precondition error).
   // We override the env for this single invocation by spawning with explicit env.
   const remoteNoEnv = spawnSync(
     'npx',
@@ -389,15 +389,15 @@ console.log('\n[11] atelier upgrade (E2 polished form)');
     {
       encoding: 'utf8',
       cwd: REPO_ROOT,
-      // Strip ATELIER_DATASTORE_URL so the precondition fires regardless of the
+      // Strip POSTGRES_URL so the precondition fires regardless of the
       // surrounding shell. Keep PATH + HOME so npx + tsx still resolve.
-      env: { ...process.env, ATELIER_DATASTORE_URL: '' },
+      env: { ...process.env, POSTGRES_URL: '' },
     },
   );
   check('upgrade --remote (no env) exits 2', remoteNoEnv.status === 2, `got ${remoteNoEnv.status}`);
   check(
     'upgrade --remote (no env) names the missing env var',
-    remoteNoEnv.stderr.includes('ATELIER_DATASTORE_URL'),
+    remoteNoEnv.stderr.includes('POSTGRES_URL'),
   );
 
   // Polished upgrade is no longer the v1.x stub: should NOT print the
@@ -659,13 +659,13 @@ console.log('\n[14] atelier datastore (D3 polished form)');
     {
       encoding: 'utf8',
       cwd: REPO_ROOT,
-      env: { ...process.env, ATELIER_DATASTORE_URL: '', DATABASE_URL: '' },
+      env: { ...process.env, POSTGRES_URL: '' },
     },
   );
   check('datastore init --remote (no env) exits 2', remoteNoEnv.status === 2, `got ${remoteNoEnv.status}`);
   check(
     'datastore init --remote (no env) names the missing env',
-    remoteNoEnv.stderr.includes('ATELIER_DATASTORE_URL') || remoteNoEnv.stderr.includes('DATABASE_URL'),
+    remoteNoEnv.stderr.includes('POSTGRES_URL'),
   );
 
   // --reset --non-interactive without --yes exits 2 (gating).

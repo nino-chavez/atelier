@@ -4,20 +4,25 @@
 //
 // Approve creates a contribution from the drafted_proposal payload + UPDATEs
 // the triage_pending row. Reject UPDATEs rejected_at + decided_by_composer_id.
-// Both actions resolve the viewer composer from the Supabase Auth cookie
-// (per ADR-028) -- the panel never trusts client-side composer ids.
+// Both actions resolve the viewer composer through the canonical Supabase JS
+// client → atelier_resolve_viewer RPC; the panel never trusts client-side
+// composer ids.
 //
-// Mirrors the find-similar-action.ts pattern: server action calls
-// AtelierClient methods directly (no HTTP round-trip to /api/mcp). The
-// substrate's authorization guards (cross-project composer rejection,
-// already-decided guard) are load-bearing.
+// The triage approve/reject operations themselves still flow through
+// AtelierClient.triagePendingApprove/Reject which holds the multi-table
+// transaction (insert contribution + UPDATE triage_pending). Per the
+// canonical-rebuild brief, /api/mcp transport stays out of scope; the
+// AtelierClient living under scripts/sync/lib/ is not a pg.Pool import
+// in prototype/src/. The client is reused through getMcpDeps()'s warm
+// singleton so we don't double-allocate connections.
 
-import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
-import { getLensDeps } from '../../../../lib/atelier/deps.ts';
-import { resolveLensViewer } from '../../../../lib/atelier/session.ts';
-import { nextCookieAdapter } from '../../../../lib/atelier/adapters/next-cookies.ts';
+import { getMcpDeps } from '../../../../lib/atelier/mcp-deps.ts';
+import {
+  LensAuthError,
+  resolveLensViewer,
+} from '../../../../lib/atelier/session.ts';
 
 export interface TriageActionResult {
   ok: boolean;
@@ -31,8 +36,8 @@ export interface TriageActionResult {
 export async function approveTriageDraft(
   triagePendingId: string,
 ): Promise<TriageActionResult> {
-  return executeAction(triagePendingId, async (client, viewerComposerId) => {
-    const result = await client.triagePendingApprove({
+  return executeAction(triagePendingId, async (viewerComposerId) => {
+    const result = await getMcpDeps().client.triagePendingApprove({
       triagePendingId,
       approverComposerId: viewerComposerId,
     });
@@ -48,8 +53,8 @@ export async function rejectTriageDraft(
   triagePendingId: string,
   reason?: string,
 ): Promise<TriageActionResult> {
-  return executeAction(triagePendingId, async (client, viewerComposerId) => {
-    const result = await client.triagePendingReject({
+  return executeAction(triagePendingId, async (viewerComposerId) => {
+    const result = await getMcpDeps().client.triagePendingReject({
       triagePendingId,
       rejecterComposerId: viewerComposerId,
       ...(reason !== undefined && reason.trim().length > 0 ? { reason: reason.trim() } : {}),
@@ -63,10 +68,7 @@ export async function rejectTriageDraft(
 
 async function executeAction(
   triagePendingId: string,
-  action: (
-    client: import('../../../../../../scripts/sync/lib/write.ts').AtelierClient,
-    viewerComposerId: string,
-  ) => Promise<TriageActionResult>,
+  action: (viewerComposerId: string) => Promise<TriageActionResult>,
 ): Promise<TriageActionResult> {
   const trimmedId = (triagePendingId ?? '').trim();
   if (trimmedId.length === 0) {
@@ -77,31 +79,23 @@ async function executeAction(
     };
   }
 
-  const deps = getLensDeps();
-  const cookieStore = await cookies();
   let viewerComposerId: string;
   try {
-    const viewerCtx = await resolveLensViewer(
-      new Request('http://internal/triage-action'),
-      deps,
-      { cookies: nextCookieAdapter(cookieStore) },
-    );
-    viewerComposerId = viewerCtx.auth.composerId;
+    const viewer = await resolveLensViewer();
+    viewerComposerId = viewer.composerId;
   } catch (err) {
     return {
       ok: false,
       triagePendingId: trimmedId,
       error: {
-        code: 'FORBIDDEN',
+        code: err instanceof LensAuthError ? err.kind.toUpperCase() : 'FORBIDDEN',
         message: err instanceof Error ? err.message : 'auth resolution failed',
       },
     };
   }
 
   try {
-    const result = await action(deps.client, viewerComposerId);
-    // Revalidate the lens page so the panel re-renders without the
-    // just-decided row in the pending list.
+    const result = await action(viewerComposerId);
     revalidatePath('/atelier');
     return result;
   } catch (err) {
@@ -109,8 +103,7 @@ async function executeAction(
       err && typeof err === 'object' && 'code' in err
         ? String((err as { code: unknown }).code)
         : 'INTERNAL';
-    const message =
-      err instanceof Error ? err.message : 'unknown error';
+    const message = err instanceof Error ? err.message : 'unknown error';
     return {
       ok: false,
       triagePendingId: trimmedId,

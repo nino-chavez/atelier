@@ -128,7 +128,7 @@ export class MigrationRunner {
   private readonly statementTimeoutMs: number;
 
   constructor(opts: MigrationRunnerOptions) {
-    this.databaseUrl = opts.databaseUrl ?? process.env.ATELIER_DATASTORE_URL ?? DEFAULT_DB_URL;
+    this.databaseUrl = opts.databaseUrl ?? process.env.POSTGRES_URL ?? DEFAULT_DB_URL;
     this.repoRoot = opts.repoRoot ?? process.cwd();
     this.templateVersion = opts.templateVersion;
     this.appliedBy = opts.appliedBy ?? 'manual';

@@ -1,4 +1,4 @@
-// Supabase SSR cookie -> bearer-token adapter (per ADR-027 / ADR-028 / ADR-029).
+// Supabase SSR adapter (per ADR-027 / ADR-028 / ADR-029).
 //
 // Per ADR-029 the reference impl preserves GCP-portability; Supabase-specific
 // dependencies must stay in named adapter modules. This file is the only
@@ -7,15 +7,20 @@
 // not editing session.ts.
 //
 // Contract:
+//   createServerSupabaseClient(opts) -> Promise<SupabaseClient>
+//     Returns a request-scoped Supabase JS client that carries the user's
+//     Auth cookie. All lens-side database reads/writes go through this
+//     client (post canonical-rebuild per BRD-OPEN-QUESTIONS section 31).
 //   readSupabaseAccessToken(opts) -> Promise<string | null>
-//     Reads the Supabase Auth session cookie via @supabase/ssr (which decodes
-//     the chunked-cookie envelope Supabase writes), returns the user's
-//     access_token if a valid session is present, or null if no session.
+//     Reads the Supabase Auth session cookie (kept for the dispatch() path
+//     that still needs a bearer to hand to the MCP-side AtelierClient flow).
+//   signOutSupabaseSession(opts) -> Promise<void>
+//   verifySupabaseOtpWithCookies(opts) -> Promise<VerifyOtpResult>
 //
 // The returned access_token is a Supabase-issued JWT and validates through
 // the same JWKS verifier path the production endpoint already uses
-// (jwks-verifier.ts -> ATELIER_OIDC_ISSUER + ATELIER_JWT_AUDIENCE pointing
-// at Supabase Auth).
+// (jwks-verifier.ts derives the issuer from NEXT_PUBLIC_SUPABASE_URL; the
+// audience is the Supabase default 'authenticated').
 
 // Lazy import: @supabase/ssr lives in prototype/package.json (Next.js
 // runtime). The lens smoke at root imports this module's types but
@@ -36,18 +41,25 @@ export interface SupabaseSsrEnv {
  * Resolve Supabase env from process.env. Throws with a concrete message
  * when either value is missing so misconfiguration fails closed at request
  * time rather than producing a silent unauthenticated state.
+ *
+ * The publishable-key slot accepts NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+ * (the late-2025 sb_publishable_* paradigm) or NEXT_PUBLIC_SUPABASE_ANON_KEY
+ * (legacy JWT-style anon key). Supabase itself names them inconsistently
+ * across docs; this is the one place a tiny chain is defensible. Both names
+ * carry the same publishable value at runtime.
  */
 export function supabaseEnvFromProcess(env: NodeJS.ProcessEnv = process.env): SupabaseSsrEnv {
-  const url = env.NEXT_PUBLIC_SUPABASE_URL ?? env.SUPABASE_URL;
-  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? env.SUPABASE_ANON_KEY;
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey =
+    env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL) not set; the /atelier lens cannot read the Supabase Auth cookie (ADR-028).',
+      'NEXT_PUBLIC_SUPABASE_URL not set; the /atelier lens cannot read the Supabase Auth cookie. Install the Vercel-Supabase Marketplace integration or set NEXT_PUBLIC_SUPABASE_URL manually.',
     );
   }
   if (!anonKey) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_ANON_KEY (or SUPABASE_ANON_KEY) not set; @supabase/ssr requires the anon key to construct the SSR client (ADR-028).',
+      'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY) not set; @supabase/ssr requires the publishable key. Install the Vercel-Supabase Marketplace integration or set the env var manually.',
     );
   }
   return { url, anonKey };
@@ -265,4 +277,84 @@ function readAllCookies(store: SsrCookieStore): Array<{ name: string; value: str
   // common names directly. Hosts that lack `getAll` will only resolve
   // sessions whose cookie envelope fits in one chunk.
   return [];
+}
+
+// =========================================================================
+// Server Supabase JS client factory (per canonical rebuild)
+// =========================================================================
+//
+// The lens-side data layer uses this factory exclusively. Construction is
+// per-request because the client carries the request-scoped Auth cookie;
+// returning a singleton would leak one user's session into the next.
+//
+// Per ADR-029 this is the only place lens code touches @supabase/ssr.
+// Routes import `createServerSupabaseClient` and never construct a Supabase
+// client directly. The adapter pin remains a clean swap-point for adopters
+// running on a non-Supabase IdP.
+//
+// We intentionally export the type as `unknown` underneath the surface
+// methods callers actually use (`from`, `rpc`, `auth`). The full @supabase/
+// supabase-js Client type pulls heavy generics; lens callers don't need
+// the generated Database types because RPCs are the call shape (one
+// jsonb in, one jsonb out).
+
+export interface CreateServerSupabaseClientOptions {
+  cookies: SsrCookieStore;
+  env?: SupabaseSsrEnv;
+}
+
+/**
+ * Server-side Supabase JS client thin shape. Just enough surface for the
+ * lens code's `.rpc()` + `.from().select().eq()` patterns. The full client
+ * has many more methods; we type only what the lens consumes so a future
+ * IdP swap (Auth0 etc.) can implement the same surface.
+ */
+export interface ServerSupabaseClient {
+  rpc<TArgs extends Record<string, unknown> = Record<string, unknown>, TData = unknown>(
+    fn: string,
+    args?: TArgs,
+  ): Promise<{ data: TData | null; error: { message: string; code?: string } | null }>;
+  from(table: string): {
+    select(columns?: string): {
+      eq(column: string, value: string | number): Promise<{
+        data: unknown[] | null;
+        error: { message: string; code?: string } | null;
+      }>;
+    };
+  };
+  auth: {
+    getUser(): Promise<{
+      data: { user: { id: string; email?: string } | null };
+      error: { message: string } | null;
+    }>;
+  };
+}
+
+/**
+ * Construct a request-scoped Supabase JS client that reads the Auth cookie
+ * from the supplied SsrCookieStore. Use this in every Server Component,
+ * Route Handler, and Server Action that needs database access.
+ */
+export async function createServerSupabaseClient(
+  opts: CreateServerSupabaseClientOptions,
+): Promise<ServerSupabaseClient> {
+  const env = opts.env ?? supabaseEnvFromProcess();
+  const { createServerClient } = await import('@supabase/ssr');
+  const client = createServerClient(env.url, env.anonKey, {
+    cookies: {
+      getAll() {
+        return readAllCookies(opts.cookies);
+      },
+      setAll(cookiesToSet: Array<{ name: string; value: string; options?: CookieOptions }>) {
+        for (const { name, value, options } of cookiesToSet) {
+          if (value === '' || value === undefined) {
+            opts.cookies.delete?.(name, options);
+          } else {
+            opts.cookies.set?.(name, value, options);
+          }
+        }
+      },
+    },
+  });
+  return client as unknown as ServerSupabaseClient;
 }

@@ -72,8 +72,9 @@ exit non-zero rather than silently falling back.
 
 Pre-requisites:
   - Node 22+, supabase CLI, Docker Desktop (or compatible runtime)
-  - prototype/.env.local with ATELIER_DATASTORE_URL, ATELIER_OIDC_ISSUER,
-    ATELIER_JWT_AUDIENCE, OPENAI_API_KEY (copy from prototype/.env.example)
+  - prototype/.env.local with POSTGRES_URL, NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY,
+    OPENAI_API_KEY (copy from prototype/.env.example)
   - A composer seeded for your email (per scripts/bootstrap/seed-composer.ts;
     see docs/user/tutorials/local-bootstrap.md Step 3)
 

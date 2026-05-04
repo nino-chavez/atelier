@@ -1,45 +1,32 @@
-// Lens-side bearer + session resolution.
+// Lens-side viewer + session resolution (post canonical-rebuild).
 //
-// The lens path needs:
-//   1. A bearer token to identify the viewing composer.
-//   2. An Atelier session_id (from sessions table) to feed get_context.
+// The canonical Supabase pattern: createServerSupabaseClient(cookies) →
+// PostgREST forwards the user's JWT → SECURITY DEFINER RPC reads
+// auth.jwt() and resolves the composer. No pg.Pool, no JWKS verifier
+// invocation in the lens path.
 //
-// Bearer resolution:
-//   - Production: read Supabase Auth cookie via @supabase/ssr (per ADR-028).
-//     The browser client sets the cookie on sign-in; the server reads it
-//     with the SSR helper and passes session.access_token as the bearer.
-//     The Supabase-specific implementation is wrapped in a named adapter
-//     (./adapters/supabase-ssr.ts) per ADR-029. The same JWT then validates
-//     through the JWKS verifier path the /api/mcp endpoint already uses --
-//     verified end-to-end against real Supabase Auth by
-//     scripts/endpoint/__smoke__/real-client.smoke.ts.
-//   - Development: ATELIER_DEV_BEARER env (e.g. "stub:sub-dev") routed
-//     through stubVerifier in deps.ts. Explicitly env-guarded -- not a
-//     silent fallback. Set ATELIER_ALLOW_DEV_BEARER=true alongside the
-//     bearer to opt-in; otherwise the dev path is skipped even when
-//     ATELIER_DEV_BEARER is present.
+// Two RPCs do the work:
+//   atelier_resolve_viewer()           → composer + project info, used by
+//                                        callers that need just the viewer
+//                                        without the full lens VM.
+//   atelier_ensure_dashboard_session() → returns session_id (find-or-create
+//                                        with 5-minute heartbeat reuse).
 //
-// Session resolution:
-//   The dashboard runs server-side and would otherwise create a fresh
-//   sessions row on every page render. Instead we reuse an active
-//   web-surface session keyed on (composer_id, agent_client='atelier-
-//   dashboard') with a 5-minute heartbeat window. Concurrent renders
-//   race-tolerantly (UNIQUE not enforced; reaper sweeps duplicates).
+// Auth surface for legacy server actions:
+//   The dispatch() path (find-similar lens action) still needs a bearer
+//   to hand to the MCP-side AtelierClient. resolveBearer() reads the
+//   same Supabase Auth cookie via @supabase/ssr and returns the JWT
+//   string. The MCP route's JWKS verifier validates it identically.
 
-import { Pool } from 'pg';
+import { cookies as nextCookies } from 'next/headers';
+
 import {
-  authenticate,
-  type AuthContext,
-} from '../../../../scripts/endpoint/lib/auth.ts';
-import { AtelierClient, AtelierError } from '../../../../scripts/sync/lib/write.ts';
-import type { LensDeps } from './deps.ts';
-import {
+  createServerSupabaseClient,
   readSupabaseAccessToken,
+  type ServerSupabaseClient,
   type SsrCookieStore,
 } from './adapters/supabase-ssr.ts';
-
-const DASHBOARD_AGENT_CLIENT = 'atelier-dashboard';
-const DASHBOARD_HEARTBEAT_WINDOW_MINUTES = 5;
+import { nextCookieAdapter } from './adapters/next-cookies.ts';
 
 export class LensAuthError extends Error {
   override readonly name = 'LensAuthError';
@@ -51,10 +38,18 @@ export class LensAuthError extends Error {
   }
 }
 
+export interface ResolveBearerOptions {
+  /**
+   * Cookie store, request-scoped. In Next.js this is the result of
+   * `cookies()` from `next/headers`. The adapter never imports
+   * `next/headers` directly so the lens code stays unit-testable and
+   * GCP-portable per ADR-029.
+   */
+  cookies: SsrCookieStore | null;
+}
+
 /**
- * Resolve the bearer token for the current request. Returns null if no
- * session is present (anonymous request); the caller renders an
- * unauthorized state.
+ * Resolve the bearer token for the current request.
  *
  * Resolution order:
  *   1. Supabase Auth cookie via @supabase/ssr (production + non-test
@@ -67,16 +62,6 @@ export class LensAuthError extends Error {
  * Callers in code that does not run under Next.js (smoke tests, internal
  * tooling) pass `cookies: null` to skip the SSR cookie path.
  */
-export interface ResolveBearerOptions {
-  /**
-   * Cookie store, request-scoped. In Next.js this is the result of
-   * `cookies()` from `next/headers`. The adapter never imports
-   * `next/headers` directly so the lens code stays unit-testable and
-   * GCP-portable per ADR-029.
-   */
-  cookies: SsrCookieStore | null;
-}
-
 export async function resolveBearer(
   _request: Request,
   opts: ResolveBearerOptions,
@@ -86,10 +71,6 @@ export async function resolveBearer(
       const token = await readSupabaseAccessToken({ cookies: opts.cookies });
       if (token) return token;
     } catch (err) {
-      // Misconfigured Supabase env -> fall through to dev path or null.
-      // Do NOT swallow silently in production: the dev gate below requires
-      // an explicit opt-in env var, so the caller will still see a clean
-      // unauthorized error if no fallback is enabled.
       console.warn('[lens] Supabase SSR cookie read failed:', (err as Error).message);
     }
   }
@@ -103,92 +84,102 @@ export async function resolveBearer(
   return null;
 }
 
-/**
- * Find or create a dashboard session for the authenticated composer.
- *
- * Reuses an active web-surface session with agent_client='atelier-dashboard'
- * within the heartbeat window; otherwise inserts a fresh row. Heartbeats
- * the session on reuse so the reaper does not sweep an in-flight render.
- *
- * The implicit web surface here is the dashboard itself. agent_client is
- * fixed to DASHBOARD_AGENT_CLIENT so dashboard-driven sessions are easily
- * distinguishable from agent-driven (claude.ai, claude-code, cursor) ones
- * in the sessions table.
- */
-export async function ensureDashboardSession(
-  client: AtelierClient,
-  auth: AuthContext,
-): Promise<string> {
-  const pool = (client as unknown as { pool: Pool }).pool;
-  const reuse = await pool.query<{ id: string }>(
-    `SELECT id FROM sessions
-      WHERE composer_id = $1
-        AND project_id = $2
-        AND surface = 'web'
-        AND agent_client = $3
-        AND status = 'active'
-        AND heartbeat_at > now() - ($4 || ' minutes')::interval
-      ORDER BY heartbeat_at DESC
-      LIMIT 1`,
-    [auth.composerId, auth.projectId, DASHBOARD_AGENT_CLIENT, DASHBOARD_HEARTBEAT_WINDOW_MINUTES],
-  );
-  const existing = reuse.rows[0]?.id;
-  if (existing) {
-    await pool.query(
-      `UPDATE sessions SET heartbeat_at = now(), status = 'active' WHERE id = $1`,
-      [existing],
-    );
-    return existing;
-  }
-  const insert = await pool.query<{ id: string }>(
-    `INSERT INTO sessions (project_id, composer_id, surface, agent_client)
-     VALUES ($1, $2, 'web', $3) RETURNING id`,
-    [auth.projectId, auth.composerId, DASHBOARD_AGENT_CLIENT],
-  );
-  const id = insert.rows[0]?.id;
-  if (!id) throw new AtelierError('INTERNAL', 'dashboard session insert returned no row');
-  return id;
+export interface LensViewerContext {
+  composerId: string;
+  composerName: string;
+  composerEmail: string;
+  discipline: string | null;
+  accessLevel: string | null;
+  projectId: string;
+  projectName: string;
+  identitySubject: string;
+  sessionId: string;
+}
+
+interface ViewerRow {
+  composer_id: string;
+  project_id: string;
+  display_name: string;
+  email: string;
+  discipline: string | null;
+  access_level: string | null;
+  identity_subject: string;
 }
 
 /**
- * Resolve the lens viewer end-to-end: bearer → AuthContext → dashboard
- * session_id. Throws LensAuthError on any failure path so the page can
- * render a clean unauthorized state.
+ * Construct a Supabase client tied to the Next.js request scope.
+ *
+ * Routes that already have a request-scoped cookie store from `cookies()`
+ * pass it via `cookieStore`; thin shims (server actions inside `'use server'`
+ * functions) call `getRequestSupabaseClient()` which does the cookies()
+ * + nextCookieAdapter() wiring inline.
+ */
+export async function getRequestSupabaseClient(): Promise<ServerSupabaseClient> {
+  const cookieStore = await nextCookies();
+  return createServerSupabaseClient({ cookies: nextCookieAdapter(cookieStore) });
+}
+
+/**
+ * Resolve the lens viewer end-to-end through the canonical RPC path.
+ * Returns composer + project + dashboard session_id for the caller.
  */
 export async function resolveLensViewer(
-  request: Request,
-  deps: LensDeps,
-  opts: ResolveBearerOptions,
-): Promise<{ auth: AuthContext; sessionId: string; bearer: string }> {
-  const bearer = await resolveBearer(request, opts);
-  if (!bearer) {
-    throw new LensAuthError(
-      'no_bearer',
-      'No bearer token. Sign in to view the coordination dashboard.',
-    );
-  }
-  let auth: AuthContext;
-  try {
-    const pool = (deps.client as unknown as { pool: Pool }).pool;
-    auth = await authenticate(bearer, deps.verifier, pool);
-  } catch (err) {
-    if (err instanceof AtelierError && err.code === 'FORBIDDEN') {
-      // The auth.ts FORBIDDEN path covers two distinct failures:
-      //   1. JWT invalid (bad signature, wrong audience/issuer, expired)
-      //   2. JWT valid but no composer row matches identity_subject
-      // Differentiate so adopters who magic-link-sign-in without an
-      // invitation see "ask your admin to invite you" instead of a
-      // generic "bearer rejected" diagnostic. The string match is
-      // load-bearing -- auth.ts emits exactly "no active composer
-      // for identity_subject <sub>" for case 2.
-      const kind = err.message.includes('no active composer') ? 'no_composer' : 'invalid_bearer';
-      throw new LensAuthError(kind, err.message);
-    }
+  client?: ServerSupabaseClient,
+): Promise<LensViewerContext> {
+  const supabase = client ?? (await getRequestSupabaseClient());
+
+  const { data: viewerRows, error: viewerErr } = await supabase.rpc<
+    Record<string, never>,
+    ViewerRow[]
+  >('atelier_resolve_viewer');
+  if (viewerErr) {
     throw new LensAuthError(
       'invalid_bearer',
-      `Bearer validation failed: ${(err as Error).message}`,
+      `atelier_resolve_viewer failed: ${viewerErr.message}`,
     );
   }
-  const sessionId = await ensureDashboardSession(deps.client, auth);
-  return { auth, sessionId, bearer };
+  const viewer = viewerRows?.[0];
+  if (!viewer) {
+    throw new LensAuthError(
+      'no_composer',
+      'No active composer for the current Auth session. Ask your admin to invite you.',
+    );
+  }
+
+  const { data: sessionId, error: sessionErr } = await supabase.rpc<
+    Record<string, never>,
+    string
+  >('atelier_ensure_dashboard_session');
+  if (sessionErr || typeof sessionId !== 'string' || sessionId.length === 0) {
+    throw new LensAuthError(
+      'invalid_bearer',
+      `atelier_ensure_dashboard_session failed: ${sessionErr?.message ?? 'no session id returned'}`,
+    );
+  }
+
+  // Resolve project name in a single PostgREST call. The RPC returns the
+  // project_id; the project name is needed for the lens header.
+  const { data: projectRows, error: projectErr } = await supabase
+    .from('projects')
+    .select('name')
+    .eq('id', viewer.project_id);
+  if (projectErr) {
+    throw new LensAuthError(
+      'invalid_bearer',
+      `projects lookup failed: ${projectErr.message}`,
+    );
+  }
+  const projectName = (projectRows?.[0] as { name?: string } | undefined)?.name ?? 'Atelier';
+
+  return {
+    composerId: viewer.composer_id,
+    composerName: viewer.display_name,
+    composerEmail: viewer.email,
+    discipline: viewer.discipline,
+    accessLevel: viewer.access_level,
+    projectId: viewer.project_id,
+    projectName,
+    identitySubject: viewer.identity_subject,
+    sessionId,
+  };
 }

@@ -11,7 +11,7 @@
 //
 // What `init` does (auto-detected mode; flag-overridable):
 //
-//   LOCAL MODE (default when supabase CLI is reachable + ATELIER_DATASTORE_URL
+//   LOCAL MODE (default when supabase CLI is reachable + POSTGRES_URL
 //   either unset or pointing at 127.0.0.1):
 //     1. Pre-flight (docker reachable, supabase CLI installed) via the
 //        shared lib/preflight.ts helpers; reuses, does not duplicate.
@@ -26,9 +26,9 @@
 //        not a deep invariant check (run `npm run smoke:schema-invariants`
 //        for the deep contracts).
 //
-//   CLOUD MODE (when ATELIER_DATASTORE_URL is set + non-localhost, OR
+//   CLOUD MODE (when POSTGRES_URL is set + non-localhost, OR
 //   --remote is passed):
-//     1. Pre-flight (ATELIER_DATASTORE_URL or DATABASE_URL set; supabase
+//     1. Pre-flight (POSTGRES_URL or DATABASE_URL set; supabase
 //        CLI present when using db push path).
 //     2. Apply migrations:
 //        - Path A (preferred): `supabase db push` when supabase project
@@ -99,8 +99,8 @@ Usage:
 
 Mode detection (auto):
   - LOCAL when supabase CLI is reachable AND
-    ATELIER_DATASTORE_URL is unset or points at 127.0.0.1.
-  - CLOUD when ATELIER_DATASTORE_URL points at a non-localhost host,
+    POSTGRES_URL is unset or points at 127.0.0.1.
+  - CLOUD when POSTGRES_URL points at a non-localhost host,
     OR --remote is passed.
 
 Init options:
@@ -132,7 +132,7 @@ Behavior contract:
   Exits 0 when all migrations apply and all 11 ARCH 5.1 tables verify;
   1 on schema/migration failure; 2 on argument or precondition error
   (e.g., --reset without --yes in non-interactive mode, missing required
-  flag, ATELIER_DATASTORE_URL invalid).
+  flag, POSTGRES_URL invalid).
 
 Cross-references:
   - docs/user/tutorials/local-bootstrap.md Steps 1-3 (local mode flow)
@@ -225,7 +225,7 @@ interface ModeDecision {
 }
 
 function decideMode(parsed: ParsedArgs): ModeDecision {
-  const envUrl = process.env.ATELIER_DATASTORE_URL ?? process.env.DATABASE_URL;
+  const envUrl = process.env.POSTGRES_URL;
   if (parsed.local) {
     return {
       mode: 'local',
@@ -236,7 +236,7 @@ function decideMode(parsed: ParsedArgs): ModeDecision {
   if (parsed.remote) {
     if (!envUrl) {
       throw new Error(
-        '--remote requires ATELIER_DATASTORE_URL or DATABASE_URL to be set',
+        '--remote requires POSTGRES_URL or DATABASE_URL to be set',
       );
     }
     return {
@@ -248,7 +248,7 @@ function decideMode(parsed: ParsedArgs): ModeDecision {
   if (envUrl && !isLocalhost(envUrl)) {
     return {
       mode: 'cloud',
-      reason: `ATELIER_DATASTORE_URL points at ${redactHost(envUrl)} (non-localhost)`,
+      reason: `POSTGRES_URL points at ${redactHost(envUrl)} (non-localhost)`,
       databaseUrl: envUrl,
     };
   }
@@ -256,8 +256,8 @@ function decideMode(parsed: ParsedArgs): ModeDecision {
     mode: 'local',
     reason:
       envUrl
-        ? `ATELIER_DATASTORE_URL points at localhost (${redactHost(envUrl)})`
-        : 'no ATELIER_DATASTORE_URL set; defaulting to local Supabase',
+        ? `POSTGRES_URL points at localhost (${redactHost(envUrl)})`
+        : 'no POSTGRES_URL set; defaulting to local Supabase',
     databaseUrl: envUrl ?? DEFAULT_LOCAL_DB_URL,
   };
 }
@@ -437,7 +437,7 @@ interface CloudPlan {
 async function planCloud(databaseUrl: string): Promise<CloudPlan> {
   const databaseUrlOk: PreflightStatus = databaseUrl
     ? { ok: true, detail: redactHost(databaseUrl) }
-    : { ok: false, detail: 'no ATELIER_DATASTORE_URL or DATABASE_URL set' };
+    : { ok: false, detail: 'no POSTGRES_URL or DATABASE_URL set' };
   const supabaseCli = checkSupabaseCli();
   const linked = existsSync(LINKED_PROJECT_REF);
   // Prefer db push when both supabase CLI and link exist; fall back to

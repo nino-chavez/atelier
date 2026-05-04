@@ -23,7 +23,7 @@ async function main(): Promise<void> {
     dimensions: config.yaml.embeddings.dimensions,
     apiKeyEnv: config.yaml.embeddings.api_key_env,
   });
-  const pool = new Pool({ connectionString: process.env['ATELIER_DATASTORE_URL']! });
+  const pool = new Pool({ connectionString: process.env['POSTGRES_URL']! });
   for (const seed of seeds) {
     const r = await findSimilar(
       projectId,

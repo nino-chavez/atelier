@@ -141,7 +141,7 @@ async function startMcpServer(deps: {
         const requestUrl = `http://${req.headers.host ?? '127.0.0.1'}${url.pathname}`;
         const webRes = oauthDiscoveryResponse(
           oauthDiscoveryConfigFromEnv(
-            { ATELIER_OIDC_ISSUER: deps.oauthIssuer } as NodeJS.ProcessEnv,
+            { NEXT_PUBLIC_SUPABASE_URL: deps.oauthIssuer.replace(/\/auth\/v1\/?$/, '') } as NodeJS.ProcessEnv,
             requestUrl,
           ),
         );
@@ -428,32 +428,32 @@ async function main(): Promise<void> {
     {
       const cfgEnvOverride = oauthDiscoveryConfigFromEnv(
         {
-          ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1',
+          NEXT_PUBLIC_SUPABASE_URL: 'http://issuer.example.invalid',
           ATELIER_OAUTH_REGISTRATION_ENDPOINT: 'http://other.example.invalid/dcr',
         } as NodeJS.ProcessEnv,
         'http://api.example.invalid/.well-known/oauth-authorization-server',
       );
       check(
-        'env override beats requestUrl + ATELIER_ENDPOINT_URL',
+        'ATELIER_OAUTH_REGISTRATION_ENDPOINT override beats requestUrl + NEXT_PUBLIC_SITE_URL',
         cfgEnvOverride.registrationEndpoint === 'http://other.example.invalid/dcr',
         `actual: ${cfgEnvOverride.registrationEndpoint}`,
       );
 
-      const cfgEndpointUrl = oauthDiscoveryConfigFromEnv(
+      const cfgSiteUrl = oauthDiscoveryConfigFromEnv(
         {
-          ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1',
-          ATELIER_ENDPOINT_URL: 'http://endpoint.example.invalid',
+          NEXT_PUBLIC_SUPABASE_URL: 'http://issuer.example.invalid',
+          NEXT_PUBLIC_SITE_URL: 'http://site.example.invalid',
         } as NodeJS.ProcessEnv,
         'http://api.example.invalid/.well-known/oauth-authorization-server',
       );
       check(
-        'ATELIER_ENDPOINT_URL derivation beats requestUrl',
-        cfgEndpointUrl.registrationEndpoint === 'http://endpoint.example.invalid/oauth/register',
-        `actual: ${cfgEndpointUrl.registrationEndpoint}`,
+        'NEXT_PUBLIC_SITE_URL derivation beats requestUrl',
+        cfgSiteUrl.registrationEndpoint === 'http://site.example.invalid/oauth/register',
+        `actual: ${cfgSiteUrl.registrationEndpoint}`,
       );
 
       const cfgRequestUrl = oauthDiscoveryConfigFromEnv(
-        { ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1' } as NodeJS.ProcessEnv,
+        { NEXT_PUBLIC_SUPABASE_URL: 'http://issuer.example.invalid' } as NodeJS.ProcessEnv,
         'http://api.example.invalid/.well-known/oauth-authorization-server',
       );
       check(
@@ -463,7 +463,7 @@ async function main(): Promise<void> {
       );
 
       const cfgFallback = oauthDiscoveryConfigFromEnv(
-        { ATELIER_OIDC_ISSUER: 'http://issuer.example.invalid/auth/v1' } as NodeJS.ProcessEnv,
+        { NEXT_PUBLIC_SUPABASE_URL: 'http://issuer.example.invalid' } as NodeJS.ProcessEnv,
       );
       check(
         'no env + no requestUrl falls back to relative /oauth/register',

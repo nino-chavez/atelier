@@ -144,33 +144,28 @@ export function oauthRegistrationStubResponse(): Response {
 /**
  * Resolve discovery config from env.
  *
- * Registration endpoint resolution order:
- *   1. ATELIER_OAUTH_REGISTRATION_ENDPOINT — explicit override (adopters
- *      with a real DCR endpoint at their auth provider point at it here).
- *   2. ATELIER_ENDPOINT_URL — derive `<endpoint-base>/oauth/register`
- *      so the metadata carries an absolute URL when the deploy URL is known.
+ * Per the canonical rebuild (BRD-OPEN-QUESTIONS section 31): issuer derives
+ * from NEXT_PUBLIC_SUPABASE_URL via `deriveSupabaseOidcIssuer`. Registration
+ * endpoint resolution order:
+ *   1. ATELIER_OAUTH_REGISTRATION_ENDPOINT — explicit override for adopters
+ *      with a real RFC 7591 DCR endpoint (this single override remains
+ *      ATELIER_-prefixed because it is genuinely Atelier-specific
+ *      configuration, not a divergence from any vendor canonical).
+ *   2. NEXT_PUBLIC_SITE_URL or VERCEL_URL — derive `<base>/oauth/register`.
  *   3. Derived from `requestUrl` when supplied — the route knows its own
  *      request origin and constructs the absolute URL there. This is the
- *      runtime fallback for local-bootstrap where neither env var is set.
+ *      runtime path for local-bootstrap where neither env var is set.
  *   4. Last-resort relative `/oauth/register` — RFC 8414 §3 permits this,
  *      but real-world MCP SDK validators (Claude Code, Cursor) reject
- *      relative URLs with Zod-style `.url()` strictness. Use only for
- *      contexts where no request URL is available (rare; mostly tests).
- *
- * The empirical tail of resolution order #4 was added 2026-05-01 as a
- * hotfix to PR #11: the original fix emitted a relative URL by default,
- * which was spec-compliant but failed Claude Code's MCP SDK schema
- * validation (`registration_endpoint` validates as `.url()` requiring
- * absolute). Wild-validator strictness > RFC permissiveness.
+ *      relative URLs with Zod-style `.url()` strictness.
  */
+import { deriveSupabaseOidcIssuer } from './jwks-verifier.ts';
+
 export function oauthDiscoveryConfigFromEnv(
   env: NodeJS.ProcessEnv = process.env,
   requestUrl?: string,
 ): OAuthDiscoveryConfig {
-  const issuer = env.ATELIER_OIDC_ISSUER;
-  if (!issuer) {
-    throw new Error('ATELIER_OIDC_ISSUER not set; cannot serve /.well-known/oauth-authorization-server (ARCH 7.9)');
-  }
+  const issuer = deriveSupabaseOidcIssuer(env);
   return {
     issuer,
     registrationEndpoint: resolveRegistrationEndpoint(env, requestUrl),
@@ -181,13 +176,12 @@ function resolveRegistrationEndpoint(env: NodeJS.ProcessEnv, requestUrl?: string
   if (env.ATELIER_OAUTH_REGISTRATION_ENDPOINT) {
     return env.ATELIER_OAUTH_REGISTRATION_ENDPOINT;
   }
-  if (env.ATELIER_ENDPOINT_URL) {
-    const base = env.ATELIER_ENDPOINT_URL.replace(/\/+$/, '');
+  const siteUrl = env.NEXT_PUBLIC_SITE_URL ?? (env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined);
+  if (siteUrl) {
+    const base = siteUrl.replace(/\/+$/, '');
     return `${base}/oauth/register`;
   }
   if (requestUrl) {
-    // Construct absolute URL from request origin. URL constructor handles
-    // the resolution against the request's authority + scheme.
     return new URL('/oauth/register', requestUrl).toString();
   }
   return '/oauth/register';

@@ -1,29 +1,30 @@
-// Lens view-model loader.
+// Lens view-model loader (post canonical-rebuild).
 //
-// Single entry point that the page server-component calls. Composes:
-//   1. Canonical state slice from get_context (charter, recent decisions,
-//      territories, contributions_summary by_state) — via dispatch() in-process.
-//   2. Lens-augmenting queries that are NOT on the 12-tool surface and never
-//      will be (presence, active locks, weighted contributions list,
-//      contracts) — via direct AtelierClient pool reads.
+// One Supabase RPC (`atelier_lens_load`) returns the view-model body —
+// territories, presence, active contributions, locks, contracts, review
+// queue, feedback queue — assembled server-side as a single jsonb. The
+// dispatch(get_context) call still serves charter + recent_decisions +
+// contributions_summary because get_context does markdown excerpt loading
+// from the repo working tree, which is genuinely not Postgres work.
 //
-// The split reflects ARCH 6.7's intent: get_context returns the project-
-// scoped digest; lens UIs that need more than the digest reach into the
-// datastore. The pool reads here run as the same DB role the dispatcher
-// uses (Postgres role bound to ATELIER_DATASTORE_URL) — no privilege
-// escalation; the lens is first-party UI.
+// Per BRD-OPEN-QUESTIONS section 31 + METHODOLOGY 11.5b: lens-side data
+// access goes via @supabase/ssr → PostgREST → SECURITY DEFINER RPC. No
+// pg.Pool in this module.
 
-import type { Pool } from 'pg';
 import { dispatch } from '../../../../scripts/endpoint/lib/dispatch.ts';
-import type {
-  AtelierClient,
-  ContributionKind,
-  ContributionState,
-} from '../../../../scripts/sync/lib/write.ts';
-import { getLensDeps } from './deps.ts';
+import type { ContributionKind, ContributionState } from '../../../../scripts/sync/lib/write.ts';
+import { getLensServices } from './deps.ts';
+import { getMcpDeps } from './mcp-deps.ts';
 import type { LensConfig, LensId } from './lens-config.ts';
 import { LENS_CONFIGS } from './lens-config.ts';
-import { LensAuthError, resolveLensViewer } from './session.ts';
+import {
+  LensAuthError,
+  resolveBearer,
+  resolveLensViewer,
+  getRequestSupabaseClient,
+  type LensViewerContext,
+} from './session.ts';
+import type { ServerSupabaseClient } from './adapters/supabase-ssr.ts';
 import type { SsrCookieStore } from './adapters/supabase-ssr.ts';
 
 export interface PresenceEntry {
@@ -149,217 +150,36 @@ export type LensLoadResult =
   | { ok: true; viewModel: LensViewModel }
   | { ok: false; reason: 'no_bearer' | 'invalid_bearer' | 'no_composer'; message: string };
 
-export async function loadLensViewModel(
-  lensId: LensId,
-  request: Request,
-  opts: { cookies: SsrCookieStore | null },
-): Promise<LensLoadResult> {
-  const deps = getLensDeps();
-  const config = LENS_CONFIGS[lensId];
-
-  let viewerCtx: Awaited<ReturnType<typeof resolveLensViewer>>;
-  try {
-    viewerCtx = await resolveLensViewer(request, deps, opts);
-  } catch (err) {
-    if (err instanceof LensAuthError) {
-      return { ok: false, reason: err.kind, message: err.message };
-    }
-    throw err;
-  }
-  const { auth, sessionId, bearer } = viewerCtx;
-  const pool = (deps.client as unknown as { pool: Pool }).pool;
-
-  const ctxResult = await dispatch(
-    { tool: 'get_context', bearer, body: { session_id: sessionId, lens: lensId } },
-    deps,
-  );
-  if (!ctxResult.ok) {
-    return {
-      ok: false,
-      reason: 'invalid_bearer',
-      message: `get_context failed: ${ctxResult.error.code}: ${ctxResult.error.message}`,
-    };
-  }
-  const ctx = ctxResult.data as {
-    charter: { paths: string[]; excerpts: Record<string, string> | null };
-    recent_decisions: {
-      direct: Array<{ id: string; summary: string; trace_ids: string[]; timestamp: Date; repo_path: string | null }>;
-      truncated: { direct: boolean };
-    };
-    contributions_summary: { by_state: Record<string, number> };
-    stale_as_of: Date;
-  };
-
-  const [
-    viewerInfo,
-    territoriesView,
-    presence,
-    activeContributions,
-    locks,
-    contracts,
-    reviewQueue,
-    feedbackQueue,
-  ] = await Promise.all([
-    loadViewerInfo(pool, auth.composerId, auth.projectId),
-    loadTerritories(pool, auth.projectId, auth.discipline),
-    loadPresence(pool, auth.projectId),
-    loadActiveContributions(pool, auth.projectId, auth.composerId, config),
-    loadLocks(pool, auth.projectId),
-    loadContracts(pool, auth.projectId),
-    loadReviewQueue(pool, auth.projectId, auth.discipline),
-    loadFeedbackQueue(deps.client, auth.projectId, auth.discipline),
-  ]);
-
-  return {
-    ok: true,
-    viewModel: {
-      config,
-      viewer: { ...viewerInfo, sessionId },
-      charter: ctx.charter,
-      recentDecisions: {
-        direct: ctx.recent_decisions.direct
-          .slice(0, config.depth.recentDecisionsPerBandLimit)
-          .map((d) => ({
-            id: d.id,
-            summary: d.summary,
-            traceIds: d.trace_ids,
-            timestamp: d.timestamp,
-            repoCommitSha: d.repo_path,
-          })),
-        truncated: ctx.recent_decisions.truncated.direct,
-      },
-      territories: territoriesView,
-      contributionsByState: ctx.contributions_summary.by_state,
-      activeContributions,
-      presence,
-      locks,
-      contracts,
-      reviewQueue,
-      feedbackQueue,
-      staleAsOf: ctx.stale_as_of,
-    },
-  };
-}
-
-async function loadViewerInfo(
-  pool: Pool,
-  composerId: string,
-  projectId: string,
-): Promise<Omit<LensViewer, 'sessionId'>> {
-  const { rows } = await pool.query<{
+interface RawLensLoadPayload {
+  viewer: {
+    composer_id: string;
     composer_name: string;
     composer_email: string;
     discipline: string | null;
     access_level: string | null;
+    project_id: string;
     project_name: string;
-  }>(
-    `SELECT c.display_name AS composer_name,
-            c.email AS composer_email,
-            c.discipline::text AS discipline,
-            c.access_level::text AS access_level,
-            p.name AS project_name
-       FROM composers c JOIN projects p ON p.id = c.project_id
-      WHERE c.id = $1 AND p.id = $2`,
-    [composerId, projectId],
-  );
-  const row = rows[0];
-  if (!row) throw new Error(`composer ${composerId} disappeared during lens render`);
-  return {
-    composerId,
-    composerName: row.composer_name,
-    composerEmail: row.composer_email,
-    discipline: row.discipline,
-    accessLevel: row.access_level,
-    projectId,
-    projectName: row.project_name,
+    session_id: string;
   };
-}
-
-async function loadTerritories(
-  pool: Pool,
-  projectId: string,
-  viewerDiscipline: string | null,
-): Promise<TerritoryView[]> {
-  const { rows } = await pool.query<{
+  territories: Array<{
     name: string;
-    owner_role: string;
-    review_role: string | null;
     scope_kind: string;
     scope_pattern: string[];
     contracts_published: string[];
-    contracts_consumed: string[];
-  }>(
-    `SELECT t.name,
-            t.owner_role::text AS owner_role,
-            t.review_role::text AS review_role,
-            t.scope_kind::text AS scope_kind,
-            t.scope_pattern,
-            COALESCE(array_agg(c.name) FILTER (WHERE c.name IS NOT NULL), ARRAY[]::text[]) AS contracts_published,
-            t.contracts_consumed
-       FROM territories t
-       LEFT JOIN contracts c ON c.territory_id = t.id AND c.project_id = t.project_id
-      WHERE t.project_id = $1
-      GROUP BY t.id, t.name, t.owner_role, t.review_role, t.scope_kind, t.scope_pattern, t.contracts_consumed
-      ORDER BY t.name`,
-    [projectId],
-  );
-  return rows.map((r) => ({
-    name: r.name,
-    scopeKind: r.scope_kind,
-    scopePattern: r.scope_pattern,
-    contractsPublished: Array.from(new Set(r.contracts_published)),
-    contractsConsumed: r.contracts_consumed ?? [],
-    ownerRole: r.owner_role,
-    reviewRole: r.review_role,
-    isOwned: viewerDiscipline !== null && r.owner_role === viewerDiscipline,
-    isConsumed: (r.contracts_consumed ?? []).length > 0,
-  }));
-}
-
-async function loadPresence(pool: Pool, projectId: string): Promise<PresenceEntry[]> {
-  const { rows } = await pool.query<{
+    contracts_consumed?: string[] | null;
+    owner_role: string;
+    review_role: string | null;
+  }>;
+  presence: Array<{
     composer_id: string;
-    display_name: string;
-    email: string;
+    composer_name: string;
+    composer_email: string;
     discipline: string | null;
     surface: PresenceEntry['surface'];
     agent_client: string | null;
-    heartbeat_at: Date;
-  }>(
-    `SELECT DISTINCT ON (s.composer_id)
-            s.composer_id,
-            c.display_name,
-            c.email,
-            c.discipline::text AS discipline,
-            s.surface::text AS surface,
-            s.agent_client,
-            s.heartbeat_at
-       FROM sessions s JOIN composers c ON c.id = s.composer_id
-      WHERE s.project_id = $1
-        AND s.status = 'active'
-        AND s.heartbeat_at > now() - interval '15 minutes'
-      ORDER BY s.composer_id, s.heartbeat_at DESC`,
-    [projectId],
-  );
-  return rows.map((r) => ({
-    composerId: r.composer_id,
-    composerName: r.display_name,
-    composerEmail: r.email,
-    discipline: r.discipline,
-    surface: r.surface,
-    agentClient: r.agent_client,
-    heartbeatAt: r.heartbeat_at,
-  }));
-}
-
-async function loadActiveContributions(
-  pool: Pool,
-  projectId: string,
-  viewerComposerId: string,
-  config: LensConfig,
-): Promise<ContributionEntry[]> {
-  const w = config.depth.contributionsKindWeights;
-  const { rows } = await pool.query<{
+    heartbeat_at: string;
+  }>;
+  active_contributions: Array<{
     id: string;
     kind: ContributionKind;
     state: ContributionState;
@@ -370,118 +190,25 @@ async function loadActiveContributions(
     author_composer_id: string | null;
     requires_owner_approval: boolean;
     blocked_by: string | null;
-    updated_at: Date;
-  }>(
-    `SELECT co.id,
-            co.kind::text AS kind,
-            co.state::text AS state,
-            co.trace_ids,
-            t.name AS territory_name,
-            co.content_ref,
-            c.display_name AS author_name,
-            co.author_composer_id,
-            co.requires_owner_approval,
-            co.blocked_by,
-            co.updated_at
-       FROM contributions co
-       JOIN territories t ON t.id = co.territory_id
-       LEFT JOIN composers c ON c.id = co.author_composer_id
-      WHERE co.project_id = $1
-        AND co.state IN ('open', 'claimed', 'plan_review', 'in_progress', 'review')
-      ORDER BY (CASE co.kind::text
-                  WHEN 'implementation' THEN $2::int
-                  WHEN 'research' THEN $3::int
-                  WHEN 'design' THEN $4::int
-                  ELSE 0
-                END) DESC,
-               co.updated_at DESC
-      LIMIT $5`,
-    [projectId, w.implementation, w.research, w.design, config.depth.contributionsActiveLimit],
-  );
-  return rows.map((r) => ({
-    id: r.id,
-    kind: r.kind,
-    state: r.state,
-    traceIds: r.trace_ids,
-    territoryName: r.territory_name,
-    contentRef: r.content_ref,
-    authorName: r.author_name,
-    isMine: r.author_composer_id === viewerComposerId,
-    requiresOwnerApproval: r.requires_owner_approval,
-    blockedBy: r.blocked_by,
-    updatedAt: r.updated_at,
-  }));
-}
-
-async function loadLocks(pool: Pool, projectId: string): Promise<LockEntry[]> {
-  const { rows } = await pool.query<{
+    updated_at: string;
+  }>;
+  locks: Array<{
     id: string;
     contribution_id: string;
     artifact_scope: string[];
     fencing_token: string;
     holder_name: string;
-    acquired_at: Date;
-  }>(
-    `SELECT l.id,
-            l.contribution_id,
-            l.artifact_scope,
-            l.fencing_token::text AS fencing_token,
-            c.display_name AS holder_name,
-            l.acquired_at
-       FROM locks l JOIN composers c ON c.id = l.holder_composer_id
-      WHERE l.project_id = $1
-      ORDER BY l.acquired_at DESC
-      LIMIT 50`,
-    [projectId],
-  );
-  return rows.map((r) => ({
-    id: r.id,
-    contributionId: r.contribution_id,
-    artifactScope: r.artifact_scope,
-    fencingToken: r.fencing_token,
-    holderComposerName: r.holder_name,
-    acquiredAt: r.acquired_at,
-  }));
-}
-
-async function loadContracts(pool: Pool, projectId: string): Promise<ContractEntry[]> {
-  const { rows } = await pool.query<{
+    acquired_at: string;
+  }>;
+  contracts: Array<{
     id: string;
     territory_name: string;
     name: string;
     version: number;
     effective_decision: 'breaking' | 'additive';
-    published_at: Date;
-  }>(
-    `SELECT c.id,
-            t.name AS territory_name,
-            c.name,
-            c.version,
-            c.effective_decision::text AS effective_decision,
-            c.published_at
-       FROM contracts c JOIN territories t ON t.id = c.territory_id
-      WHERE c.project_id = $1
-      ORDER BY c.published_at DESC
-      LIMIT 25`,
-    [projectId],
-  );
-  return rows.map((r) => ({
-    id: r.id,
-    territoryName: r.territory_name,
-    name: r.name,
-    version: r.version,
-    effectiveDecision: r.effective_decision,
-    publishedAt: r.published_at,
-  }));
-}
-
-async function loadReviewQueue(
-  pool: Pool,
-  projectId: string,
-  viewerDiscipline: string | null,
-): Promise<ReviewQueueEntry[]> {
-  if (!viewerDiscipline) return [];
-  const { rows } = await pool.query<{
+    published_at: string;
+  }>;
+  review_queue: Array<{
     id: string;
     kind: ContributionKind;
     state: ContributionState;
@@ -492,92 +219,221 @@ async function loadReviewQueue(
     author_name: string | null;
     requires_owner_approval: boolean;
     blocked_by: string | null;
-    updated_at: Date;
-  }>(
-    `SELECT co.id,
-            co.kind::text AS kind,
-            co.state::text AS state,
-            co.trace_ids,
-            t.name AS territory_name,
-            t.review_role::text AS review_role,
-            co.content_ref,
-            c.display_name AS author_name,
-            co.requires_owner_approval,
-            co.blocked_by,
-            co.updated_at
-       FROM contributions co
-       JOIN territories t ON t.id = co.territory_id
-       LEFT JOIN composers c ON c.id = co.author_composer_id
-      WHERE co.project_id = $1
-        AND co.state = 'review'
-        AND COALESCE(t.review_role::text, t.owner_role::text) = $2
-      ORDER BY co.updated_at DESC
-      LIMIT 30`,
-    [projectId, viewerDiscipline],
-  );
-  return rows.map((r) => ({
-    id: r.id,
-    kind: r.kind,
-    state: r.state,
-    traceIds: r.trace_ids,
-    territoryName: r.territory_name,
-    contentRef: r.content_ref,
-    authorName: r.author_name,
-    isMine: false,
-    requiresOwnerApproval: r.requires_owner_approval,
-    blockedBy: r.blocked_by,
-    updatedAt: r.updated_at,
-    reviewRole: r.review_role,
-  }));
+    updated_at: string;
+  }>;
+  feedback_queue: Array<{
+    id: string;
+    comment_source: string;
+    external_comment_id: string;
+    external_author: string;
+    comment_text: string;
+    classification: { category: string; confidence: number; signals: string[] };
+    drafted_proposal: {
+      bodyMarkdown: string;
+      suggestedAction: string;
+      discipline: 'implementation' | 'research' | 'design';
+    };
+    territory_id: string;
+    territory_name: string | null;
+    review_role: string | null;
+    created_at: string;
+  }>;
 }
 
-// =========================================================================
-// Feedback queue (M6 / ADR-018 / migration 9)
-// =========================================================================
-//
-// Loads pending triage_pending rows via AtelierClient.triagePendingList
-// (the panel-side wrapper around migration 9's table). Each row is
-// shaped into a FeedbackEntry that the panel renders. The
-// `routedToViewer` flag (computed client-side from the viewer's
-// discipline + the territory's review_role) drives whether the panel
-// shows approve/reject affordances or just a "routed to <role>" hint.
-//
-// Same data layer pattern as loadReviewQueue: panel reads from the
-// derived view-model; server actions (approve/reject) call back into
-// AtelierClient via the dispatcher.
+/**
+ * Load the lens view-model. Required: a Next.js request scope (cookies +
+ * the lens id from the path). Optional: the Supabase client; tests can
+ * pass a stub.
+ */
+export async function loadLensViewModel(
+  lensId: LensId,
+  request: Request,
+  opts: { cookies: SsrCookieStore | null; client?: ServerSupabaseClient },
+): Promise<LensLoadResult> {
+  const config = LENS_CONFIGS[lensId];
+  let supabase: ServerSupabaseClient;
+  let viewer: LensViewerContext;
+  try {
+    supabase = opts.client ?? (await getRequestSupabaseClient());
+    viewer = await resolveLensViewer(supabase);
+  } catch (err) {
+    if (err instanceof LensAuthError) {
+      return { ok: false, reason: err.kind, message: err.message };
+    }
+    throw err;
+  }
 
-async function loadFeedbackQueue(
-  client: AtelierClient,
-  projectId: string,
-  viewerDiscipline: string | null,
-): Promise<FeedbackEntry[]> {
-  const rows = await client.triagePendingList({ projectId });
-  return rows.map((r) => {
-    // Per ADR-025 review_role is nullable; falls back to owner_role.
-    // Without owner_role here we conservatively use review_role only;
-    // the server action's territory check is the load-bearing one.
-    const requiredRole = r.territoryReviewRole;
-    const routedToViewer =
-      viewerDiscipline !== null &&
-      requiredRole !== null &&
-      requiredRole === viewerDiscipline;
+  // Bearer for the dispatch(get_context) leg. We already have the cookie;
+  // resolveBearer() reads it via the same SSR adapter and returns the
+  // JWT string the MCP-side authenticate() expects.
+  const bearer =
+    (await resolveBearer(request, { cookies: opts.cookies })) ?? '';
+  if (!bearer) {
     return {
-      id: r.id,
-      source: r.commentSource,
-      externalCommentId: r.externalCommentId,
-      externalAuthor: r.externalAuthor,
-      commentText: r.commentText,
-      category: r.classification.category,
-      confidence: r.classification.confidence,
-      signals: r.classification.signals,
-      bodyMarkdown: r.draftedProposal.bodyMarkdown,
-      suggestedAction: r.draftedProposal.suggestedAction,
-      discipline: r.draftedProposal.discipline,
-      territoryId: r.territoryId,
-      territoryName: r.territoryName,
-      reviewRole: r.territoryReviewRole,
-      createdAt: r.createdAt,
-      routedToViewer,
+      ok: false,
+      reason: 'no_bearer',
+      message: 'No Supabase Auth session present.',
     };
-  });
+  }
+
+  const [lensPayloadResult, ctxResult] = await Promise.all([
+    supabase.rpc<{ p_lens_id: string }, RawLensLoadPayload>('atelier_lens_load', {
+      p_lens_id: lensId,
+    }),
+    dispatch(
+      { tool: 'get_context', bearer, body: { session_id: viewer.sessionId, lens: lensId } },
+      getMcpDeps(),
+    ),
+  ]);
+
+  if (lensPayloadResult.error || !lensPayloadResult.data) {
+    return {
+      ok: false,
+      reason: 'invalid_bearer',
+      message: `atelier_lens_load failed: ${lensPayloadResult.error?.message ?? 'no payload'}`,
+    };
+  }
+  if (!ctxResult.ok) {
+    return {
+      ok: false,
+      reason: 'invalid_bearer',
+      message: `get_context failed: ${ctxResult.error.code}: ${ctxResult.error.message}`,
+    };
+  }
+  const ctx = ctxResult.data as {
+    charter: { paths: string[]; excerpts: Record<string, string> | null };
+    recent_decisions: {
+      direct: Array<{ id: string; summary: string; trace_ids: string[]; timestamp: string; repo_path: string | null }>;
+      truncated: { direct: boolean };
+    };
+    contributions_summary: { by_state: Record<string, number> };
+    stale_as_of: string;
+  };
+
+  const payload = lensPayloadResult.data;
+  const viewerComposerId = payload.viewer.composer_id;
+
+  const viewModel: LensViewModel = {
+    config,
+    viewer: {
+      composerId: payload.viewer.composer_id,
+      composerName: payload.viewer.composer_name,
+      composerEmail: payload.viewer.composer_email,
+      discipline: payload.viewer.discipline,
+      accessLevel: payload.viewer.access_level,
+      projectId: payload.viewer.project_id,
+      projectName: payload.viewer.project_name,
+      sessionId: payload.viewer.session_id,
+    },
+    charter: ctx.charter,
+    recentDecisions: {
+      direct: ctx.recent_decisions.direct
+        .slice(0, config.depth.recentDecisionsPerBandLimit)
+        .map((d) => ({
+          id: d.id,
+          summary: d.summary,
+          traceIds: d.trace_ids,
+          timestamp: new Date(d.timestamp),
+          repoCommitSha: d.repo_path,
+        })),
+      truncated: ctx.recent_decisions.truncated.direct,
+    },
+    territories: payload.territories.map((t) => ({
+      name: t.name,
+      scopeKind: t.scope_kind,
+      scopePattern: t.scope_pattern,
+      contractsPublished: Array.from(new Set(t.contracts_published ?? [])),
+      contractsConsumed: t.contracts_consumed ?? [],
+      ownerRole: t.owner_role,
+      reviewRole: t.review_role,
+      isOwned: viewer.discipline !== null && t.owner_role === viewer.discipline,
+      isConsumed: (t.contracts_consumed ?? []).length > 0,
+    })),
+    contributionsByState: ctx.contributions_summary.by_state,
+    activeContributions: payload.active_contributions.map((c) => ({
+      id: c.id,
+      kind: c.kind,
+      state: c.state,
+      traceIds: c.trace_ids,
+      territoryName: c.territory_name,
+      contentRef: c.content_ref,
+      authorName: c.author_name,
+      isMine: c.author_composer_id === viewerComposerId,
+      requiresOwnerApproval: c.requires_owner_approval,
+      blockedBy: c.blocked_by,
+      updatedAt: new Date(c.updated_at),
+    })),
+    presence: payload.presence.map((p) => ({
+      composerId: p.composer_id,
+      composerName: p.composer_name,
+      composerEmail: p.composer_email,
+      discipline: p.discipline,
+      surface: p.surface,
+      agentClient: p.agent_client,
+      heartbeatAt: new Date(p.heartbeat_at),
+    })),
+    locks: payload.locks.map((l) => ({
+      id: l.id,
+      contributionId: l.contribution_id,
+      artifactScope: l.artifact_scope,
+      fencingToken: l.fencing_token,
+      holderComposerName: l.holder_name,
+      acquiredAt: new Date(l.acquired_at),
+    })),
+    contracts: payload.contracts.map((c) => ({
+      id: c.id,
+      territoryName: c.territory_name,
+      name: c.name,
+      version: c.version,
+      effectiveDecision: c.effective_decision,
+      publishedAt: new Date(c.published_at),
+    })),
+    reviewQueue: payload.review_queue.map((c) => ({
+      id: c.id,
+      kind: c.kind,
+      state: c.state,
+      traceIds: c.trace_ids,
+      territoryName: c.territory_name,
+      contentRef: c.content_ref,
+      authorName: c.author_name,
+      isMine: false,
+      requiresOwnerApproval: c.requires_owner_approval,
+      blockedBy: c.blocked_by,
+      updatedAt: new Date(c.updated_at),
+      reviewRole: c.review_role,
+    })),
+    feedbackQueue: payload.feedback_queue.map((f) => {
+      const requiredRole = f.review_role;
+      const routedToViewer =
+        viewer.discipline !== null &&
+        requiredRole !== null &&
+        requiredRole === viewer.discipline;
+      return {
+        id: f.id,
+        source: f.comment_source,
+        externalCommentId: f.external_comment_id,
+        externalAuthor: f.external_author,
+        commentText: f.comment_text,
+        category: f.classification.category,
+        confidence: f.classification.confidence,
+        signals: f.classification.signals,
+        bodyMarkdown: f.drafted_proposal.bodyMarkdown,
+        suggestedAction: f.drafted_proposal.suggestedAction,
+        discipline: f.drafted_proposal.discipline,
+        territoryId: f.territory_id,
+        territoryName: f.territory_name,
+        reviewRole: f.review_role,
+        createdAt: new Date(f.created_at),
+        routedToViewer,
+      };
+    }),
+    staleAsOf: new Date(ctx.stale_as_of),
+  };
+
+  // The find-similar lens action consumes embedder + config; we
+  // resolve the lens services lazily there. No-op here; just keeps the
+  // import live so dead-code-elimination doesn't drop it.
+  void getLensServices;
+
+  return { ok: true, viewModel };
 }

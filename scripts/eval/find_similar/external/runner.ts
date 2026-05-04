@@ -18,7 +18,7 @@
 //      stored in pgvector matches the seed expected list directly.
 //
 // Run:
-//   ATELIER_DATASTORE_URL=postgresql://... \
+//   POSTGRES_URL=postgresql://... \
 //   OPENAI_API_KEY=sk-... \
 //     npx tsx scripts/eval/find_similar/external/runner.ts \
 //       --corpus-dir atelier/eval/find_similar/external-corpora/claude-agent-sdk \
@@ -130,9 +130,9 @@ async function main(): Promise<void> {
   const corpusDir = resolve(parseArg('corpus-dir'));
   const projectId = parseArg('project');
   const repoRoot = resolve(process.cwd());
-  const datastoreUrl = process.env['ATELIER_DATASTORE_URL'];
+  const datastoreUrl = process.env['POSTGRES_URL'];
   if (!datastoreUrl) {
-    console.error('ATELIER_DATASTORE_URL is not set');
+    console.error('POSTGRES_URL is not set');
     process.exit(2);
   }
   if (!process.env['OPENAI_API_KEY']) {

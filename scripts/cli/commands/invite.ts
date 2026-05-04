@@ -25,9 +25,9 @@
 // screen-share recordings, and CI logs.
 //
 // Mode detection (auto):
-//   - LOCAL when ATELIER_DATASTORE_URL points at localhost (or is unset)
+//   - LOCAL when POSTGRES_URL points at localhost (or is unset)
 //     AND --remote is not passed.
-//   - CLOUD when ATELIER_DATASTORE_URL points at a non-localhost host,
+//   - CLOUD when POSTGRES_URL points at a non-localhost host,
 //     OR --remote is passed.
 //
 // What `invite` does:
@@ -86,7 +86,7 @@ Optional:
                              shared terminal output, screenshots, and logs
                              (BRD-OPEN-QUESTIONS §31 / X1 audit A1).
   --site-url <url>           Public URL of the deploy. Default:
-                             ATELIER_PUBLIC_URL env, then localhost:3000.
+                             NEXT_PUBLIC_SITE_URL env, then localhost:3000.
                              Used to build the magic-link redirect target
                              (\`<site>/auth/confirm?next=/atelier\`).
   --remote                   Force cloud mode regardless of env detection.
@@ -246,7 +246,7 @@ function redactHost(connStr: string): string {
 const DEFAULT_LOCAL_DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
 function decideMode(parsed: ParsedArgs): ModeDecision {
-  const envUrl = process.env.ATELIER_DATASTORE_URL ?? process.env.DATABASE_URL;
+  const envUrl = process.env.POSTGRES_URL;
   if (parsed.local) {
     return {
       mode: 'local',
@@ -257,7 +257,7 @@ function decideMode(parsed: ParsedArgs): ModeDecision {
   if (parsed.remote) {
     if (!envUrl) {
       throw new Error(
-        '--remote requires ATELIER_DATASTORE_URL or DATABASE_URL to be set',
+        '--remote requires POSTGRES_URL or DATABASE_URL to be set',
       );
     }
     return {
@@ -269,15 +269,15 @@ function decideMode(parsed: ParsedArgs): ModeDecision {
   if (envUrl && !isLocalhost(envUrl)) {
     return {
       mode: 'cloud',
-      reason: `ATELIER_DATASTORE_URL points at ${redactHost(envUrl)} (non-localhost)`,
+      reason: `POSTGRES_URL points at ${redactHost(envUrl)} (non-localhost)`,
       databaseUrl: envUrl,
     };
   }
   return {
     mode: 'local',
     reason: envUrl
-      ? `ATELIER_DATASTORE_URL points at localhost (${redactHost(envUrl)})`
-      : 'no ATELIER_DATASTORE_URL set; defaulting to local Supabase',
+      ? `POSTGRES_URL points at localhost (${redactHost(envUrl)})`
+      : 'no POSTGRES_URL set; defaulting to local Supabase',
     databaseUrl: envUrl ?? DEFAULT_LOCAL_DB_URL,
   };
 }

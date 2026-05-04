@@ -19,9 +19,9 @@ Subcommands:
                  ADR-043 (advisory tier; informational per ADR-045).
 
 Required env (per ADR-027 + ADR-041):
-  ATELIER_DATASTORE_URL  Postgres connection string
-  OPENAI_API_KEY         Or whichever .atelier/config.yaml find_similar.
-                         embeddings.api_key_env names
+  POSTGRES_URL    Postgres connection string
+  OPENAI_API_KEY  Or whichever .atelier/config.yaml find_similar.
+                  embeddings.api_key_env names
 
 Common forwarded options:
   --project <uuid>       Project ID to scope the eval to (required)

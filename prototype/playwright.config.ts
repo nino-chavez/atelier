@@ -34,15 +34,14 @@ export default defineConfig({
     env: {
       // Auth bypass: route requests with this bearer to the seeded
       // composer subject. The fixture seeder creates the matching row.
-      // Empty OIDC vars override .env.local so resolveVerifier() picks
-      // stubVerifier instead of the JWKS path (which would reject
-      // "stub:..." as an invalid JWS).
+      // The dev-bearer path is opt-in via ATELIER_ALLOW_DEV_BEARER=true
+      // (per session.ts:resolveBearer). NEXT_PUBLIC_SUPABASE_URL set to
+      // a placeholder host is enough to keep the SSR adapter happy; the
+      // dev-bearer short-circuits the JWKS verifier path.
       ATELIER_ALLOW_DEV_BEARER: 'true',
       ATELIER_DEV_BEARER: 'stub:sub-iaux-smoke-analyst',
-      ATELIER_OIDC_ISSUER: '',
-      ATELIER_JWT_AUDIENCE: '',
-      ATELIER_DATASTORE_URL:
-        process.env.DATABASE_URL ??
+      POSTGRES_URL:
+        process.env.POSTGRES_URL ??
         'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
       // Local Supabase URL + anon key required by the broadcast client
       // island (supabase-browser.ts) and the SSR cookie adapter. The

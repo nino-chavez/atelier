@@ -199,9 +199,10 @@ export async function checkEnvFile(): Promise<PreflightStatus> {
   }
   const body = await readFile(envPath, 'utf8');
   const requiredKeys = [
-    'ATELIER_DATASTORE_URL',
-    'ATELIER_OIDC_ISSUER',
-    'ATELIER_JWT_AUDIENCE',
+    'POSTGRES_URL',
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
     'OPENAI_API_KEY',
   ];
   const missing = requiredKeys.filter((k) => !new RegExp(`^${k}=.+`, 'm').test(body));

@@ -10,7 +10,7 @@
 //   npm run eval:find_similar -- --project <uuid>
 //
 // Env (per ADR-027 + ADR-041):
-//   ATELIER_DATASTORE_URL  Postgres connection string (required).
+//   POSTGRES_URL  Postgres connection string (required).
 //   OPENAI_API_KEY         Or whichever .atelier/config.yaml find_similar.
 //                          embeddings.api_key_env names.
 //
@@ -153,7 +153,7 @@ Exit:
   1 otherwise. CI gates fail closed.
 
 Env:
-  ATELIER_DATASTORE_URL  Postgres connection string.
+  POSTGRES_URL  Postgres connection string.
   OPENAI_API_KEY         Or whichever apiKeyEnv config names.
 `);
 }
@@ -170,10 +170,10 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const datastoreUrl = process.env['ATELIER_DATASTORE_URL'];
+  const datastoreUrl = process.env['POSTGRES_URL'];
   if (!datastoreUrl) {
     // eslint-disable-next-line no-console
-    console.error('ATELIER_DATASTORE_URL is not set');
+    console.error('POSTGRES_URL is not set');
     process.exit(2);
   }
 

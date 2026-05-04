@@ -164,6 +164,96 @@ console.log('\n[8] atelier review computes from territories.yaml');
 }
 
 // ---------------------------------------------------------------------------
+// [9] atelier invite (D4 polished form; couples with D7 magic-link sign-in)
+// ---------------------------------------------------------------------------
+//
+// Substrate-touching assertions live in scripts/cli/__smoke__/invite.smoke.ts
+// (gated on a running local stack). This section asserts only the
+// argument-handling contract: missing flags exit 2, --dry-run renders a
+// plan without mutating, --help cross-references D7 and ADR-038.
+console.log('\n[9] atelier invite (D4 polished form)');
+{
+  const help = run(['invite', '--help']);
+  check('invite --help exits 0', help.status === 0, `got ${help.status}`);
+  check('invite --help mentions Required flags', help.stdout.includes('Required:'));
+  check('invite --help mentions discipline enum', help.stdout.includes('analyst | dev | pm | designer | architect'));
+  check('invite --help mentions access-level enum', help.stdout.includes('member | admin | stakeholder'));
+  check('invite --help cross-references D7 sign-in', help.stdout.includes('/sign-in/callback'));
+  check('invite --help cross-references ADR-038', help.stdout.includes('ADR-038'));
+
+  const noFlags = run(['invite']);
+  check('invite (no flags) exits 2', noFlags.status === 2, `got ${noFlags.status}`);
+  check(
+    'invite (no flags) names email + discipline as required',
+    noFlags.stderr.includes('email') && noFlags.stderr.includes('discipline'),
+  );
+
+  const badEmail = run(['invite', '--email', 'not-an-email', '--discipline', 'dev']);
+  check('invite --email <invalid> exits 2', badEmail.status === 2, `got ${badEmail.status}`);
+  check(
+    'invite invalid-email error names the field',
+    badEmail.stderr.includes('email'),
+  );
+
+  const badDiscipline = run(['invite', '--email', 'a@b.co', '--discipline', 'wizard']);
+  check(
+    'invite --discipline <invalid> exits 2',
+    badDiscipline.status === 2,
+    `got ${badDiscipline.status}`,
+  );
+
+  // --dry-run does not touch Supabase or Postgres so it runs without env.
+  const dry = run([
+    'invite',
+    '--email', 'alice@example.com',
+    '--discipline', 'dev',
+    '--access-level', 'member',
+    '--project-id', '00000000-0000-0000-0000-000000000000',
+    '--dry-run',
+    '--local',
+  ]);
+  check('invite --dry-run exits 0', dry.status === 0, `got ${dry.status}`);
+  check('invite --dry-run renders PLAN header', dry.stdout.includes('PLAN'));
+  check('invite --dry-run echoes email', dry.stdout.includes('alice@example.com'));
+  check(
+    'invite --dry-run does NOT print DONE',
+    !dry.stdout.includes('DONE'),
+  );
+  check(
+    'invite --dry-run notes no mutations',
+    dry.stdout.includes('No mutations performed'),
+  );
+
+  const dryJson = run([
+    'invite',
+    '--email', 'alice@example.com',
+    '--discipline', 'dev',
+    '--dry-run',
+    '--local',
+    '--json',
+  ]);
+  check('invite --dry-run --json exits 0', dryJson.status === 0, `got ${dryJson.status}`);
+  let parsed: { ok?: boolean; dryRun?: boolean } | null = null;
+  try {
+    parsed = JSON.parse(dryJson.stdout);
+  } catch {
+    parsed = null;
+  }
+  check('invite --dry-run --json emits valid JSON', parsed !== null);
+  check('invite --dry-run --json sets ok=true', parsed?.ok === true);
+  check('invite --dry-run --json sets dryRun=true', parsed?.dryRun === true);
+
+  const conflict = run([
+    'invite',
+    '--email', 'a@b.co',
+    '--discipline', 'dev',
+    '--remote',
+    '--local',
+  ]);
+  check('invite --remote + --local exits 2', conflict.status === 2, `got ${conflict.status}`);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log('');

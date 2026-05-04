@@ -302,7 +302,7 @@ The v1 polished-form scope review at PR #37 surfaced an honest split: 6 commands
 | `atelier init` | Lifecycle (Epic 1) | M0 (this repo's structure) + M2 (guided handshake protocol per US-1.8) | **v1.x stub** — prints clone-and-rm-rf-git pointer + local-bootstrap.md path; polished init lands with US-1.8 handshake |
 | `atelier datastore init` | Lifecycle (Epic 1) | M2 (raw SQL migration scripts) | **v1.x stub** — prints `supabase db reset` pointer |
 | `atelier deploy` | Lifecycle (Epic 1) | M3 (raw deploy script for prototype + endpoint) | **v1.x stub** — prints `vercel deploy --prod` + first-deploy.md pointer |
-| `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | **v1.x stub** — prints Supabase Auth invite + bearer-rotation pointer |
+| `atelier invite` | Lifecycle (Epic 1) | M6 (token issuance for remote-principal composers) | **v1 polished** (PR #56; couples with D7 magic-link sign-in) |
 | `atelier territory add` | Lifecycle (Epic 1) | M2 (manual `.atelier/territories.yaml` edit pattern) | **v1.x stub** — prints YAML edit pointer + audit invocation |
 | `atelier doctor` | Lifecycle (Epic 1) | M2 (raw script invocation of the ARCH 6.1.1 self-verification flow) | **v1.x stub** — prints `atelier dev` + smoke pointer (overlaps with `atelier dev` at v1) |
 | `atelier upgrade` | Lifecycle (Epic 1) | -- | **v1.x stub** (no v1 raw form; semver-aware migration system is v1.x scope per BRD-OPEN-QUESTIONS §29) |

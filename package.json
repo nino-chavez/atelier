@@ -16,6 +16,7 @@
     "lint:portability": "tsx scripts/lint/portability-lint.ts",
     "atelier": "tsx scripts/cli/atelier.ts",
     "smoke:cli": "tsx scripts/cli/__smoke__/cli.smoke.ts",
+    "smoke:invite": "tsx scripts/cli/__smoke__/invite.smoke.ts",
     "smoke:endpoint": "tsx scripts/endpoint/__smoke__/endpoint.smoke.ts",
     "smoke:committer": "tsx scripts/endpoint/__smoke__/committer.smoke.ts",
     "smoke:transport": "tsx scripts/endpoint/__smoke__/transport.smoke.ts",

@@ -155,9 +155,9 @@ If the coordination datastore is down, `decisions.md` still gets committed. If p
 
 ---
 
-## 7. Find_similar — auxiliary advisory capability (post-M5 calibration)
+## 7. Find_similar — auxiliary advisory search aid
 
-**Ships at v1 as the advisory-tier semantic search aid (per ADR-006 + ADR-042 + ADR-043).** The original framing of find_similar as the "irreducible technical bet" / "load-bearing capability" was demoted at M5 measurement + M6 strategic re-evaluation: P=0.672, R=0.626 on Atelier's own corpus is useful as a search aid but does not deliver hands-off duplicate prevention. The substrate as a whole — territories + contracts + atomic claim + fenced locks + broadcast + repo-canonical decisions + per-project committer + the methodology — is the load-bearing differentiation; find_similar is one auxiliary capability within it.
+**Ships at v1 as an advisory-tier semantic search aid (per ADR-006 + ADR-042 + ADR-043 + ADR-047).** find_similar is one capability within the coordination substrate; it answers "have we discussed this before?" across decisions, contributions, BRD/PRD sections, and research artifacts. It is not the load-bearing wedge — the substrate as a whole (territories + contracts + atomic claim + fenced locks + broadcast + repo-canonical decisions + per-project committer + the methodology) is. find_similar's measured precision/recall on Atelier's own corpus (P=0.672, R=0.626) clears advisory tier; blocking-tier (hands-off duplicate prevention) is v1.x opt-in gated on the cross-encoder reranker per BRD-OPEN-QUESTIONS §27.
 
 What ships at v1:
 
@@ -327,14 +327,14 @@ Atelier is the **spine that connects all of the above around one project**. Not 
 
 ---
 
-## 16. The find_similar threshold (post-M5 calibration)
+## 16. The find_similar gate tiers
 
-The original ADR-006 specification framed find_similar with a single CI gate at ≥75% precision and ≥60% recall, treating both as the load-bearing strategic bet. Post-M5 calibration produced two corrections (per ADR-042 + ADR-043 + ADR-045):
+find_similar ships with two gate tiers (per ADR-043 + ADR-045 + ADR-047):
 
-1. **Gate-tier split:** the original 0.75/0.60 threshold is the *blocking-tier* target (hands-off duplicate prevention; v1.x opt-in; gated on cross-encoder reranker per BRD-OPEN-QUESTIONS section 27). The v1 *advisory tier* sits at ≥0.60/≥0.60 — empirically achievable on Atelier's own corpus, ships at v1 default.
-2. **CI gate informational at v1 (ADR-045):** the eval still runs on every PR (when `OPENAI_API_KEY` is set) and produces `last-run.json` + log output, but does not fail the workflow. Per-PR noise floor exceeds the original gate margin; blocking on noise was a discipline tax. Adopters who want strict gating opt in.
+1. **Advisory tier (v1 default):** P ≥ 0.60 AND R ≥ 0.60. Warnings surface in claim flows, PR comments, and `/atelier` panels but do not block. The CI eval gate is informational at v1: runs, produces `last-run.json` + log output, but does not fail the workflow. Adopters wanting strict gating set `find_similar.ci_gate.enabled: true` + remove `continue-on-error` in the audit workflow.
+2. **Blocking tier (v1.x opt-in):** P ≥ 0.85 AND R ≥ 0.70. Activation gated on the cross-encoder reranker per BRD-OPEN-QUESTIONS §27 with documented criteria (≤15pp gap from advisory; reranker measurably lifts; <200ms p95 added latency).
 
-The threshold is part of the spec. Whether the *blocking-tier* threshold is achievable with M7 polish (cross-encoder reranker landing) and what changes about Atelier's commercial story if it isn't is tracked in [`risks.md`](./risks.md). The spec stands regardless of how the bet resolves; the wedge framing already shifted from find_similar to the substrate-as-a-whole (per §7).
+Advisory-tier clearance is corpus-dependent — Atelier's own corpus clears at v1 defaults; some adopter corpora may not. The eval harness (`atelier eval find_similar`) is the diagnostic adopters run against their own corpus to learn whether they sit above or below the tier. The spec stands regardless of how the bet resolves; the wedge framing is the substrate-as-a-whole (per §7), not find_similar standalone.
 
 ---
 

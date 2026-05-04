@@ -1,8 +1,6 @@
 # BRD Open Questions
 
-**Context.** Questions surfaced during design that must be answered before or during v1 build. Each item is an explicit decision point, not a defect.
-
-**Last updated:** 2026-05-04 (section 29 RESOLVED — E2 `atelier upgrade` polished CLI landed, consuming the E1 migration runner substrate; PARTIAL → RESOLVED. Earlier same-day: E1 substrate landed [`atelier_schema_versions` table + `scripts/migration/` runner]. Earlier 2026-05-02: sections 26 and 27 RESOLVED via ADR-047 wider-eval result on the claude-agent-sdk corpus; section 28 RESOLVED via ADR-046 codifying the empirical M6-entry deploy choices; section 7 partially resolved as bounded harness landing; section 29 ADDED as `atelier upgrade` scope-deferral; section 30 ADDED as push-notification observability-alerting v1.x deferral. Genuinely-open list: 21, 22, 23, 30.)
+**Context.** Decision points surfaced during design that need an explicit call. Each item is a discrete strategic question, not a defect.
 
 **File structure.** Open entries with full context appear first. Resolved entries below are compressed to one-line redirects pointing at the canonical home where each decision now lives. Original numbering is preserved so external references (e.g., "see BRD-OPEN-QUESTIONS section 14") still resolve. Full historical text of resolved entries is in git history.
 
@@ -10,7 +8,7 @@
 
 ## Open
 
-Three entries remain genuinely open (down from seven post-M7 Track 2). Sections 21, 22, 23 surfaced by the 2026-04-28 AI-speed red-team pivot — §22 schema-reservation landed at M7 Track 2; §21 (AI auto-reviewers) and §23 (annotation surface) remain genuinely open as v1.x defer with adopter-signal bar held. Section 7 (scale ceiling) was partially resolved at M7 Track 2 — the bounded harness landed (`scripts/test/scale/load-runner.ts` + ARCH §9.8 envelope commitment); empirical override pending operator runs of the harness. Section 28 (deploy trigger conditions) was resolved 2026-05-02 as ADR-046 — trigger #2 (claude.ai Connectors blocked on local-only) fired empirically at M6 entry; ADR codifies the empirical Vercel + Supabase Cloud choices that landed `atelier-three-coral.vercel.app`. Section 26 (multi-corpus generalization) was resolved 2026-05-02 via ADR-047 — wider eval against claude-agent-sdk public docs measured P=0.5540 / R=0.5423; the unanticipated finding that advisory tier is corpus-dependent prompted ADR-043 reversal of the blocking-tier framing. Section 27 (cross-encoder reranker) was resolved 2026-05-02 via the same ADR-047 — v1.x opt-in with documented activation criteria. Section 3 (embedding model default) was resolved 2026-05-01 as ADR-041. Section 25 (cross-dimension embedding swap) was resolved 2026-05-01 within 24 hours of filing. Section 19 (plan-review checkpoint) was resolved 2026-04-30 as ADR-039.
+Open at v1.x: §7 (scale ceiling — bounded harness shipped; empirical override pending operator runs), §21 (AI auto-reviewers — v1.x defer with adopter-signal bar), §22 (semantic-contradiction validator — schema reservation shipped at v1; implementation v1.x), §23 (lightweight annotations on contributions — v1.x defer with adopter-signal bar), §30 (push-notification alerting via messaging adapter — v1 ships UI alerts; out-of-band delivery v1.x with adopter-signal trigger), §31 (X1 audit LOW items — filed with explicit activation criteria each).
 
 ### 7 · Scale ceiling per guild
 
@@ -24,14 +22,6 @@ Three entries remain genuinely open (down from seven post-M7 Track 2). Sections 
 **Recommendation.** Document supported scale envelope (e.g., up to 10 projects × 20 composers × 10K contributions per project = 2M rows). Beyond that, recommend multiple guilds per team.
 
 **Status.** OPEN -- bounded M7 deliverable landed; empirical override pending operator runs of the harness. The v1 envelope is committed in ARCH §9.8 (mirrors `docs/testing/scale-ceiling-benchmark-plan.md` §4). The harness at `scripts/test/scale/load-runner.ts` ships Scenarios A (endpoint sustained load) and B (reaper cycle time) end-to-end; C (broadcast fanout), D (vector kNN at scale), and E (cross-dimension stress) ship as documented stubs that follow the same scenario-A pattern. Per ADR-011 destination-first + the M7 kickoff bounded scope: the v1 deliverable is "harness + observability hooks + measured-envelope doc" not "find the actual ceiling." When operators run the harness against a deployed substrate, the empirical numbers populate `docs/architecture/audits/scale-ceiling-envelope-v1.md` §4 and replace the architectural prediction. Two architectural side-deliverables already landed prior to M7 (ARCH 6.1.2 session row cleanup; ARCH 6.8 broadcast topology) per the plan analysis. The remaining open work is operator-driven (run the harness, populate the measured-envelope section, file an ADR if results diverge by >2x per the plan §7 decision criteria).
-
----
-
-### 19 - Plan-review checkpoint between claim and implementation
-
-Accepted into v1 as a per-territory opt-in (default off) lifecycle gate. `contributions.state` enum gains `plan_review`; `territories.yaml` gains `requires_plan_review: bool` field. New ARCH section 6.2.1.7 specifies semantics.
-
-**Status.** RESOLVED 2026-04-30. See [ADR-039](../architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md). Resolved prior to M2 entry per the architect-of-record strategic call. The defer-to-v1.x option was rejected as the "Phase 2 / coming soon" pattern that ADR-011 (destination-first design) prohibits; the AI-speed pivot's commitment to addressing human-latency-as-bottleneck plus Atelier's regulated-team intent-vs-execution audit-trail value made acceptance the right binary call.
 
 ---
 
@@ -52,7 +42,7 @@ The 2026-04-28 expert review's Opportunities table explicitly named "Auto-Review
 
 This is the single highest-leverage v1.x feature. Worth landing at M6 (alongside remote-principal composers + triage, which are the other AI-coordination concentrations) as a future ADR + ARCH 6.2.3 extension + territory schema addition.
 
-**Status.** OPEN. Strategic call: does this land at v1 or v1.x? Recommendation is v1.x (M6) because the find_similar precision data (M5) informs the auto-approve thresholds. v1 reserves the config surface (`territories.<name>.ai_review_policy: null`) so adoption doesn't require a schema migration. Surfaced by 2026-04-28 AI-speed red-team pivot.
+**Status.** OPEN at v1.x. v1 reserves the config surface (`territories.<name>.ai_review_policy: null`) so adoption does not require a schema migration. Recommendation is v1.x M6 alongside remote-principal composers and triage; find_similar precision data informs the auto-approve thresholds.
 
 ---
 
@@ -73,15 +63,15 @@ In an AI-speed reality, agents may generate ADRs at scale that pass syntactic ch
 
 The check is advisory at v1.x (warns, never blocks). Promoting to blocking is a per-project policy decision based on observed false-positive rate.
 
-**Status.** OPEN -- v1.x defer with schema reservation landed at M7. The v1 reservation per the M7 strategic call (kickoff Track 2):
+**Status.** OPEN at v1.x — implementation deferred; schema reservation ships at v1.
+
+v1 reservation:
 
 - `.atelier/config.yaml: review.semantic_contradiction` block exists with `enabled: false` default. All fields the v1.x implementation needs (scope_paths, mode, base_url, api_key_env, model_name, anchor_paths, confidence_threshold) are present. Adopters who fork at v1 do not need a schema migration to enable the v1.x validator.
-- `scripts/README.md "Extended cross-doc consistency"` table includes the `semantic_contradiction` check-class row marking it RESERVED. The validator has not implemented the check yet; the row documents where the v1.x implementation will plug in.
+- `scripts/README.md "Extended cross-doc consistency"` table includes the `semantic_contradiction` check-class row marked RESERVED. The validator has not implemented the check yet; the row documents where the v1.x implementation plugs in.
 - Adapter pattern matches ADR-041 (OpenAI-compatible `/v1/chat/completions`); adopters override `base_url` + `model_name` to swap providers (Anthropic, Mistral, vLLM, Ollama, etc.) without changing adapter code.
 
-The strategic call (does this land at v1?) was answered no per the M7 kickoff -- "schema reservation only -- not implementation." Reasons: (a) v1 is hardening, not feature-add; (b) the LLM-call cost + calibration overhead is genuinely substantial; (c) adopter signal for the feature has not surfaced; (d) destination-first per ADR-011 admits "scope deferred to v1.x" only when the v1 reservation makes the v1.x landing migration-free, which the schema reservation accomplishes.
-
-The remaining open work is the v1.x implementation when an adopter signals need OR when AI-generated ADRs cross a noise threshold that empirically warrants the validator's catch. Filed 2026-04-28; schema reservation landed 2026-05-02. Surfaced by the AI-speed red-team pivot.
+Activation criteria for v1.x landing: an adopter signals need OR AI-generated ADRs cross a noise threshold that empirically warrants the validator's catch.
 
 ---
 
@@ -116,89 +106,6 @@ Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing m
 
 ---
 
-### 25 · Cross-dimension embedding-model swap migration path
-
-**Scenario.** ADR-041 fixes the v1 default at OpenAI `text-embedding-3-small` (1536-dim) and the pgvector column at `vector(1536)`. ARCH 6.4.2 documents the same-dimension swap procedure (`atelier eval find_similar --rebuild-index` + 30-day grace window). What's NOT specified: the swap procedure when the new model has a different native dimension (e.g. moving to `nomic-embed-text-v1.5` at 768-dim, or `text-embedding-3-large` at 3072-dim).
-
-**Open questions:**
-- Add a second `embedding_v2 vector(N)` column on the embeddings table during transition, swap the active pointer, drop the old column at end-of-grace-window?
-- Use pgvector's `halfvec` to compress without dimension change (only valid for some model pairs)?
-- Reduce all models to a common dimension via Matryoshka-style truncation (lossy; trade-off on quality)?
-- Force a full corpus re-embed under the new dimension, with read-only fallback during the rebuild window?
-
-**Recommendation.** Defer until a second adapter at a different dimension is contributed. The decision space depends on: (a) which dimension count the new adapter exposes, (b) whether the source corpus content is still available at swap time, and (c) what the team's tolerance is for query-side downtime during rebuild. Pre-deciding without these constraints is over-investment.
-
-**Status.** RESOLVED 2026-05-01 (24 hours after filing) via the M5-entry calibration. Trigger fired during ADR-042's model-swap experiment when text-embedding-3-large (3072-dim) was tested against text-embedding-3-small (1536-dim). v1 path (per migrations 7 and 8): drop + recreate the embeddings table at the new dimension, re-embed corpus from source via `embed-runner`. No production users at M5 entry -> brief read-only window during rebuild is free. v1.x considers multi-column transitions (`embedding_v1 vector(1536)`, `embedding_v2 vector(N)` with active-pointer swap) or pgvector `halfvec` compression for higher-availability deployments where downtime is not free. Methodology-honesty signal: when an "event-triggered" open question's trigger fires within 24 hours of filing, the question wasn't actually event-triggered -- it was near-term-need being deferred. The lesson: filing as event-triggered should require evidence the trigger is genuinely distant, not just absent at filing time.
-
----
-
-_(Sections 26, 27, 28 moved to **Resolved** below — see the redirects.)_
-
----
-
-### 29 · `atelier upgrade` template-upgrade flow (scope-deferred to v1.x)
-
-**Scenario.** BRD US-11.10 + BUILD-SEQUENCE §9 list `atelier upgrade` as a v1 CLI command for pulling a new Atelier template version into an existing project. ARCH 9.7 specifies the semantics: additive-preferred migrations, idempotent, N/N-1 schema co-existence, conflict reports without auto-resolution, decision-log preservation. The 12-command CLI polish PR (M7 Track 1 / 2026-05-02) ships `atelier upgrade` as a **scope-deferred stub** — distinct from the 6 timeline-deferred stubs (init, datastore init, deploy, invite, territory add, doctor) which all have working raw equivalents. `atelier upgrade` has **no v1 raw form** because the underlying capability (semver-aware template upgrade with migration tracking) is not built at v1.
-
-This files the deferral so the gap doesn't get lost.
-
-**Why scope-deferred (not timeline-deferred):**
-
-- Timeline-deferred stubs (the other 6): the substrate capability exists at v1; only the CLI wrapper polish lands in v1.x. Adopters using the raw form get the full capability.
-- Scope-deferred `atelier upgrade`: there is no raw substrate command that does what ARCH 9.7 specifies. Operator practice at v1 is the manual workaround:
-
-  ```bash
-  cd <your-atelier-project>
-  git remote add upstream https://github.com/Signal-x-Studio-LLC/atelier.git
-  git fetch upstream main
-  git log HEAD..upstream/main -- .atelier/ docs/strategic/ docs/architecture/ | less
-  # Review what changed
-  git merge upstream/main   # or cherry-pick what applies
-  ```
-
-This works for adopters who cloned recently and have minimal local divergence. It does NOT scale to:
-
-- Adopters with custom territories that need to be preserved across upgrades
-- Adopters tracking a non-`main` branch
-- Adopters with custom config that conflicts with new template defaults
-- Adopters with locally-applied schema migrations (ARCH 9.7's N/N-1 co-existence requirement)
-
-**v1 reservation:** none beyond the CLI stub. No schema migration system exists at v1; no version-tracking metadata is stored in adopter projects; no migration-script registry is shipped. v1.x adds all of these.
-
-**Trigger to land:** first adopter requests semver-aware template upgrade. Until then, the manual git-pull workflow + the CHANGELOG (when it exists) are sufficient.
-
-**v1.x deliverables (when triggered):**
-
-1. Per-project version metadata: `.atelier/version.lock` records the template version the project was scaffolded from + the version of every subsequent upgrade
-2. Migration script registry: `tools/atelier-template/migrations/v1.0-to-v1.1/` style directories with idempotent migration scripts
-3. `atelier upgrade` polished implementation: discovers the registry, applies migrations in order, reports conflicts with the team's local divergence, preserves the decision log per ARCH 9.7
-4. CHANGELOG convention enforcement: every template change that affects adopter projects requires a corresponding migration script + CHANGELOG entry
-
-**Status.** RESOLVED 2026-05-04 — both substrate (E1) and operator-facing CLI (E2) landed. E2 ships the polished `atelier upgrade [--check | --apply]` consuming E1's `MigrationRunner`. Filed 2026-05-02 as part of the 12-command polish PR (US-11.10's polished form initially shipped as a scope-deferred stub); resolved on the v1.x close-out push.
-
-**E1 substrate (landed 2026-05-04):**
-
-- `atelier_schema_versions` table: per-migration apply tracking (filename, applied_at, content_sha256, applied_by, atelier_template_version). Bootstrap migration at `supabase/migrations/20260504000010_atelier_schema_versions.sql` creates the table + inserts baseline rows for every existing migration.
-- `scripts/migration/manifest.ts` + `scripts/migration/runner.ts`: substrate library exposing `MigrationRunner` with `discoverMigrations()`, `loadAppliedMigrations()`, `computeStatus()` (returns `{ pending, modified, missing }`), `applyMigration()` (transactional; idempotent via ON CONFLICT DO NOTHING).
-- `docs/architecture/schema/migration-system.md`: contract documentation covering filename conventions, idempotency requirement, append-only discipline (no DOWN migrations at v1 per ADR-005), conflict semantics, and adopter guidance.
-- `scripts/migration/__smoke__/runner.smoke.ts` (39 assertions, all green against local stack) + assertion added to `scripts/test/__smoke__/schema-invariants.smoke.ts §[8]`.
-
-**E2 polished CLI (landed 2026-05-04):**
-
-- `scripts/cli/commands/upgrade.ts`: polished form replacing the scope-deferred stub. Default action is `--check` (read-only); `--apply` is opt-in. Auto-detects LOCAL vs CLOUD mode from `ATELIER_DATASTORE_URL`. LOCAL preflight reuses the shared docker / supabase-CLI / supabase-running checks. Modified-migration detection refuses `--apply` without `--force-apply-modified` opt-in. `--dry-run` prints the planned apply sequence without mutation. `--json` carries the same status buckets the human-format renders. Password redaction in datastore URL output.
-- `scripts/cli/__smoke__/upgrade.smoke.ts`: substrate-touching smoke covering --check / --apply / --dry-run / modified-detection / force-modified gating. Cleanup removes the synthetic test table + schema_versions row + migration file.
-- Updates: `scripts/cli/atelier.ts` flips `upgrade` from `scope-deferred` → `working` in the registry; `scripts/cli/__smoke__/cli.smoke.ts` replaces the stub-deferral assertions with polished argument-handling assertions.
-- `docs/user/guides/upgrade-schema.md`: adopter-facing runbook for routine upgrades + how to handle modified-migration detection.
-- `docs/architecture/schema/migration-system.md`: "How operators use it" section pointing at `atelier upgrade --check` / `--apply`.
-
-**Out-of-scope (filed for v1.x next-level):**
-
-- DOWN migrations / rollback (per ADR-005 append-only; documented in E1)
-- Automatic upgrade on init (E2 is operator-driven; auto-upgrade is an unsafe default)
-- Cross-deploy coordination (apply same migration to staging + prod atomically — adopter-side decision)
-
----
-
 ### 30 · Push-notification alerting via messaging adapter (out-of-band observability delivery)
 
 **Scenario.** ARCH §8.3 specifies messaging-adapter-published alerts when observability thresholds cross (sync lag > NFR thresholds, find_similar precision regression > 5%, reaper rate spike, authentication failure spike). The M7 Track 1 observability stack ships UI-rendered alerts only — the dashboard at `/atelier/observability` colors threshold pills (yellow at 80% of envelope, red at 100%) per `.atelier/config.yaml: observability.thresholds`, but does not push out-of-band notifications to messaging surfaces (Slack, Teams, Discord, email). v1 ships visibility-in-UI; out-of-band delivery is filed for v1.x.
@@ -224,36 +131,34 @@ This works for adopters who cloned recently and have minimal local divergence. I
 3. Quiet hours + acknowledgment: respect operator-set quiet windows; allow ack from the messaging surface to suppress repeat notifications until the next state transition
 4. Backoff on flap: exponential backoff when a metric oscillates between `warn` and `alert` (reduces alert fatigue from noisy thresholds)
 
-**Status.** OPEN. v1 ships UI alerts; out-of-band delivery deferred to v1.x with the adopter-signal trigger above. Filed 2026-05-02 as part of the M7 Track 1 observability stack PR.
+**Status.** OPEN. v1 ships UI alerts; out-of-band delivery is v1.x scope, gated on the adopter-signal trigger above.
 
 ---
 
-### 31 · X1 close-out audit follow-ups
+### 31 · v1.x next-level security and polish items
 
-**Context.** The X1 audit (`fix(audit): X1 — security + quality batch from review of v1.x close-out`) shipped fixes for HIGH + MEDIUM findings whose target files were reachable from the E2 close-out stack. The items below were either lower severity (LOW), out-of-scope by design (need adopter infra), or required code on stacked branches that had not yet merged when X1 landed. Each is filed with explicit activation criteria so it does not get lost.
+**Context.** Items the v1 security + quality audit (X1) classified as LOW severity, code polish, or activation-gated by adopter signal. HIGH + MEDIUM findings shipped at v1 (B1 prompt-injection pre-filter on the semantic-contradiction validator; C1 OTP-relay gate on `/sign-in`; A1 magic-link redaction in `atelier invite` default output; A3 secret redaction in diffs; B2 execFileSync hardening; B4 statement_timeout on migration apply; D1 advisory lock on alert-publisher; D2 advisory lock on migration runner; plus quality patterns for self-disabling tests, regex-as-parser sanity floors, and parallel-implementation consolidation under `scripts/lib/`). Items below carry explicit activation criteria so they do not age into anonymous backlog.
 
-**LOW severity / scope-deferred:**
+**Security / hardening (activation-gated):**
 
 - **C2 sign-out CSRF.** Switch sign-out from GET to POST. *Activate when:* an adopter reports CSRF concern OR one-form-edit polish lands.
-- **C3 invite identity-rebinding.** Invite re-issued to an attacker-controlled email could rebind a composer's identity_subject. *Activate when:* multi-admin teams onboard. *Workaround until:* runbook entry advising single-admin invite + manual identity_subject rotation.
+- **C3 invite identity-rebinding.** Invite re-issued to an attacker-controlled email could rebind a composer's `identity_subject`. *Activate when:* multi-admin teams onboard. *Workaround until then:* runbook entry advising single-admin invite + manual identity_subject rotation.
 - **C4 LensUnauthorized info disclosure.** The `no_composer` reason names the exact failure mode. *Activate when:* an adopter classifies their deploy as user-class hostile.
-- **B3 git clone -- separator.** `atelier init` invokes `git clone <url>` without `--`; a malicious tutorial could supply a URL like `--upload-pack=...`. *Activate when:* one-form-edit polish lands.
-- **A2 webhook URL in fetch error message.** Node's `fetch` may include URL in error.toString. *Activate when:* node version drift makes this concrete.
-- **A4 deploy validation tail redaction.** `atelier deploy --validate` tails command output that may include secrets if the substrate ever logs them. *Activate when:* an adopter reports a leak, OR substrate logging changes.
+- **B3 `git clone --` separator.** `atelier init` invokes `git clone <url>` without `--`; a malicious tutorial URL like `--upload-pack=...` could exploit option parsing. *Activate when:* one-form-edit polish lands.
+- **A2 webhook URL in fetch error message.** Node's `fetch` may include the URL in `error.toString`. *Activate when:* a node version drift makes this concrete.
+- **A4 deploy validation tail redaction.** `atelier deploy --validate` tails command output that may include secrets if the substrate ever logs them. *Activate when:* an adopter reports a leak OR substrate logging changes.
 - **D3 invite race.** Two simultaneous `atelier invite` calls for the same email can both pass the duplicate check. *Activate when:* scale ceiling per ARCH §9.8 is approached, or batch-onboarding lands.
-- **E1, E2, E3 DoS items.** Endpoint rate-limit; magic-link request flood; cron-publisher fanout. *Activate when:* deploy infra (Vercel + Supabase) signals the layer below cannot absorb the rate.
-- **Code polish:** rerank adapter type widening; messaging-lib slack coupling; runner.ts re-exports; doctor JSON inline type; webhook adapter URL substring matching brittleness.
-- **Validator: stale example trace IDs in milestone-exit audit docs.** `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` reference 4 example trace IDs (matching `NF-N`, `US-N.M`, and `BRD:Epic-N` shapes) that don't resolve in `traceability.json`. The IDs are illustrative-only in audit prose, not real references. Surfaced by the F1 (Jira adapter) PR's pre-flight `validate-refs` run (18 unrelated failures pre-existing on main). *Fix path:* either rewrite the audit-doc references with real trace IDs, or extend `scripts/traceability/validate-refs.ts` to whitelist a documented example-IDs set. The literal IDs aren't reproduced here so this entry doesn't itself trip the validator. *Activate when:* next traceability-validator polish pass, OR a future milestone-exit audit blocks on inheriting the false-positive.
+- **E1 / E2 / E3 DoS items.** Endpoint rate-limit; magic-link request flood; cron-publisher fanout. *Activate when:* deploy infra (Vercel + Supabase) signals the layer below cannot absorb the rate.
 
-**Resolved at D7 landing (2026-05-04):**
+**Code polish:**
 
-- **C1 open OTP relay on `/sign-in`.** Resolved by the D7 PR (`feat/d7-sign-in-flow-on-current-main`); the route at `prototype/src/app/sign-in/check/route.ts` gates `auth.signInWithOtp` on `composers.email` existence, returns 200/404 indistinguishably to the browser UI, and applies an in-memory 10/min per-IP rate limit. Playwright coverage in `prototype/__smoke__/sign-in.dom.spec.ts`.
+- Rerank adapter type widening; messaging-lib slack coupling; `runner.ts` re-exports; doctor JSON inline type; webhook adapter URL substring matching brittleness.
 
-**Resolved at D4 landing (2026-05-04):**
+**Validator polish:**
 
-- **A1 magic-link printed to stdout by default in `atelier invite`.** Resolved by the D4 PR (`feat/d4-atelier-invite-on-current-main`); default text output redacts the link to `<magic-link suppressed; re-run with --print-link to emit>` (constant exported as `SUPPRESSED_LINK_MARKER` from `scripts/cli/commands/invite.ts`). Opt-in via `--print-link`. `--json` keeps `magicLink` as a structured field plus a top-level `warning: "magic_link_in_output"`. Operator runbook `docs/user/guides/invite-composers.md` calls out the redaction default. Coverage: `scripts/cli/__smoke__/cli.smoke.ts` section [12] (dispatcher contract + `--help` documents the marker + dry-run plan surfaces `print_link` posture); `scripts/cli/__smoke__/invite.smoke.ts` section 4b (live CLI subprocess: default output contains the suppressed marker and no URL; `--print-link` emits the URL; `--json` carries `warning: "magic_link_in_output"`).
+- **Stale example trace IDs in milestone-exit audit docs.** `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` reference example trace IDs (matching `NF-N`, `US-N.M`, and `BRD:Epic-N` shapes) that do not resolve in `traceability.json`. The IDs are illustrative-only in audit prose, not real references. *Fix path:* either rewrite the audit-doc references with real trace IDs, or extend `scripts/traceability/validate-refs.ts` to whitelist a documented example-IDs set. *Activate when:* next traceability-validator polish pass, OR a future milestone-exit audit blocks on inheriting the false-positive.
 
-**Status.** RESOLVED 2026-05-04. Filed 2026-05-04 with X1 close-out; C1 resolved 2026-05-04 with D7; A1 resolved 2026-05-04 with D4. Each LOW item retains explicit activation criteria for future work. No time-triggered ping per CLAUDE.md (state-triggered work, not calendar-triggered).
+**Status.** OPEN at v1.x. Each item carries an explicit state-triggered activation criterion; no time-triggered ping (state-triggered work per CLAUDE.md).
 
 ---
 
@@ -397,11 +302,19 @@ Pick the trigger mechanism for publish-delivery before the broadcast substrate e
 
 ---
 
+### 19 - Plan-review checkpoint between claim and implementation
+
+Per-territory opt-in lifecycle gate between `claim` and `in_progress`.
+
+**Status.** RESOLVED 2026-04-30. See [ADR-039](../architecture/decisions/ADR-039-plan-review-state-in-contribution-lifecycle.md). Per-territory opt-in (default off); `contributions.state` enum gains `plan_review`; `territories.yaml` gains `requires_plan_review: bool`. Semantics in ARCH 6.2.1.7.
+
+---
+
 ### 20 - Composer role enum mixes work-discipline with access-level
 
 Split into `composers.discipline` (5 values including newly-added `architect`) + `composers.access_level` (3 values).
 
-**Status.** RESOLVED 2026-04-28. See [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md). Resolved same-day per expert-review prompt that surfaced this should land before M1 schema implementation, not v1.x. The fix also closed a previously-undetected drift: `architect` was used as `owner_role` across 4 territories but missing from the composers enum -- now first-class as `discipline=architect`.
+**Status.** RESOLVED 2026-04-28. See [ADR-038](../architecture/decisions/ADR-038-composer-role-split-into-discipline-plus-access-level.md). `composers.default_role` split into `composers.discipline` (analyst | dev | pm | designer | architect) + `composers.access_level` (member | admin | stakeholder). `architect` is first-class discipline, matching its use as `owner_role` across territories.
 
 ---
 
@@ -409,7 +322,15 @@ Split into `composers.discipline` (5 values including newly-added `architect`) +
 
 Extend `reconcile.ts` with a branch-reaping pass guarded by a config flag; default off at v1.
 
-**Status.** RESOLVED 2026-04-28. See `../../scripts/sync/reconcile.ts` M1 step 4.iii implementation (`reapBranches` pass guarded by `ATELIER_RECONCILE_BRANCH_REAPING_ENABLED`, default false; `--reap-branches --apply` CLI override) and `../../scripts/README.md` reconcile section. Recommendation confirmed during M1 step 4.iii; strategic-call gate from SESSION.md closed by execution.
+**Status.** RESOLVED 2026-04-28. See `../../scripts/sync/reconcile.ts` M1 step 4.iii (`reapBranches` pass guarded by `ATELIER_RECONCILE_BRANCH_REAPING_ENABLED`, default false; `--reap-branches --apply` CLI override) and `../../scripts/README.md` reconcile section.
+
+---
+
+### 25 · Cross-dimension embedding-model swap migration path
+
+Define the swap procedure when a new embedding model has a different native dimension from the v1 default.
+
+**Status.** RESOLVED 2026-05-01 via the M5-entry calibration. v1 path (per migrations 7 and 8): drop + recreate the embeddings table at the new dimension, re-embed corpus from source via `embed-runner`. With no production users at v1, a brief read-only window during rebuild is acceptable. v1.x considers multi-column transitions (`embedding_v1 vector(1536)`, `embedding_v2 vector(N)` with active-pointer swap) or pgvector `halfvec` compression for higher-availability deployments where downtime is not free.
 
 ---
 
@@ -434,3 +355,11 @@ Decide when (or whether) the cross-encoder reranker ships, per the §26 activati
 Decide WHEN to deploy the Atelier endpoint to a network-reachable host (vs the local-stack default per ADR-044).
 
 **Status.** RESOLVED 2026-05-02. See [ADR-046](../architecture/decisions/ADR-046-deploy-strategy-vercel-supabase-cloud.md). Trigger #2 (claude.ai Connectors blocked on local-only) fired empirically at M6 entry; the deploy executed as a parallel workstream and landed `https://atelier-three-coral.vercel.app`. ADR-046 codifies the empirical choices (Vercel + Supabase Cloud + rootDirectory=prototype + URL split inheritance from PR #14 + Supabase Auth bearer with operator-driven rotation) and points at `docs/user/tutorials/first-deploy.md` (PR #24) as the procedural twin.
+
+---
+
+### 29 · `atelier upgrade` template-upgrade flow
+
+Build the substrate + CLI for semver-aware template upgrade with migration tracking (per ARCH §9.7: additive-preferred migrations, idempotent, N/N-1 schema co-existence, conflict reports without auto-resolution, decision-log preservation).
+
+**Status.** RESOLVED 2026-05-04. See BUILD-SEQUENCE §10 (E1 + E2). Substrate: `scripts/migration/` library exposing `MigrationRunner` + `atelier_schema_versions` tracking table. Operator-facing CLI: `atelier upgrade [--check | --apply | --dry-run | --force-apply-modified | --json]` consuming the runner. Operator runbook at `docs/user/guides/upgrade-schema.md`. DOWN migrations / rollback remain v1.x next-level per ADR-005 (append-only); cross-deploy coordination is an adopter-side decision.

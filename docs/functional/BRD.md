@@ -570,7 +570,7 @@ See `PRD.md` §4.11 for the full surface. CLI commands ship at v1 across milesto
 
 NFR for all stories below: each command has `--help`, documented exit codes, and a corresponding end-to-end test.
 
-The canonical CLI surface is **12 commands** at v1 (per NORTH-STAR §10): the 9 enumerated below plus `atelier upgrade` (US-1.7 covers the lifecycle framing; US-11.10 below covers the CLI surface), `atelier audit` (US-11.11), and `atelier review` (US-11.12). Reconciliation of the three originally-divergent lists landed 2026-04-28.
+The canonical CLI surface is **12 commands** at v1 (per NORTH-STAR §10): the 9 enumerated below plus `atelier upgrade` (US-1.7 covers the lifecycle framing; US-11.10 below covers the CLI surface), `atelier audit` (US-11.11), and `atelier review` (US-11.12).
 
 **US-11.1 — atelier init**
 As a team starting a new project, I want `atelier init <project>` so that I get the scaffolded directory structure, config templates, and charter files in one command.

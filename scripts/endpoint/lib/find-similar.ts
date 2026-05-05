@@ -66,7 +66,7 @@ export const DEFAULT_FIND_SIMILAR_CONFIG: FindSimilarConfig = {
   weakSuggestionThreshold: 0.030,
   topKPerBand: 5,
   strategy: 'hybrid',
-  rrfK: 60,
+  rrfK: 50,
 };
 
 // ===========================================================================
@@ -249,12 +249,12 @@ async function runVectorSearch(
       source_ref,
       trace_ids,
       content_text,
-      (1 - (embedding <=> $1::vector))::float8 AS similarity
+      (embedding <#> $1::vector) * -1 AS similarity
     FROM embeddings
     WHERE project_id = $2
       ${traceFilter}
-      AND (1 - (embedding <=> $1::vector)) >= $3
-    ORDER BY embedding <=> $1::vector ASC
+      AND ((embedding <#> $1::vector) * -1) >= $3
+    ORDER BY embedding <#> $1::vector ASC
     LIMIT ${limit}
   `;
 
@@ -341,41 +341,6 @@ function stringifyFiniteNumber(n: number): string {
   return n.toString();
 }
 
-// ===========================================================================
-// FTS query construction
-// ===========================================================================
-//
-// plainto_tsquery and websearch_to_tsquery both AND query terms, which
-// returns zero rows for natural-language descriptions of three or more
-// content words. The hybrid path needs OR semantics so BM25 can find
-// "documents containing ANY of these keywords" -- which is the standard
-// IR / BM25 behavior. We tokenize, sanitize to alphanumeric, drop short
-// tokens, and join with `|`.
-//
-// Sanitization is the load-bearing safety: to_tsquery raises syntax errors
-// on special characters, so we strip everything that isn't [A-Za-z0-9].
-// Empty input after filtering returns null; callers fall back to "no FTS
-// candidates" rather than executing an invalid query.
-
-const FTS_MIN_TOKEN_LEN = 3;
-
-/**
- * Build an OR-joined to_tsquery argument from free-form text. Returns null
- * when no usable token survives sanitization (e.g., query is "?" or
- * "test 1"); callers omit the FTS step in that case.
- */
-export function buildOrTsQuery(text: string): string | null {
-  const tokens = text
-    .toLowerCase()
-    .split(/[^a-z0-9_]+/)
-    .map((t) => t.replace(/[^a-z0-9]/g, ''))
-    .filter((t) => t.length >= FTS_MIN_TOKEN_LEN);
-  if (tokens.length === 0) return null;
-  // De-dup so to_tsquery doesn't choke on repeated alternatives
-  // (e.g. "find_similar find_similar"); set preserves insertion order.
-  const unique = Array.from(new Set(tokens));
-  return unique.join(' | ');
-}
 
 // ===========================================================================
 // Hybrid retrieval: vector kNN + BM25 fused via Reciprocal Rank Fusion (RRF)
@@ -422,111 +387,67 @@ async function runHybridSearch(
 ): Promise<FindSimilarResponse> {
   const cfg = deps.config;
   const embeddingText = embeddingToVectorLiteral(embedding);
-  const traceFilter = traceScope ? 'AND trace_ids && $3::text[]' : '';
+  const traceFilter = traceScope ? 'AND trace_ids && $5::text[]' : '';
 
-  // Vector kNN: top HYBRID_CANDIDATE_POOL by cosine. No threshold filter
-  // here -- RRF cares about rank position, not absolute score, so cutting
-  // off below a similarity floor would silently drop items that BM25
-  // legitimately likes.
-  const vectorSql = `
-    SELECT source_kind, source_ref, trace_ids, content_text,
-           (1 - (embedding <=> $1::vector))::float8 AS similarity
-      FROM embeddings
-     WHERE project_id = $2
-       ${traceFilter}
-     ORDER BY embedding <=> $1::vector ASC
-     LIMIT ${HYBRID_CANDIDATE_POOL}
+  const sql = `
+    WITH
+    vector_hits AS (
+      SELECT source_ref,
+             row_number() OVER (ORDER BY embedding <#> $1::vector ASC) AS rank
+        FROM embeddings
+       WHERE project_id = $2
+         ${traceFilter}
+       ORDER BY embedding <#> $1::vector ASC
+       LIMIT ${HYBRID_CANDIDATE_POOL}
+    ),
+    bm25_hits AS (
+      SELECT source_ref,
+             row_number() OVER (
+               ORDER BY ts_rank_cd(to_tsvector('english', content_text),
+                                   websearch_to_tsquery('english', $3)) DESC
+             ) AS rank
+        FROM embeddings
+       WHERE project_id = $2
+         ${traceFilter}
+         AND to_tsvector('english', content_text) @@ websearch_to_tsquery('english', $3)
+       ORDER BY ts_rank_cd(to_tsvector('english', content_text),
+                           websearch_to_tsquery('english', $3)) DESC
+       LIMIT ${HYBRID_CANDIDATE_POOL}
+    ),
+    fused AS (
+      SELECT source_ref, sum(score) AS rrf_score
+        FROM (
+          SELECT source_ref, 1.0 / ($4 + rank) AS score FROM vector_hits
+          UNION ALL
+          SELECT source_ref, 1.0 / ($4 + rank) AS score FROM bm25_hits
+        ) sub
+       GROUP BY source_ref
+       ORDER BY sum(score) DESC
+       LIMIT ${cfg.topKPerBand * 2}
+    )
+    SELECT e.source_kind,
+           e.source_ref,
+           e.trace_ids,
+           e.content_text,
+           f.rrf_score::float8 AS similarity
+      FROM fused f
+      JOIN embeddings e ON e.source_ref = f.source_ref AND e.project_id = $2
+     ORDER BY f.rrf_score DESC
   `;
-  const vectorParams: unknown[] = [embeddingText, projectId];
-  if (traceScope) vectorParams.push(traceScope);
 
-  // BM25 path: tokenize + OR-join into to_tsquery. plainto_tsquery /
-  // websearch_to_tsquery have AND semantics that return zero rows for
-  // natural-language queries against this corpus density (verified
-  // empirically during M5 calibration). OR semantics + ts_rank_cd give
-  // standard BM25-like behavior: rank by density of matching keywords.
-  const orTsQuery = buildOrTsQuery(description);
-  let ftsRows: KeywordMatchRow[] = [];
-  let vectorRows: VectorMatchRow[];
+  const params: unknown[] = [embeddingText, projectId, description, cfg.rrfK];
+  if (traceScope) params.push(traceScope);
+
+  let rows: VectorMatchRow[];
   try {
-    const vectorPromise = deps.pool.query<VectorMatchRow>(vectorSql, vectorParams);
-    let ftsPromise: Promise<{ rows: KeywordMatchRow[] }> = Promise.resolve({ rows: [] });
-    if (orTsQuery !== null) {
-      const ftsTraceFilter = traceScope ? 'AND trace_ids && $3::text[]' : '';
-      const ftsSql = `
-        SELECT source_kind, source_ref, trace_ids, content_text,
-               ts_rank_cd(to_tsvector('english', content_text),
-                          to_tsquery('english', $1))::float8 AS rank
-          FROM embeddings
-         WHERE project_id = $2
-           ${ftsTraceFilter}
-           AND to_tsvector('english', content_text) @@ to_tsquery('english', $1)
-         ORDER BY rank DESC
-         LIMIT ${HYBRID_CANDIDATE_POOL}
-      `;
-      const ftsParams: unknown[] = [orTsQuery, projectId];
-      if (traceScope) ftsParams.push(traceScope);
-      ftsPromise = deps.pool.query<KeywordMatchRow>(ftsSql, ftsParams);
-    }
-    const [v, f] = await Promise.all([vectorPromise, ftsPromise]);
-    vectorRows = v.rows;
-    ftsRows = f.rows;
+    const result = await deps.pool.query<VectorMatchRow>(sql, params);
+    rows = result.rows;
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[find_similar] hybrid query failed; falling back to keyword-only:', err);
     return runKeywordFallback(projectId, description, traceScope, deps);
   }
 
-  // RRF fusion. rank starts at 1 (not 0) so the formula 1/(k+rank) is
-  // well-defined for rank=1 and the 1st-place reward is bounded.
-  const k = cfg.rrfK;
-  const fused = new Map<string, HybridCandidate>();
-
-  vectorRows.forEach((row, idx) => {
-    const rrfContribution = 1 / (k + (idx + 1));
-    const existing = fused.get(row.source_ref);
-    if (existing) {
-      existing.fused += rrfContribution;
-    } else {
-      fused.set(row.source_ref, {
-        source_kind: row.source_kind,
-        source_ref: row.source_ref,
-        trace_ids: row.trace_ids,
-        content_text: row.content_text,
-        fused: rrfContribution,
-      });
-    }
-  });
-  ftsRows.forEach((row, idx) => {
-    const rrfContribution = 1 / (k + (idx + 1));
-    const existing = fused.get(row.source_ref);
-    if (existing) {
-      existing.fused += rrfContribution;
-    } else {
-      fused.set(row.source_ref, {
-        source_kind: row.source_kind,
-        source_ref: row.source_ref,
-        trace_ids: row.trace_ids,
-        content_text: row.content_text,
-        fused: rrfContribution,
-      });
-    }
-  });
-
-  const ordered = Array.from(fused.values()).sort((a, b) => b.fused - a.fused);
-
-  // Convert HybridCandidate -> VectorMatchRow shape for partitionRowsToResponse.
-  // The "similarity" field is the fused score; thresholds in cfg are calibrated
-  // against this scale per ADR-042.
-  const synthesized: VectorMatchRow[] = ordered.map((c) => ({
-    source_kind: c.source_kind,
-    source_ref: c.source_ref,
-    trace_ids: c.trace_ids,
-    content_text: c.content_text,
-    similarity: c.fused.toString(),
-  }));
-
-  return partitionRowsToResponse(synthesized, cfg, /* degraded */ false);
+  return partitionRowsToResponse(rows, cfg, /* degraded */ false);
 }
 
 // ===========================================================================
@@ -576,16 +497,6 @@ async function runKeywordFallback(
     };
   }
 
-  const orTsQuery = buildOrTsQuery(description);
-  if (orTsQuery === null) {
-    return {
-      primary_matches: [],
-      weak_suggestions: [],
-      degraded: true,
-      thresholds_used: { default: cfg.defaultThreshold, weak: cfg.weakSuggestionThreshold },
-    };
-  }
-
   const traceFilter = traceScope ? 'AND trace_ids && $3::text[]' : '';
   const sql = `
     SELECT
@@ -595,17 +506,17 @@ async function runKeywordFallback(
       content_text,
       ts_rank_cd(
         to_tsvector('english', content_text),
-        to_tsquery('english', $1)
+        websearch_to_tsquery('english', $1)
       )::float8 AS rank
     FROM embeddings
     WHERE project_id = $2
       ${traceFilter}
-      AND to_tsvector('english', content_text) @@ to_tsquery('english', $1)
+      AND to_tsvector('english', content_text) @@ websearch_to_tsquery('english', $1)
     ORDER BY rank DESC
     LIMIT ${limit}
   `;
 
-  const params: unknown[] = [orTsQuery, projectId];
+  const params: unknown[] = [description, projectId];
   if (traceScope) params.push(traceScope);
 
   let rows: KeywordMatchRow[];

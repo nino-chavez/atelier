@@ -19,7 +19,7 @@ The following architectural seams and infrastructure primitives have been discov
 | **S04: Auth & Session Management** | The token-hash flow, OTP relay, and session cookie strategies via Supabase Auth. | matches-canonical | [Fixed in PR #75](#s04-auth--session-management) |
 | **S05: Vercel Deploy Config** | Vercel deployment primitives (missing `vercel.ts`/`vercel.json`, `rootDirectory` handling, crons). | matches-canonical | [Fixed in PR #75](#s05-vercel-deploy-config) |
 | **S06: Edge Runtime / Middleware** | Next.js `middleware.ts` auth guards and edge execution constraints. | matches-canonical | [Fixed in PR #75](#s06-edge-runtime--middleware) |
-| **S07: pgvector & `find_similar`** | Embedding generation, vector indexing, and hybrid retrieval logic via pgvector. | diverges-silently | [§S07](#s07-pgvector--find_similar) |
+| **S07: pgvector & `find_similar`** | Embedding generation, vector indexing, and hybrid retrieval logic via pgvector. | matches-canonical | [Fixed in main](#s07-pgvector--find_similar) |
 | **S08: BroadcastService / Realtime** | Multi-composer concurrency using Supabase Realtime pub/sub. | matches-canonical | [§S08](#s08-broadcastservice--realtime) |
 | **S09: RLS Policies** | Row Level Security policies defining access control at the Postgres layer. | matches-canonical | [Fixed in PR #75](#s09-rls-policies) |
 | **S10: Migrations Execution** | How schema migrations are tracked, applied, and locked (advisory locks, `statement_timeout`). | matches-canonical | [§S10](#s10-migrations-execution) |
@@ -37,8 +37,8 @@ Executed 2026-05-04 via 15 parallel isolated worktrees per ADR-048's Empirical P
 
 ### Tally
 
-- **matches-canonical: 11** (S02, S03, S04, S05, S06, S08, S09, S10, S11, S13, S14)
-- **diverges-silently: 4** (S01, S07, S12, S15)
+- **matches-canonical: 12** (S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S13, S14)
+- **diverges-silently: 3** (S01, S12, S15)
 - **diverges-with-documented-reason: 0**
 
 11 of 15 surfaces silently diverge from canonical. Note that S10 and S11 returned auditor-coined intermediate verdicts ("solid", "aligned-with-minor-gaps") that map to matches-canonical-with-polish under the strict rubric; their polish items are listed within their sections but do not change the verdict. S04 and S06 returned auditor-coined hedge labels ("diverges-with-known-gaps", "diverges-with-documented-reason but with corrected sub-finding") that map to diverges-silently under strict rubric — the substance in both cases is canonical violation with no ADR-level justification.

@@ -81,13 +81,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           # Need full history so the validator can diff against base ref
           fetch-depth: 0
 
       - name: Setup Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: npm
@@ -133,7 +133,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
 
@@ -150,7 +150,7 @@ jobs:
         # On schedule / workflow_dispatch events dorny/paths-filter has no diff
         # context and defaults all filter outputs to 'true', so the smoke runs.
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050 # v3
         with:
           filters: |
             mcp_routes:
@@ -164,7 +164,7 @@ jobs:
               - '.github/workflows/atelier-audit.yml'
 
       - name: Setup Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: npm
@@ -176,7 +176,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@b60b5899c73b63a2d2d651b1e90db8d4c9392f51 # v1
         with:
           version: latest
 
@@ -324,10 +324,10 @@ jobs:
         run: npx tsx scripts/traceability/validate-refs.ts --milestone-exit
 
       # ---------------------------------------------------------------------
-      # find_similar eval gate (ADR-006: precision >= 0.75 AND recall >= 0.60)
+      # find_similar eval gate (ADR-043 advisory tier P>=0.60 AND R>=0.60; ADR-045 informational)
       # ---------------------------------------------------------------------
       #
-      # Per ADR-006 the gate is mandatory on main. We split execution by
+      # We split execution by
       # secret availability:
       #   - With OPENAI_API_KEY in the env (forks + main pipelines that hold
       #     the secret): embed the corpus, run the eval, FAIL the build on
@@ -389,7 +389,7 @@ jobs:
 
       - name: Upload eval metrics (when gate ran)
         if: env.OPENAI_API_KEY != '' && always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: find_similar-eval-${{ github.run_id }}
           path: atelier/eval/find_similar/last-run.json

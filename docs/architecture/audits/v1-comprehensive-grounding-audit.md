@@ -25,7 +25,7 @@ The following architectural seams and infrastructure primitives have been discov
 | **S10: Migrations Execution** | How schema migrations are tracked, applied, and locked (advisory locks, `statement_timeout`). | matches-canonical | [§S10](#s10-migrations-execution) |
 | **S11: CLI Patterns (`atelier` bin)** | Node.js CLI argument parsing, option injection, and shell execution hardening (`execFileSync`). | matches-canonical | [§S11](#s11-cli-patterns) |
 | **S12: Webhook Handling** | Webhook signature verification, idempotency, and routing if any external services push events. | diverges-silently | [§S12](#s12-webhook-handling) |
-| **S13: GitHub Actions CI Workflow** | CI/CD pipelines, test runner environments, and secrets handling. | diverges-silently | [§S13](#s13-github-actions-ci-workflow) |
+| **S13: GitHub Actions CI Workflow** | CI/CD pipelines, test runner environments, and secrets handling. | matches-canonical | [Fixed in main](#s13-github-actions-ci-workflow) |
 | **S14: Image Pipeline / Static Assets** | Next.js Image optimization and static asset serving patterns. | matches-canonical | [§S14](#s14-image-pipeline--static-assets) |
 | **S15: Telemetry / Logging** | Observability alerts, severity calculators, and out-of-band notification logic. | diverges-silently | [§S15](#s15-telemetry--logging) |
 
@@ -37,8 +37,8 @@ Executed 2026-05-04 via 15 parallel isolated worktrees per ADR-048's Empirical P
 
 ### Tally
 
-- **matches-canonical: 10** (S02, S03, S04, S05, S06, S08, S09, S10, S11, S14)
-- **diverges-silently: 5** (S01, S07, S12, S13, S15)
+- **matches-canonical: 11** (S02, S03, S04, S05, S06, S08, S09, S10, S11, S13, S14)
+- **diverges-silently: 4** (S01, S07, S12, S15)
 - **diverges-with-documented-reason: 0**
 
 11 of 15 surfaces silently diverge from canonical. Note that S10 and S11 returned auditor-coined intermediate verdicts ("solid", "aligned-with-minor-gaps") that map to matches-canonical-with-polish under the strict rubric; their polish items are listed within their sections but do not change the verdict. S04 and S06 returned auditor-coined hedge labels ("diverges-with-known-gaps", "diverges-with-documented-reason but with corrected sub-finding") that map to diverges-silently under strict rubric — the substance in both cases is canonical violation with no ADR-level justification.

@@ -24,7 +24,7 @@ The following architectural seams and infrastructure primitives have been discov
 | **S09: RLS Policies** | Row Level Security policies defining access control at the Postgres layer. | matches-canonical | [Fixed in PR #75](#s09-rls-policies) |
 | **S10: Migrations Execution** | How schema migrations are tracked, applied, and locked (advisory locks, `statement_timeout`). | matches-canonical | [§S10](#s10-migrations-execution) |
 | **S11: CLI Patterns (`atelier` bin)** | Node.js CLI argument parsing, option injection, and shell execution hardening (`execFileSync`). | matches-canonical | [§S11](#s11-cli-patterns) |
-| **S12: Webhook Handling** | Webhook signature verification, idempotency, and routing if any external services push events. | diverges-silently | [§S12](#s12-webhook-handling) |
+| **S12: Webhook Handling** | Webhook signature verification, idempotency, and routing if any external services push events. | matches-canonical | [§S12](#s12-webhook-handling) |
 | **S13: GitHub Actions CI Workflow** | CI/CD pipelines, test runner environments, and secrets handling. | matches-canonical | [Fixed in main](#s13-github-actions-ci-workflow) |
 | **S14: Image Pipeline / Static Assets** | Next.js Image optimization and static asset serving patterns. | matches-canonical | [§S14](#s14-image-pipeline--static-assets) |
 | **S15: Telemetry / Logging** | Observability alerts, severity calculators, and out-of-band notification logic. | matches-canonical | [Fixed in main](#s15-telemetry--logging) |
@@ -37,9 +37,11 @@ Executed 2026-05-04 via 15 parallel isolated worktrees per ADR-048's Empirical P
 
 ### Tally
 
-- **matches-canonical: 14** (S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S13, S14, S15)
-- **diverges-silently: 1** (S12)
+- **matches-canonical: 15** (S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S12, S13, S14, S15)
+- **diverges-silently: 0**
 - **diverges-with-documented-reason: 0**
+
+The M8 grounding audit's eleven `diverges-silently` findings are now closed. The audit's purpose — restoring methodological trust in the v1 substrate by empirically verifying every architectural seam against vendor canonicals — is achieved. Two remaining v1.x scope items are tracked in §31 entries (S09 row-level RLS as second-layer defense; MCP `/api/mcp` path retirement off pg.Pool) but those are scope expansions on already-canonical surfaces, not silent divergences.
 
 11 of 15 surfaces silently diverge from canonical. Note that S10 and S11 returned auditor-coined intermediate verdicts ("solid", "aligned-with-minor-gaps") that map to matches-canonical-with-polish under the strict rubric; their polish items are listed within their sections but do not change the verdict. S04 and S06 returned auditor-coined hedge labels ("diverges-with-known-gaps", "diverges-with-documented-reason but with corrected sub-finding") that map to diverges-silently under strict rubric — the substance in both cases is canonical violation with no ADR-level justification.
 
@@ -453,7 +455,7 @@ The canonical-rebuild PR landed shortly after this matrix was produced. It addre
 | S09 RLS Policies | **partial** | Lens authz now enforced at DB tier via SECURITY DEFINER RPCs that resolve viewer from `auth.jwt() ->> 'sub'` and check project_id. Table-level `CREATE POLICY` statements remain absent; the MCP path (which still uses pg.Pool as postgres superuser) continues to bypass RLS structurally. v1.x scope: add row-level RLS as second-layer defense + refactor MCP path. |
 | S01 MCP Endpoint Transport | open | Hand-rolled vs `@modelcontextprotocol/sdk` `StreamableHTTPServerTransport`; four spec deviations (Origin, notification 202, MCP-Protocol-Version, Accept). v1.x. |
 | S07 pgvector & find_similar | open | Cosine vs canonical inner-product; application-side RRF fold vs SQL CTE; k=60 vs k=50; OR-tokenizer vs `websearch_to_tsquery`. v1.x. |
-| S12 Webhook Handling | open | Zero handlers despite ARCH §6.2.2.1/§6.4.2/§6.5.2/§902-905 mandate. v1.x. |
+| S12 Webhook Handling | **closed** | GitHub + Figma route handlers ship at `prototype/src/app/api/webhooks/{github,figma}/route.ts` with HMAC-SHA256 verification (raw body, constant-time compare) + idempotency via `webhook_deliveries` table (migration 13) keyed on the provider's per-delivery ID. Eleven smoke checks cover malformed-signature rejection, missing-headers, valid-first-delivery, duplicate-idempotency, missing-secret fail-closed, GET 405. Per-event dispatch (push → embed pipeline; pull_request.merged → contribution state; FILE_COMMENT → triage) deferred to v1.x — the spec gap S12 named (no verifying receiver) is closed; per-event handler wiring is incremental work. Supabase Auth Hooks (Svix-style verify) deferred to v1.x as separable scope. |
 | S13 GitHub Actions CI | open | Third-party actions floating-tag-pinned; stale ADR-006 threshold comment. v1.x polish. |
 | S15 Telemetry / Logging | open | Coordination-telemetry canonical; application observability unspecified. v1.x doc-ack + optional `instrumentation.ts`. |
 

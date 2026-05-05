@@ -439,6 +439,28 @@ find_similar eval gate present (lines 327-396). **ADR-006's original `0.75/0.60`
 
 ---
 
+### Post-merge progress (PR #75 — canonical-supabase-rebuild, 2026-05-04)
+
+The canonical-rebuild PR landed shortly after this matrix was produced. It addresses six of the eleven `diverges-silently` findings; the remaining five carry forward into v1.x as named follow-ups.
+
+| Finding | Status after PR #75 | Notes |
+|---|---|---|
+| S02 DB Connection Pattern | **closed (lens path)** | Lens runtime now uses `@supabase/ssr` → PostgREST → SECURITY DEFINER RPC via `prototype/src/lib/atelier/adapters/supabase-ssr.ts`. The MCP `/api/mcp` route continues to use pg.Pool directly per rebuild brief — separable v1.x follow-up. |
+| S03 Environment Variables | **closed** | `ATELIER_*` retired in favor of `POSTGRES_URL` + `NEXT_PUBLIC_SITE_URL` + derived issuer. Adapter accepts both `_PUBLISHABLE_KEY` and `_ANON_KEY`. Operator runbook covers Vercel-Supabase Marketplace provisioning + retiring legacy env vars. |
+| S04 Auth & Session Management | **closed** | `prototype/middleware.ts` ships per Supabase canonical Next.js pattern. Calls `auth.getUser()` (not `getSession()`). Cookie bridge writes both `request.cookies` and fresh `response.cookies`. |
+| S05 Vercel Deploy Config | **closed** | `prototype/vercel.ts` ships with framework, per-route function timeouts, crons stub. Closes audit F5. |
+| S06 Edge Runtime / Middleware | **closed** | `prototype/middleware.ts` ships; the §31 retraction's wrong-rationale verdict is corrected by the merged code. |
+| S09 RLS Policies | **partial** | Lens authz now enforced at DB tier via SECURITY DEFINER RPCs that resolve viewer from `auth.jwt() ->> 'sub'` and check project_id. Table-level `CREATE POLICY` statements remain absent; the MCP path (which still uses pg.Pool as postgres superuser) continues to bypass RLS structurally. v1.x scope: add row-level RLS as second-layer defense + refactor MCP path. |
+| S01 MCP Endpoint Transport | open | Hand-rolled vs `@modelcontextprotocol/sdk` `StreamableHTTPServerTransport`; four spec deviations (Origin, notification 202, MCP-Protocol-Version, Accept). v1.x. |
+| S07 pgvector & find_similar | open | Cosine vs canonical inner-product; application-side RRF fold vs SQL CTE; k=60 vs k=50; OR-tokenizer vs `websearch_to_tsquery`. v1.x. |
+| S12 Webhook Handling | open | Zero handlers despite ARCH §6.2.2.1/§6.4.2/§6.5.2/§902-905 mandate. v1.x. |
+| S13 GitHub Actions CI | open | Third-party actions floating-tag-pinned; stale ADR-006 threshold comment. v1.x polish. |
+| S15 Telemetry / Logging | open | Coordination-telemetry canonical; application observability unspecified. v1.x doc-ack + optional `instrumentation.ts`. |
+
+The matches-canonical surfaces (S08, S10, S11, S14) carry their original polish recommendations forward unchanged.
+
+---
+
 ### S15: Telemetry / Logging
 
 **Verdict:** diverges-silently

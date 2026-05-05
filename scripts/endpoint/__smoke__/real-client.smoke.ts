@@ -270,6 +270,10 @@ async function rpc(
   const id = nextRpcId++;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    // MCP Streamable HTTP spec (2025-11-25) + ADR-050: clients MUST send
+    // Accept including application/json or text/event-stream. The
+    // transport.ts handler enforces this at line ~199.
+    Accept: 'application/json, text/event-stream',
     ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
   };
   const res = await fetch(`${serverUrl}/api/mcp`, {

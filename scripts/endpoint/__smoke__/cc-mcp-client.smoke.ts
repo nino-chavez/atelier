@@ -328,7 +328,14 @@ async function main(): Promise<void> {
     console.log('\n[5] POST /api/mcp no bearer: 401 + WWW-Authenticate');
     const noAuthRes = await fetch(`${server.baseUrl}/api/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // MCP spec + ADR-050: clients MUST send Accept including
+        // application/json or text/event-stream. Without it, transport.ts
+        // returns 400 before the bearer check fires, masking the 401
+        // assertion this test is meant to verify.
+        Accept: 'application/json, text/event-stream',
+      },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize' }),
     });
     check('no-bearer returns 401', noAuthRes.status === 401);

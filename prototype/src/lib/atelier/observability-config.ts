@@ -91,13 +91,5 @@ export function loadObservabilityConfig(repoRoot: string): ObservabilityConfig {
   };
 }
 
-/** Severity per ARCH 8.3 conventions: yellow at >=80% of envelope, red at >=100%. */
-export type Severity = 'ok' | 'warn' | 'alert';
+export { severityFor, type Severity } from "../../../../scripts/lib/severity.ts";
 
-export function severityFor(value: number, envelope: number): Severity {
-  if (envelope <= 0) return 'ok';
-  const ratio = value / envelope;
-  if (ratio >= 1) return 'alert';
-  if (ratio >= 0.8) return 'warn';
-  return 'ok';
-}

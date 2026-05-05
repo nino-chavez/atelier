@@ -13,7 +13,7 @@ The following architectural seams and infrastructure primitives have been discov
 
 | Surface | Description | Verdict | Evidence/Fix Link |
 |---|---|---|---|
-| **S01: 12-Tool MCP Endpoint Shape** | The interface mapping the 12 tools to MCP v1 protocol via `stdio` or `sse`. | diverges-silently | [§S01](#s01-12-tool-mcp-endpoint-shape) |
+| **S01: 12-Tool MCP Endpoint Shape** | Transport validation over JSON-RPC limits to exact 12-tool surface. | matches-canonical | [Fixed in main](#s01-12-tool-mcp-endpoint-shape) |
 | **S02: DB Connection Pattern** | How the application connects to Supabase (currently suspected raw `pg.Pool` instead of `@supabase/ssr`). | matches-canonical | [Fixed in PR #75](#s02-db-connection-pattern) |
 | **S03: Environment Variable Configuration** | Naming and fallback chains for `.env` slots (e.g. legacy anon key vs publishable key). | matches-canonical | [Fixed in PR #75](#s03-environment-variable-configuration) |
 | **S04: Auth & Session Management** | The token-hash flow, OTP relay, and session cookie strategies via Supabase Auth. | matches-canonical | [Fixed in PR #75](#s04-auth--session-management) |
@@ -27,7 +27,7 @@ The following architectural seams and infrastructure primitives have been discov
 | **S12: Webhook Handling** | Webhook signature verification, idempotency, and routing if any external services push events. | diverges-silently | [§S12](#s12-webhook-handling) |
 | **S13: GitHub Actions CI Workflow** | CI/CD pipelines, test runner environments, and secrets handling. | matches-canonical | [Fixed in main](#s13-github-actions-ci-workflow) |
 | **S14: Image Pipeline / Static Assets** | Next.js Image optimization and static asset serving patterns. | matches-canonical | [§S14](#s14-image-pipeline--static-assets) |
-| **S15: Telemetry / Logging** | Observability alerts, severity calculators, and out-of-band notification logic. | diverges-silently | [§S15](#s15-telemetry--logging) |
+| **S15: Telemetry / Logging** | Observability alerts, severity calculators, and out-of-band notification logic. | matches-canonical | [Fixed in main](#s15-telemetry--logging) |
 
 ## Phase 2: Audit Execution
 
@@ -37,8 +37,8 @@ Executed 2026-05-04 via 15 parallel isolated worktrees per ADR-048's Empirical P
 
 ### Tally
 
-- **matches-canonical: 12** (S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S13, S14)
-- **diverges-silently: 3** (S01, S12, S15)
+- **matches-canonical: 14** (S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11, S13, S14, S15)
+- **diverges-silently: 1** (S12)
 - **diverges-with-documented-reason: 0**
 
 11 of 15 surfaces silently diverge from canonical. Note that S10 and S11 returned auditor-coined intermediate verdicts ("solid", "aligned-with-minor-gaps") that map to matches-canonical-with-polish under the strict rubric; their polish items are listed within their sections but do not change the verdict. S04 and S06 returned auditor-coined hedge labels ("diverges-with-known-gaps", "diverges-with-documented-reason but with corrected sub-finding") that map to diverges-silently under strict rubric — the substance in both cases is canonical violation with no ADR-level justification.

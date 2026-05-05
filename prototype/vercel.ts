@@ -49,6 +49,8 @@ export const config: VercelConfig = {
     { path: '/api/cron/reconcile', schedule: '15 * * * *' },
     // Triage (ARCH §6.5.2): poll external integrations for new feedback rows.
     { path: '/api/cron/triage', schedule: '*/10 * * * *' },
+    // Alert publisher (ARCH §8): publish observability alerts.
+    { path: '/api/cron/alert-publisher', schedule: '*/5 * * * *' },
   ],
 };
 

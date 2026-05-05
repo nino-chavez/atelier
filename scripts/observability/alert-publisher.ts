@@ -175,13 +175,7 @@ function loadConfig(repoRoot: string): AppConfig {
 // Severity helpers (mirrors prototype/src/lib/atelier/observability-config.ts)
 // ---------------------------------------------------------------------------
 
-function severityFor(value: number, envelope: number): AlertSeverity | 'ok' {
-  if (envelope <= 0) return 'ok';
-  const ratio = value / envelope;
-  if (ratio >= 1) return 'alert';
-  if (ratio >= 0.8) return 'warn';
-  return 'ok';
-}
+import { severityFor } from '../lib/severity.ts';
 
 function severityRank(s: AlertSeverity | 'ok'): number {
   if (s === 'ok') return 0;

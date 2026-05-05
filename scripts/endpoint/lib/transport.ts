@@ -194,6 +194,33 @@ export async function handleMcpRequest(
     );
   }
 
+  // 1. Accept header enforcement
+  const accept = request.headers.get('accept') ?? '';
+  if (!accept.includes('application/json') && !accept.includes('text/event-stream')) {
+    return new Response('Accept header must include application/json or text/event-stream', { status: 400 });
+  }
+
+  // 2. Origin validation (DNS-rebinding protection)
+  const origin = request.headers.get('origin');
+  if (origin) {
+    const host = request.headers.get('host') || '';
+    try {
+      const originHost = new URL(origin).host;
+      if (originHost !== host && originHost !== 'localhost') {
+        return new Response('Untrusted Origin', { status: 403 });
+      }
+    } catch {
+      return new Response('Invalid Origin', { status: 403 });
+    }
+  }
+
+  // 3. MCP-Protocol-Version enforcement
+  const mcpVersion = request.headers.get('mcp-protocol-version');
+  const expectedVersion = options.protocolVersion ?? DEFAULT_PROTOCOL_VERSION;
+  if (mcpVersion && mcpVersion !== expectedVersion) {
+    return new Response(`Unsupported MCP Protocol Version. Expected ${expectedVersion}`, { status: 400 });
+  }
+
   const contentType = request.headers.get('content-type') ?? '';
   if (!contentType.toLowerCase().includes('application/json')) {
     return jsonRpcResponse(
@@ -247,7 +274,7 @@ export async function handleMcpRequest(
   switch (body.method) {
     case 'initialize':
       return jsonRpcResponse(jsonRpcSuccess(id, {
-        protocolVersion: options.protocolVersion ?? DEFAULT_PROTOCOL_VERSION,
+        protocolVersion: expectedVersion,
         capabilities: { tools: { listChanged: false } },
         serverInfo: {
           name: options.serverName ?? DEFAULT_SERVER_NAME,
@@ -278,9 +305,8 @@ export async function handleMcpRequest(
     }
 
     case 'notifications/initialized':
-      // No-op handshake notification per MCP spec; respond with empty
-      // success result so JSON-RPC envelope round-trip still validates.
-      return jsonRpcResponse(jsonRpcSuccess(id, {}));
+      // JSON-RPC notifications (id omitted) return HTTP 202 without a body
+      return new Response(null, { status: 202 });
 
     default:
       return jsonRpcResponse(jsonRpcError(id, JSONRPC_METHOD_NOT_FOUND, `method "${body.method}" not implemented`));

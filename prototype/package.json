@@ -10,8 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@sentry/nextjs": "^10.51.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.105.1",
+    "@vercel/otel": "^2.1.2",
     "gray-matter": "^4.0.3",
     "jose": "^5.9.6",
     "next": "^15.1.0",

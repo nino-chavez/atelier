@@ -259,6 +259,11 @@ async function rpc(
   const id = nextRpcId++;
   const headers: Record<string, string> = {
     'Content-Type': init?.contentType ?? 'application/json',
+    // MCP Streamable HTTP spec (2025-11-25) + ADR-050: clients MUST send
+    // Accept including application/json or text/event-stream. The
+    // transport.ts handler enforces this at line ~199; non-compliant
+    // clients get HTTP 400 before any other check fires.
+    Accept: 'application/json, text/event-stream',
     ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
     ...(init?.headers ?? {}),
   };
@@ -382,8 +387,16 @@ async function main(): Promise<void> {
     );
     check('path-prefixed discovery returns 200', oauthDiscRes.status === 200);
     const disc = (await oauthDiscRes.json()) as Record<string, string>;
-    check('discovery.issuer matches configured issuer', disc.issuer === issuer.url);
-    check('discovery.jwks_uri derived correctly', disc.jwks_uri === `${issuer.url}/.well-known/jwks.json`);
+    // Per ADR-050 + Gemini's S01 patches: oauthDiscoveryConfigFromEnv
+    // derives the issuer from NEXT_PUBLIC_SUPABASE_URL by appending
+    // '/auth/v1' (Supabase's actual issuer path). The smoke wires
+    // NEXT_PUBLIC_SUPABASE_URL = issuer.url at startMcpServer (line ~144),
+    // so the derived issuer is `${issuer.url}/auth/v1` and jwks_uri sits
+    // under that. The verifier (line ~334) is wired separately with the
+    // unsuffixed issuer.url because the test JwksIssuer http server
+    // serves at /.well-known/jwks.json directly (not /auth/v1/...).
+    check('discovery.issuer matches derived Supabase OIDC issuer', disc.issuer === `${issuer.url}/auth/v1`);
+    check('discovery.jwks_uri derived correctly', disc.jwks_uri === `${issuer.url}/auth/v1/.well-known/jwks.json`);
     check('discovery.token_endpoint set', typeof disc.token_endpoint === 'string' && disc.token_endpoint.length > 0);
     check('discovery.authorization_endpoint set', typeof disc.authorization_endpoint === 'string');
     check(
@@ -482,6 +495,7 @@ async function main(): Promise<void> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
           Authorization: `Bearer ${devToken}`,
         },
         body: JSON.stringify({
@@ -512,7 +526,7 @@ async function main(): Promise<void> {
     console.log('\n[2] missing bearer -> 401 + WWW-Authenticate');
     const noAuth = await fetch(`${mcp.url}/api/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize' }),
     });
     check('no-bearer returns 401', noAuth.status === 401);
@@ -534,7 +548,11 @@ async function main(): Promise<void> {
     console.log('\n[4] malformed JSON-RPC envelope -> -32600');
     const malformed = await fetch(`${mcp.url}/api/mcp`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${devToken}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        Authorization: `Bearer ${devToken}`,
+      },
       body: JSON.stringify({ method: 'initialize' }), // missing jsonrpc
     });
     const malformedBody = (await malformed.json()) as { error?: { code: number } };

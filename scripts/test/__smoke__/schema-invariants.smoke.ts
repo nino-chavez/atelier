@@ -531,10 +531,15 @@ async function testSchemaVersionsBaseline(): Promise<void> {
       check(`baseline row present for ${f}`, appliedNames.has(f));
     }
 
-    // Bootstrap row uses sentinel hash; non-bootstrap rows use 64-hex SHA.
+    // Bootstrap rows (migration 10 + any baseline-extension migrations
+    // that backfill tracking rows for post-bootstrap migrations applied
+    // via supabase CLI) use sentinel hash 'bootstrap'. Their self-rows
+    // skip drift check because the file's own SHA includes its own
+    // INSERT statement (chicken-and-egg). Every other row carries the
+    // canonical 64-hex SHA-256 of the migration file content.
     const bootstrap = applied.find((r) => r.filename === '20260504000010_atelier_schema_versions.sql');
     check('bootstrap row content_sha256 is the sentinel', bootstrap?.content_sha256 === 'bootstrap');
-    const nonBootstrap = applied.filter((r) => r.filename !== '20260504000010_atelier_schema_versions.sql');
+    const nonBootstrap = applied.filter((r) => r.content_sha256 !== 'bootstrap');
     check(
       'all non-bootstrap rows carry 64-hex SHA-256 hashes',
       nonBootstrap.every((r) => /^[0-9a-f]{64}$/.test(r.content_sha256)),

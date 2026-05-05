@@ -62,6 +62,7 @@ This is also the strongest disconfirming test available before public release. A
 | **M5** | find_similar + eval harness + CI gate | Disconfirming test on the commercial wedge fires | **Done** (2026-05-01; no per-milestone exit audit; calibration captured in ADR-042/043; reframed by ADR-047) |
 | **M6** | Remote-principal composers + triage | Analyst case executes through Atelier itself; bootstrap inflection point per ADR-044 | **Done** (2026-05-02; see `../architecture/audits/milestone-M6-exit.md`) |
 | **M7** | Hardening + open-ADR resolution | Reference implementation is publication-ready | **Done** (2026-05-03; audit at `../architecture/audits/milestone-M7-exit.md`; Playwright IA/UX suite landed via PR #43 (static layer) + PR #44 (DOM layer); v1 substrate complete) |
+| **M8** | v1 Grounding Audit | Reference implementation empirically validated against canonicals | **Planned** (Blocks v1.x feature work per ADR-048) |
 
 ---
 
@@ -257,6 +258,22 @@ v1 substrate is now publication-ready per the no-announcement-ceremony principle
 **Demoable.** `atelier init demo-project && cd demo-project && atelier deploy` produces a live prototype + endpoint with the five lenses working out of the box.
 
 **Exit criteria.** All 35 design decisions in `../functional/PRD-COMPANION.md` are DECIDED (no OPEN). `atelier init` round-trips clean. Automated IA/UX validation suite (Playwright) covers the prototype's dynamic surfaces (`/atelier` lenses + `/atelier/observability`) per the IA/UX scope rule. No announcement ceremony — the README + repo description state shipped status; the substrate validates itself through automated flows. Adoption discovery is organic.
+
+---
+
+### M8 — v1 Grounding Audit
+
+**Status:** Planned (Introduced via ADR-048)
+
+**Produces.** A comprehensive, empirical audit of all infrastructure surfaces against vendor canonical standards. Fixes for any unjustified divergences. The `v1-comprehensive-grounding-audit.md` matrix artifact.
+
+**Operationalizes.** ADR-048 (v1 Infrastructure Reset and Comprehensive Grounding Audit). Replaces the pre-spec `§11.5b` check with a retroactive, empirical test.
+
+**Advances.** Restores methodological trust in the v1 substrate.
+
+**Bootstrap function.** Guarantees that the substrate we are dogfooding actually aligns with industry standards, preventing the propagation of hallucinated or flawed custom patterns.
+
+**Exit criteria.** Every architectural seam is enumerated in the discovery matrix. Every surface is tested empirically in an isolated worktree. All surfaces return `matches-canonical` or `diverges-with-documented-reason`. Any `diverges-silently` finding is refactored to match canonical. 
 
 ---
 

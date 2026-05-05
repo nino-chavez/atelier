@@ -8,7 +8,7 @@
 
 ## Open
 
-Open at v1.x: §7 (scale ceiling — bounded harness shipped; empirical override pending operator runs), §21 (AI auto-reviewers — v1.x defer with adopter-signal bar), §22 (semantic-contradiction validator — schema reservation shipped at v1; implementation v1.x), §23 (lightweight annotations on contributions — v1.x defer with adopter-signal bar), §30 (push-notification alerting via messaging adapter — v1 ships UI alerts; out-of-band delivery v1.x with adopter-signal trigger), §31 (X1 audit LOW items — filed with explicit activation criteria each).
+Open at v1.x: §7 (scale ceiling — bounded harness shipped; empirical override pending operator runs), §21 (AI auto-reviewers — v1.x defer with adopter-signal bar), §22 (semantic-contradiction validator — schema reservation shipped at v1; implementation v1.x), §23 (lightweight annotations on contributions — v1.x defer with adopter-signal bar), §30 (push-notification alerting via messaging adapter — v1 ships UI alerts; out-of-band delivery v1.x with adopter-signal trigger), §31 (X1 audit LOW items — filed with explicit activation criteria each), §32 (v0 methodological failure & grounding).
 
 ### 7 · Scale ceiling per guild
 
@@ -187,6 +187,20 @@ Surfaced by 2026-04-28 red-team Gap A + reinforced by GitHub ACE intel showing m
 - **Stale example trace IDs in milestone-exit audit docs.** `docs/architecture/audits/milestone-M0-exit.md` and `milestone-M1-exit.md` reference example trace IDs (matching `NF-N`, `US-N.M`, and `BRD:Epic-N` shapes) that do not resolve in `traceability.json`. The IDs are illustrative-only in audit prose, not real references. *Fix path:* either rewrite the audit-doc references with real trace IDs, or extend `scripts/traceability/validate-refs.ts` to whitelist a documented example-IDs set. *Activate when:* next traceability-validator polish pass, OR a future milestone-exit audit blocks on inheriting the false-positive.
 
 **Status.** OPEN at v1.x. Each item carries an explicit state-triggered activation criterion; no time-triggered ping (state-triggered work per CLAUDE.md).
+
+---
+
+### 32 · v0 Methodological Failure & Infrastructure Reset
+
+**Scenario.** The methodology audits (M0-M7 exits) tested internal consistency (code matches spec), but failed to test the spec against vendor canonical standards. The `§11.5b` canonical-pattern audit was introduced late, was scoped too narrowly, and relied on spec-reading rather than empirical verification. As a result, critical infrastructure surfaces (auth, env vars, DB connections, deploy config) diverged from industry standards and failed in the cloud production environment. The shipped v1 substrate is methodologically a v0.
+
+**Open questions:**
+- How do we trust the remaining unscoped surfaces (MCP endpoint, broadcast, RLS, webhooks, cron, pgvector, etc.)?
+- How do we execute an audit that actually works and cannot be gamed by spec-reading?
+
+**Recommendation.** Execute a "Soft Reset." Suspend the untrusted infrastructure ADRs (ADR-027, ADR-046, etc.). Formally sequence a new M8 milestone (Comprehensive Grounding Audit) before any further v1.x development. The audit must use isolated worktrees and empirical testing (actually running the code, not reading the spec).
+
+**Status.** RESOLVED by ADR-048. ADR-048 suspends the diverged decisions and mandates the 5-step empirical audit plan. The execution of this audit is tracked as the M8 milestone in `BUILD-SEQUENCE.md`.
 
 ---
 

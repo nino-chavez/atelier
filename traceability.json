@@ -7,11 +7,11 @@
   "counts": {
     "brd-epics": 16,
     "brd-stories": 106,
-    "decisions": 49,
+    "decisions": 52,
     "open-questions": 31,
     "sections": 0,
     "prototype-slices": 0,
-    "adrs": 47
+    "adrs": 50
   },
   "entries": [
     {
@@ -1509,6 +1509,39 @@
       "prototypePages": [],
       "adr": "ADR-047",
       "source": "m7-track-2-section-26-wider-eval",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D50",
+      "label": "v1 Infrastructure Reset and Comprehensive Grounding Audit (M8): reverse ADR-027/046, suspend ADR-028/041; replace pre-spec §11.5b with empirical post-implementation audit",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-048-v1-infrastructure-reset-and-comprehensive-grounding.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-048",
+      "source": "m8-grounding-audit",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D51",
+      "label": "find_similar canonical hybrid retrieval via single SQL CTE: vector_ip_ops + websearch_to_tsquery + RRF k=50 (supersedes ADR-042)",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-049-hybrid-retrieval-cte.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-049",
+      "source": "m8-grounding-audit-s07",
+      "status": "DECIDED"
+    },
+    {
+      "id": "D52",
+      "label": "Hand-rolled MCP transport patched for spec conformance (Origin, MCP-Protocol-Version, Accept, notification 202); did not migrate to @modelcontextprotocol/sdk to preserve compile-time 12-tool length lock",
+      "kind": "decision",
+      "docPath": "docs/architecture/decisions/ADR-050-mcp-transport-conformance.md",
+      "docUrl": "",
+      "prototypePages": [],
+      "adr": "ADR-050",
+      "source": "m8-grounding-audit-s01",
       "status": "DECIDED"
     },
     {

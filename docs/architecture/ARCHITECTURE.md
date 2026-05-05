@@ -1639,6 +1639,13 @@ Messaging adapter publishes alerts for:
 - Reaper rate spike (possible platform issue)
 - Authentication failure spike (possible attack)
 
+### 8.4 Application logging
+
+Application observability conforms to the following shape (resolving audit finding S15):
+- **Runtime logging:** Uses a shared `logger.ts` interface. In development/preview, emits `debug`/`info`/`warn` via `console.*`. In production, emits only `error` directly (relies on Sentry for capture).
+- **Tracing (OTel):** Instrumentation is provided via `@vercel/otel` in `instrumentation.ts` for distributed trace propagation across the Vercel edge/Node runtime.
+- **Error tracking:** Sentry is initialized via `@sentry/nextjs`, gated by the presence of `NEXT_PUBLIC_SENTRY_DSN` in the environment.
+
 ---
 
 ## 9. Deployment model

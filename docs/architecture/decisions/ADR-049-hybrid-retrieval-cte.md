@@ -1,11 +1,15 @@
 ---
-slug: hybrid-retrieval-cte
-date: 2026-05-05
-status: accepted
-supersedes: ADR-042
+id: ADR-049
+trace_id: BRD:Epic-6
+category: architecture
+session: m8-grounding-audit-s07
+composer: nino-chavez
+timestamp: 2026-05-05T00:00:00Z
 ---
 
-# ADR-049: Canonical Hybrid Retrieval via Single CTE
+# Canonical Hybrid Retrieval via Single CTE
+
+**Supersedes:** ADR-042 (app-side RRF fold + RRF k=60 + cosine `<=>` + custom OR-tokenizer). The hybrid retrieval ambition (vector + BM25 fused via RRF) carries forward; the implementation specifics are replaced per the M8 grounding audit's S07 finding. Frontmatter `reverses` field reserved for full reversals; this is a refinement-superseding relationship.
 
 ## Context
 During the v1 Comprehensive Grounding Audit (S07), we identified that our `find_similar` implementation diverged from the canonical Supabase hybrid retrieval architecture. We were performing the Reciprocal Rank Fusion (RRF) in application-side TypeScript after making parallel `pg.Pool` queries for vector kNN and keyword search. Additionally, we were using the cosine distance operator `<=>` instead of the more performant inner-product `<#>` for normalized OpenAI embeddings, and using a custom tokenizer instead of `websearch_to_tsquery`.

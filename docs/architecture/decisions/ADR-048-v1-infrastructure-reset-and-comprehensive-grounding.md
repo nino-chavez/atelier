@@ -1,12 +1,15 @@
 ---
-title: "ADR-048: v1 Infrastructure Reset and Comprehensive Grounding Audit"
-date: 2026-05-04
-status: accepted
-reverses: ADR-027, ADR-046
-suspends: ADR-028, ADR-041
+id: ADR-048
+trace_id: BRD:Epic-1
+category: architecture
+session: m8-grounding-audit
+composer: nino-chavez
+timestamp: 2026-05-04T00:00:00Z
 ---
 
-# ADR-048: v1 Infrastructure Reset and Comprehensive Grounding Audit
+# v1 Infrastructure Reset and Comprehensive Grounding Audit
+
+**Reverses (multi-target):** ADR-027 (reference impl stack — implementation ungrounded, capabilities preserved), ADR-046 (deploy strategy — current shape ungrounded). **Suspends:** ADR-028 (identity default), ADR-041 (embedding default). The frontmatter `reverses` field is single-target by validator schema; the multi-target relationship is documented here in prose per the precedent set when validator hygiene blocks faithful representation in frontmatter alone.
 
 ## Context
 During the transition to the v1.x lifecycle, empirical evidence demonstrated severe architectural divergence in the deployed reference implementation. Four critical infrastructure surfaces (auth, environment variables, DB connection patterns, and deployment config) were found to be misaligned with vendor canonical standards, causing breakage in the Vercel/Supabase production environment. 

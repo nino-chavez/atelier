@@ -281,6 +281,12 @@ jobs:
           set -e
           eval "$(supabase status -o env --workdir .)"
           export ATELIER_DATASTORE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          # POSTGRES_URL is the canonical env name post-PR-#75 (the
+          # rebuild renamed ATELIER_DATASTORE_URL → POSTGRES_URL in code
+          # to match the Vercel-Supabase Marketplace integration's
+          # auto-provisioned shape). Both names are exported so any code
+          # path reading either name resolves correctly.
+          export POSTGRES_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           export ATELIER_OIDC_ISSUER="$API_URL/auth/v1"
           export ATELIER_JWT_AUDIENCE=authenticated
           export NEXT_PUBLIC_SUPABASE_URL="$API_URL"
@@ -348,6 +354,10 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ATELIER_DATASTORE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          # POSTGRES_URL is the post-PR-#75 canonical name (embed-runner
+          # and find_similar runner read this; legacy name kept for
+          # backwards-compat with any code still on the old slot).
+          POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
           set -e
           # Seed the find_similar project with a fixture project_id matching
@@ -374,6 +384,9 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ATELIER_DATASTORE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+          # POSTGRES_URL is the post-PR-#75 canonical name (find_similar
+          # runner reads this; legacy name kept for backwards-compat).
+          POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: |
           set -e
           npx tsx scripts/eval/find_similar/runner.ts \

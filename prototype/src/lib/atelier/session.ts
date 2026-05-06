@@ -18,7 +18,16 @@
 //   same Supabase Auth cookie via @supabase/ssr and returns the JWT
 //   string. The MCP route's JWKS verifier validates it identically.
 
-import { cookies as nextCookies } from 'next/headers';
+// `next/headers` is loaded lazily inside `getRequestSupabaseClient` rather
+// than at module-top-level. The static import path made non-Next.js
+// callers (the substrate-audit smoke runner under tsx) crash at module-
+// load with `Cannot find module 'next/headers'` because that module only
+// resolves inside the Next.js compilation context. The lazy form lets
+// `prototype/__smoke__` files import session.ts to reach the type exports
+// + non-cookie helpers (LensAuthError, type LensViewerContext) without
+// triggering the next/headers resolution. Production paths (Server
+// Components, route handlers) call `getRequestSupabaseClient()` and pay
+// the dynamic-import cost once per worker (cached by Node's module cache).
 
 import {
   createServerSupabaseClient,
@@ -115,6 +124,7 @@ interface ViewerRow {
  * + nextCookieAdapter() wiring inline.
  */
 export async function getRequestSupabaseClient(): Promise<ServerSupabaseClient> {
+  const { cookies: nextCookies } = await import('next/headers');
   const cookieStore = await nextCookies();
   return createServerSupabaseClient({ cookies: nextCookieAdapter(cookieStore) });
 }

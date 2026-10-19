@@ -25,7 +25,7 @@ It is explicitly **not** a roadmap, a phased rollout, or a feature-deferral plan
 | `../architecture/decisions` | Append-only canonical decision log | Append-only |
 | **`BUILD-SEQUENCE.md` (this doc)** | **Order of construction** | **Editable; major reorders log an ADR** |
 
-This doc is **not** in the canonical-state precedence list in `CLAUDE.md`. If it conflicts with any design doc, the design doc wins.
+This doc is **not** in the canonical-state precedence list in `AGENTS.md`. If it conflicts with any design doc, the design doc wins.
 
 ---
 

@@ -25,7 +25,7 @@ The dogfood/refine loop only works if downstream improvements flow back upstream
 1. Open an issue describing the gap (constraint that didn't fit, pattern that broke).
 2. Propose the refinement as a draft ADR. Use the template from [`../architecture/decisions/README.md`](../architecture/decisions/README.md).
 3. Link evidence: a real adoption pain, not a hypothetical.
-4. Maintainer review against the load-bearing decisions ([`CLAUDE.md`](../../CLAUDE.md) load-bearing list).
+4. Maintainer review against the load-bearing decisions ([`AGENTS.md`](../../AGENTS.md) load-bearing list).
 5. If accepted, the ADR is appended; if rejected, the issue is closed with rationale.
 
 Reversals of existing ADRs follow the same flow but additionally must reference the prior ADR with `reverses:` frontmatter.

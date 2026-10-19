@@ -183,7 +183,7 @@ Atelier's doc set is informed by the [claude-docs-toolkit](https://github.com/) 
 
 ### Canonical state (root of repo)
 
-The files at the repo root are the **canonical state precedence list** declared in `CLAUDE.md`. They are append-edit-only via PR; never duplicated; never summarized in a parallel surface. The audience-question mapping:
+The files at the repo root are the **canonical state precedence list** declared in `AGENTS.md`. They are append-edit-only via PR; never duplicated; never summarized in a parallel surface. The audience-question mapping:
 
 | File | Toolkit layer analog | Audience | Question |
 |---|---|---|---|
@@ -364,7 +364,7 @@ The six are independent. A PR can pass per-PR review while the milestone sweep i
 
 ### 11.2 Per-PR review
 
-Every change to canonical discovery content (per CLAUDE.md "How to propose changes") goes through PR review. The reviewer matrix defaults to `territories.review_role` for the affected territory; teams may extend in `.atelier/config.yaml: review.per_pr.territory_overrides`.
+Every change to canonical discovery content (per AGENTS.md "How to propose changes") goes through PR review. The reviewer matrix defaults to `territories.review_role` for the affected territory; teams may extend in `.atelier/config.yaml: review.per_pr.territory_overrides`.
 
 **Change classes and minimum reviewers:**
 

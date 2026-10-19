@@ -270,11 +270,11 @@ For deeper diagnostics, the dev server's stdout shows every incoming request; th
 
 ---
 
-## Step 8: Update your CLAUDE.md session-start checklist
+## Step 8: Update your AGENTS.md session-start checklist
 
-The repo's `CLAUDE.md` (and any agent-charter file in your fork) has a session-start checklist that historically read "read the canonical state directly." Now that the endpoint is wired, the canonical first move is `get_context`.
+The repo's `AGENTS.md` (and any agent-charter file in your fork) has a session-start checklist that historically read "read the canonical state directly." Now that the endpoint is wired, the canonical first move is `get_context`.
 
-Update the relevant line in `CLAUDE.md` to something like:
+Update the relevant line in `AGENTS.md` to something like:
 
 ```markdown
 5. Call `get_context` against the configured MCP endpoint to pull project + territory + recent decisions. The endpoint is live (Streamable HTTP MCP per ARCH 7.9 + ADR-013/040, verified by `scripts/endpoint/__smoke__/real-client.smoke.ts`). For local development, see `docs/user/tutorials/local-bootstrap.md`. If the endpoint is unreachable (local stack down, etc.), fall back to direct canonical state read per the precedence list above.

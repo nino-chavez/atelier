@@ -74,15 +74,18 @@ Supabase rotates the email template through your provider; the magic-link token 
 
 ### Custom email template (REQUIRED for the magic-link path)
 
-Atelier's `/auth/confirm` route uses Supabase's token-hash verify flow, which requires the email template to emit a `?token_hash=` URL pointing at our app rather than Supabase's default verifier. Paste the following into Supabase Dashboard -> Authentication -> Email Templates -> Magic Link:
+Atelier's `/auth/confirm` route uses Supabase's token-hash verify flow, which requires the email template to emit a `?token_hash=` URL pointing at our app rather than Supabase's default verifier. The same replacement template must also include `{{ .Token }}` or Supabase will not show the 6-digit-code path. Paste the following into Supabase Dashboard -> Authentication -> Email Templates -> Magic Link:
 
+```html
+<p>Use this link to sign in to Atelier:</p>
+<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=magiclink&amp;next=/atelier">Sign in to Atelier</a></p>
+<p>Or enter this 6-digit code in the sign-in form:</p>
+<p><strong>{{ .Token }}</strong></p>
 ```
-{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next=/atelier
-```
 
-The 6-digit code path works without this change (Supabase's default template includes `{{ .Token }}` already), but the link path will land on Supabase's PKCE verify URL and fail unless this template is in place.
+The link path will land on Supabase's PKCE verify URL and fail unless this template is in place; omitting `{{ .Token }}` from the replacement removes the code path.
 
-For local-bootstrap, edit `[auth.email.template.magic_link]` in `supabase/config.toml`. For Supabase Cloud, edit the template in the Auth dashboard.
+For local-bootstrap, `supabase/config.toml` already points `[auth.email.template.magic_link]` at `supabase/templates/magic_link.html`, which contains this body. For Supabase Cloud, edit the template in the Auth dashboard.
 
 ---
 

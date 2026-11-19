@@ -231,6 +231,13 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# Local-only equivalent of the Magic Link template documented in
+# docs/user/guides/sign-in-magic-links.md. It emits both the token-hash link
+# that /auth/confirm verifies and the six-digit OTP used by the form.
+[auth.email.template.magic_link]
+subject = "Your Atelier sign-in link"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

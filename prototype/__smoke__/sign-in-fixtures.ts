@@ -211,13 +211,12 @@ export async function expectNoOtpEmail(toEmail: string, windowMs = 3_000): Promi
 
 function extractOtpCode(body: string): string | null {
   // Supabase's default magic-link template surfaces the 6-digit code via
-  // a "code: NNNNNN" / "code is NNNNNN" / "code is: NNNNNN" /
-  // "Token: NNNNNN" line. Anchor
+  // a "code: NNNNNN" / "code is NNNNNN" / "Token: NNNNNN" line. Anchor
   // the regex to that prefix; the alternative (find any standalone
   // 6-digit run) false-matches accidental 6-digit substrings inside
   // the PKCE token URL parameter (token=pkce_<hex>... carries
   // arbitrary digit runs).
-  const match = body.match(/(?:code|token)\s*(?:is\s*:|is|:)\s*(\d{6})\b/i);
+  const match = body.match(/(?:code|token)\s*(?:is|:)\s*(\d{6})\b/i);
   return match ? match[1]! : null;
 }
 

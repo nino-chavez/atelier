@@ -64,7 +64,7 @@ async function waitForOtpEmail(toEmail: string, timeoutMs = 15_000): Promise<str
         await fetch(`${MAILPIT_URL}/api/v1/message/${hit.ID}`)
       ).json()) as MailpitMessage;
       const match = `${message.Text}\n${message.HTML}`.match(
-        /(?:code|token)\s*(?:is\s*:|is|:)\s*(\d{6})\b/i,
+        /(?:code|token)\s*(?:is|:)\s*(\d{6})\b/i,
       );
       if (match) return match[1]!;
     }

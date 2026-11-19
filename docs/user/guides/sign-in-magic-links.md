@@ -79,8 +79,7 @@ Atelier's `/auth/confirm` route uses Supabase's token-hash verify flow, which re
 ```html
 <p>Use this link to sign in to Atelier:</p>
 <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=magiclink&amp;next=/atelier">Sign in to Atelier</a></p>
-<p>Or enter this 6-digit code in the sign-in form:</p>
-<p><strong>{{ .Token }}</strong></p>
+<p>Your sign-in code is {{ .Token }}.</p>
 ```
 
 The link path will land on Supabase's PKCE verify URL and fail unless this template is in place; omitting `{{ .Token }}` from the replacement removes the code path.
